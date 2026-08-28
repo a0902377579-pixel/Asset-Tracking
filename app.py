@@ -17,8 +17,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# 20分鐘自動刷新 (1,200,000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
+# 注入科技感 CSS 背景與卡片特效
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
@@ -131,6 +133,11 @@ def style_fig(fig, title):
         xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d"), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
+    return fig
+
+def add_zero_baseline(fig):
+    """為圖表加入 0 基準線虛線"""
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(255, 255, 255, 0.6)", line_width=2)
     return fig
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -261,9 +268,23 @@ with tab2:
 
         c2_7, c2_8 = st.columns(2)
         with c2_7:
-            fig7 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['總投資損益'], mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=3)))
-            fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig7, "7. 總投資累積損益面積圖"), use_container_width=True)
+            # ✨ 圖表 7 史詩級升級：大於 0 紅色填滿，小於 0 綠色填滿，並加上零點虛線
+            fig7 = go.Figure()
+            # 獲利(大於0)區塊
+            fig7.add_trace(go.Scatter(
+                x=df_hist['真實日期'], y=df_hist['總投資損益'].clip(lower=0), customdata=df_hist['總投資損益'],
+                mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), name="獲利"
+            ))
+            # 虧損(小於0)區塊
+            fig7.add_trace(go.Scatter(
+                x=df_hist['真實日期'], y=df_hist['總投資損益'].clip(upper=0), customdata=df_hist['總投資損益'],
+                mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), name="虧損"
+            ))
+            fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
+            fig7 = add_zero_baseline(fig7) # 加入基準虛線
+            fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{customdata:+,.0f}}</b></span><extra></extra>")
+            fig7.update_layout(showlegend=False)
+            st.plotly_chart(fig7, use_container_width=True)
             
         with c2_8:
             fig8 = go.Figure()
@@ -276,8 +297,10 @@ with tab2:
         c2_9, c2_10 = st.columns(2)
         with c2_9:
             fig9 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['ROI(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
+            fig9 = style_fig(fig9, "9. 投資報酬率 (ROI) 走勢")
+            fig9 = add_zero_baseline(fig9) # 加入基準虛線
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>投資報酬率: %{{y:+.2f}}%</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig9, "9. 投資報酬率 (ROI) 走勢"), use_container_width=True)
+            st.plotly_chart(fig9, use_container_width=True)
 
         with c2_10:
             fig10 = go.Figure()
@@ -298,7 +321,8 @@ with tab2:
 
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
-            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="rgba(255,255,255,0.5)", dash="dash"))
+            # ✨ 圖表 12 增強損益兩平虛線
+            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="rgba(255,255,255,0.8)", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True)
 
@@ -308,8 +332,10 @@ with tab2:
         with c2_13:
             vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist['單日損益變化']]
             fig13 = go.Figure(go.Bar(x=df_hist['真實日期'], y=df_hist['單日損益變化'], marker_color=vol_colors))
+            fig13 = style_fig(fig13, "13. 單日總損益震盪圖")
+            fig13 = add_zero_baseline(fig13) # 加入基準虛線
             fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig13, "13. 單日總損益震盪圖"), use_container_width=True)
+            st.plotly_chart(fig13, use_container_width=True)
             
         with c2_14:
             fig14 = px.histogram(df_hist, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
@@ -318,14 +344,18 @@ with tab2:
             
         with c2_15:
             fig15 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
+            fig15 = style_fig(fig15, "15. 歷史最大回撤 (Drawdown)")
+            fig15 = add_zero_baseline(fig15) # 加入基準虛線
             fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), use_container_width=True)
+            st.plotly_chart(fig15, use_container_width=True)
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
             fig16 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
+            fig16 = style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢")
+            fig16 = add_zero_baseline(fig16) # 加入基準虛線
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{y:+.2f}}%</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), use_container_width=True)
+            st.plotly_chart(fig16, use_container_width=True)
 
         with c2_17:
             win_days, lose_days = len(df_hist[df_hist['單日損益變化'] > 0]), len(df_hist[df_hist['單日損益變化'] < 0])
@@ -364,8 +394,10 @@ with tab2:
             
         with c2_21:
             fig21 = go.Figure(go.Scatter(x=df_txs['日期_dt'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
+            fig21 = style_fig(fig21, "21. 累計淨現金流走勢")
+            fig21 = add_zero_baseline(fig21) # 加入基準虛線
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig21, "21. 累計淨現金流走勢"), use_container_width=True)
+            st.plotly_chart(fig21, use_container_width=True)
     else:
         st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至「金流明細」新增紀錄。")
 
@@ -393,7 +425,7 @@ with tab4:
         st.markdown("#### ✍️ 記帳 / 資金異動")
         with st.form("bank_record_form"):
             rec_date = st.date_input("日期")
-            rec_type = st.selectbox("異rotype", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
+            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
             amount = st.number_input("金額 (元) 【扣款請直接輸入負數】", value=0.0, step=100.0)
             note = st.text_input("備註說明")
             
