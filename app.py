@@ -353,7 +353,7 @@ with tab3:
                         client = get_gspread_client()
                         sh = client.open(SPREADSHEET_NAME)
                         ws_bank = sh.worksheet("db_bank_ledger")
-                        ws_bank.append_row([str(rec_date), rec_type, f"{amount:,.0f}", note])
+                        ws_bank.append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入 Google 試算表！畫面將自動更新。")
                         st.rerun()
                     except Exception as e:
