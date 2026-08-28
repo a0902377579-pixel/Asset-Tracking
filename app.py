@@ -309,7 +309,7 @@ with tab2:
         df_hist = pd.DataFrame(hist_data)
         df_hist["真實日期"] = pd.to_datetime(df_hist["日期"])
         df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
-        df_hist["日期"] = df_hist["真實日期"].dt.strftime('%Y-%m-%d') + " (" + df_hist["星期"] + ")"
+        df_hist["日期"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
         df_hist = df_hist.sort_values("真實日期")
         
         fig_line = px.line(df_hist, x="真實日期", y=["總市值", "總累積成本"], title="📈 總市值與投資成本走勢", markers=True)
