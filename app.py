@@ -53,10 +53,11 @@ def load_sheet_data():
         if len(rows) > 1:
             last_row = rows[-1]
             def parse_num(v):
-                try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
-                : return 0.0
+                try: 
+                    return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
+                except: 
+                    return 0.0
             
-            # 安全讀取欄位，避免超出範圍
             if len(last_row) > 7:
                 total_cost = parse_num(last_row[5])
                 total_assets = parse_num(last_row[6])
@@ -81,8 +82,7 @@ def load_sheet_data():
             "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings
         }, hist_data
     except Exception as e:
-        # 改進錯誤顯示，避免直接印出 Response 物件
-        st.warning("目前試算表尚無數據或格式正在初始化中，請稍候。")
+        st.info("目前試算表尚無數據或格式正在初始化中，請稍候。")
         return None, None
 
 def load_bank_data():
