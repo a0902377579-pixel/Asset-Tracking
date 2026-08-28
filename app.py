@@ -1,23 +1,27 @@
 import streamlit as st
+import requests
 import pandas as pd
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 import gspread
 from google.oauth2.service_account import Credentials
 import json
-import requests
 from datetime import datetime
 
-# ==========================================
-# 1. 頁面基本配置與自動刷新
-# ==========================================
-st.set_page_config(page_title="個人資產儀表板 (雲端版)", layout="wide", page_icon="💼")
-st_autorefresh(interval=15000, key="realtime_data_refresher") # 雲端建議每15秒刷新一次即可，避免資源耗盡
+# 1. 頁面基本配置
+st.set_page_config(
+    page_title="個人資產儀表板 (雲端工作站)",
+    layout="wide",
+    page_icon="💼"
+)
+
+# 2. ⚡ 雲端自動刷新 (改為 15 秒避免過度消耗雲端資源)
+st_autorefresh(interval=15000, key="realtime_data_refresher")
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
 
 # ==========================================
-# 2. 雲端連線 Google 試算表 (使用 Secrets)
+# 3. 雲端 Google 試算表連線設定 (讀取 Secrets)
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
@@ -32,9 +36,80 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
-# ==========================================
-# 3. UI 卡片設計 (保持您最愛的炫彩置中版)
-# ==========================================
+# 請在此處填入您 Google 試算表的真實名稱
+SPREADSHEET_NAME = "db_daily_stock_prices" 
+
+def load_sheet_data():
+    client = get_gspread_client()
+    if not client:
+        return None, None
+    try:
+        sh = client.open(SPREADSHEET_NAME)
+        # 讀取持股與損益分頁
+        ws_overview = sh.worksheet("每日損益追蹤")
+        rows = ws_overview.get_all_values()
+        
+        total_assets, total_cost, total_profit, profit_rate = 0.0, 0.0, 0.0, 0.0
+        holdings = []
+        hist_data = []
+        
+        if len(rows) > 1:
+            last_row = rows[-1]
+            def parse_num(v):
+                try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
+                except: return 0.0
+            
+            total_cost = parse_num(last_row[5])
+            total_assets = parse_num(last_row[6])
+            total_profit = parse_num(last_row[7])
+            profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
+            
+            # 建立歷史數據
+            for r in rows[1:]:
+                if len(r) >= 10:
+                    hist_data.append({
+                        "日期": r[0], "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), 
+                        "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]) if len(r)>12 else 0,
+                        "台積電每日損益": parse_num(r[13]) if len(r)>13 else 0
+                    })
+        
+        # 模擬持股清單（可對應您的試算表架構擴充）
+        holdings = [
+            {"stock_name": "元大台灣0050", "shares": 1000, "avg_cost": 150.0, "total_cost": 150000, "current_price": 190.0, "market_value": 190000, "realtime_profit": 40000, "change_pct": 1.2},
+            {"stock_name": "台積電", "shares": 100, "avg_cost": 900.0, "total_cost": 90000, "current_price": 1200.0, "market_value": 120000, "realtime_profit": 30000, "change_pct": 2.5}
+        ]
+        
+        return {
+            "total_assets": total_assets, "total_cost": total_cost, 
+            "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings
+        }, hist_data
+    except Exception as e:
+        st.warning(f"讀取試算表發生錯誤: {e}")
+        return None, None
+
+def load_bank_data():
+    client = get_gspread_client()
+    if not client:
+        return 58661.0, []
+    try:
+        sh = client.open(SPREADSHEET_NAME)
+        # 假設銀行明細存在名為「銀行流水」的分頁，若沒有則會自動捕捉或回傳預設
+        try:
+            ws_bank = sh.worksheet("銀行流水")
+            b_rows = ws_bank.get_all_values()
+            txs = []
+            if len(b_rows) > 1:
+                for r in b_rows[1:]:
+                    if len(r) >= 4:
+                        txs.append({"日期": r[0], "類型": r[1], "金額": float(r[2].replace(',', '') or 0), "備註": r[3]})
+            balance = sum([t["金額"] for t in txs]) + 58661 # 基準餘額
+            return balance, txs
+        except:
+            return 58661.0, [{"日期": "2026-08-28", "類型": "現金", "金額": 58661.0, "備註": "初始結餘"}]
+    except:
+        return 58661.0, []
+
+# --- 🌈 視覺優化版卡片 ---
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
         bg_gradient = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)"
@@ -58,9 +133,9 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
             title_color, val_color = "#bae6fd", "#a7f3d0"
             text_shadow, title_shadow = "0 2px 4px rgba(0,0,0,0.3)", "0 1px 3px rgba(0,0,0,0.3)"
         elif theme == "gold":
-            bg_gradient, glow_color = "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)", "rgba(255, 128, 8, 0.6)"
-            title_color, val_color = "#78350f", "#0f172a"
-            text_shadow, title_shadow = "none", "none"
+            bg_gradient, glow_color = "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)", "rgba(200, 128, 8, 0.6)"
+            title_color, val_color = "#78350f", "#80caf0"
+            text_shadow, title_shadow = "0 2px 4px rgba(0,0,0,0.3)", "0 1px 3px rgba(0,0,0,0.3)"
 
     html = f"""
     <div style="
@@ -82,78 +157,69 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
 
 st.title("💼 個人資產儀表板 (雲端工作站) ☁️")
 
-# ==========================================
-# 4. 讀取資料
-# ==========================================
-client = get_gspread_client()
-db_name = "個人資產"  # 您的試算表名稱
+# 載入雲端資料
+bank_balance, txs = load_bank_data()
+dashboard_data, hist_data = load_sheet_data()
 
-def parse_num(val):
-    if not val: return 0.0
-    try: return float(str(val).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
-    except: return 0.0
-
-total_assets, total_cost, total_profit, profit_rate = 0.0, 0.0, 0.0, 0.0
-bank_balance = 58661  # 預設銀行餘額，可由試算表讀取覆蓋
-hist_data = []
-
-if client:
-    try:
-        sh = client.open(db_name)
-        sheet = sh.worksheet("每日損益追蹤")
-        rows = sheet.get_all_values()
-        
-        if len(rows) > 1:
-            headers = rows[0]
-            last_row = rows[-1]
-            total_cost = parse_num(last_row[5])       # 總累積成本
-            total_assets = parse_num(last_row[6])     # 總市值
-            total_profit = parse_num(last_row[7])     # 總投資損益
-            profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
-            
-            # 建立歷史紀錄
-            for r in rows[1:]:
-                if len(r) >= 10:
-                    hist_data.append({
-                        "日期": r[0], "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), 
-                        "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]) if len(r)>12 else 0,
-                        "台積電每日損益": parse_num(r[13]) if len(r)>13 else 0
-                    })
-    except Exception as e:
-        st.warning("讀取試算表資料時發生問題，請確認表格名稱。")
-
-# ==========================================
-# 5. 渲染分頁
-# ==========================================
 tab1, tab2, tab3 = st.tabs(["📊 即時資產現況", "📈 歷史損益與市值走勢", "🏦 銀行帳戶明細"])
 
+# ==========================================
+# 分頁 1：即時資產現況
+# ==========================================
 with tab1:
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: st.markdown(create_colorful_card("總市值", f"NT$ {total_assets:,.0f}", icon="💎", theme="purple"), unsafe_allow_html=True)
-    with c2: st.markdown(create_colorful_card("總成本", f"NT$ {total_cost:,.0f}", icon="📥", theme="blue"), unsafe_allow_html=True)
-    with c3: st.markdown(create_colorful_card("帳戶餘額", f"NT$ {bank_balance:,.0f}", icon="🏦", theme="gold"), unsafe_allow_html=True)
-    profit_icon = "🔥" if total_profit > 0 else ("💧" if total_profit < 0 else "⚖️")
-    with c4: st.markdown(create_colorful_card("即時總損益", f"{total_profit:+,.0f}", icon=profit_icon, is_profit=True, num_val=total_profit), unsafe_allow_html=True)
-    with c5: st.markdown(create_colorful_card("總損益 (%)", f"{profit_rate:+.2f}%", icon="📈", is_profit=True, num_val=profit_rate), unsafe_allow_html=True)
+    if dashboard_data:
+        total_assets = dashboard_data.get("total_assets", 0.0)
+        total_cost = dashboard_data.get("total_cost", 0.0)
+        total_profit = dashboard_data.get("total_profit", 0.0)
+        profit_rate = dashboard_data.get("profit_rate", 0.0)
+        holdings = dashboard_data.get("holdings", [])
 
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        fig_pie = px.pie(
-            names=['股票總市值', '銀行帳戶餘額'], values=[total_assets, bank_balance],
-            title="📊 總資產配置比例", hole=0.45, color_discrete_sequence=['#4B8BBE', '#FFE873']
-        )
-        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    with col_chart2:
-        # 簡易持股比例圓餅圖取代條形圖，方便雲端顯示
-        fig_pie2 = px.pie(
-            names=['元大台灣0050', '台積電'], values=[190000, 120000], # 示意數值，可串接試算表
-            title="📊 各持股市值佔比", hole=0.45, color_discrete_sequence=['#0068c9', '#83c9ff']
-        )
-        fig_pie2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_pie2, use_container_width=True)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1: st.markdown(create_colorful_card("總市值", f"NT$ {total_assets:,.0f}", icon="💎", theme="purple"), unsafe_allow_html=True)
+        with c2: st.markdown(create_colorful_card("總成本", f"NT$ {total_cost:,.0f}", icon="📥", theme="blue"), unsafe_allow_html=True)
+        with c3: st.markdown(create_colorful_card("帳戶餘額", f"NT$ {bank_balance:,.0f}", icon="🏦", theme="gold"), unsafe_allow_html=True)
+        
+        profit_icon = "🔥" if total_profit > 0 else ("💧" if total_profit < 0 else "⚖️")
+        with c4: st.markdown(create_colorful_card("即時總損益", f"{total_profit:+,.0f}", icon=profit_icon, is_profit=True, num_val=total_profit), unsafe_allow_html=True)
+        with c5: st.markdown(create_colorful_card("總損益 (%)", f"{profit_rate:+.2f}%", icon="📈", is_profit=True, num_val=profit_rate), unsafe_allow_html=True)
 
+        st.write("") 
+        
+        col_chart1, col_chart2 = st.columns(2)
+        with col_chart1:
+            fig_pie = px.pie(
+                names=['股票總市值', '銀行帳戶餘額'], values=[total_assets, bank_balance],
+                title="📊 總資產配置比例", hole=0.45, color_discrete_sequence=['#4B8BBE', '#FFE873']
+            )
+            fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_pie, use_container_width=True)
+            
+        with col_chart2:
+            if holdings:
+                df_h = pd.DataFrame(holdings)
+                fig_bar = px.bar(
+                    df_h, x="stock_name", y="market_value", title="📊 各持股市值佔比",
+                    text_auto='.2s', color="stock_name", labels={"stock_name": "股票名稱", "market_value": "市值"}
+                )
+                fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False)
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.divider()
+        st.subheader("📋 持股即時明細")
+        if holdings:
+            df_holdings = pd.DataFrame(holdings)
+            df_holdings["總損益(%)"] = df_holdings.apply(lambda x: (x["realtime_profit"] / x["total_cost"] * 100) if x["total_cost"] > 0 else 0.0, axis=1)
+            df_holdings = df_holdings.rename(columns={
+                "stock_name": "股票名稱", "shares": "總股數", "avg_cost": "平均成本", "total_cost": "總成本",
+                "current_price": "即時現價", "market_value": "即時市值", "realtime_profit": "即時總損益", "change_pct": "即時漲跌幅(%)"
+            })
+            st.dataframe(df_holdings, use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ 無法讀取試算表資料。")
+
+# ==========================================
+# 分頁 2：歷史損益與市值走勢
+# ==========================================
 with tab2:
     st.subheader("📈 歷史市值與累積損益走勢")
     if hist_data:
@@ -169,10 +235,52 @@ with tab2:
 
         st.divider()
         st.subheader("📜 歷史結算數據列表")
-        df_hist_display = df_hist.drop(columns=["真實日期", "星期"]).copy()[::-1]
-        st.dataframe(df_hist_display, use_container_width=True, hide_index=True)
+        st.dataframe(df_hist.drop(columns=["真實日期", "星期"])[::-1], use_container_width=True, hide_index=True)
+    else:
+        st.info("目前暫無每日歷史結算記錄。")
 
+# ==========================================
+# 分頁 3：銀行帳戶明細與記帳表單
+# ==========================================
 with tab3:
     st.subheader("🏦 銀行帳戶資金流水")
     st.markdown(create_colorful_card("銀行帳戶活存總結餘", f"NT$ {bank_balance:,.0f}", icon="💰", theme="gold"), unsafe_allow_html=True)
-    st.info("雲端版本已部署成功！銀行流水與記帳功能可透過直接編輯 Google 試算表來同步。")
+    st.divider()
+
+    col_form, col_list = st.columns([1, 2])
+
+    with col_form:
+        st.markdown("#### ✍️ 記帳 / 資金異動")
+        with st.form("bank_record_form"):
+            rec_date = st.date_input("日期")
+            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
+            amount = st.number_input("金額 (元) 【扣款請直接輸入負數】", value=0.0, step=100.0)
+            note = st.text_input("備註說明")
+            submitted = st.form_submit_button("寫入試算表")
+
+            if submitted:
+                if amount != 0:
+                    try:
+                        client = get_gspread_client()
+                        sh = client.open(SPREADSHEET_NAME)
+                        try:
+                            ws_bank = sh.worksheet("銀行流水")
+                        except:
+                            ws_bank = sh.add_worksheet(title="銀行流水", rows="100", cols="5")
+                            ws_bank.append_row(["日期", "類型", "金額", "備註"])
+                        
+                        ws_bank.append_row([str(rec_date), rec_type, f"{amount:,.0f}", note])
+                        st.success("紀錄成功寫入 Google 試算表！畫面將自動更新。")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"寫入失敗: {e}")
+                else:
+                    st.warning("請輸入有效的金額。")
+
+    with col_list:
+        st.markdown("#### 📋 帳戶流水明細")
+        if txs:
+            df_bank = pd.DataFrame(txs)
+            st.dataframe(df_bank, use_container_width=True, hide_index=True)
+        else:
+            st.info("尚無銀行紀錄。")
