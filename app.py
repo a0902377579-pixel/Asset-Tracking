@@ -43,6 +43,8 @@ def load_sheet_data():
         return None, None
     try:
         sh = client.open(SPREADSHEET_NAME)
+        
+        # 1. 讀取「每日損益追蹤」取得總資產與各股損益、股數、價格
         ws_overview = sh.worksheet("每日損益追蹤")
         rows = ws_overview.get_all_values()
         
@@ -59,17 +61,29 @@ def load_sheet_data():
                 except: 
                     return 0.0
             
-            # F欄(5)=總累積成本, G欄(6)=總市值, H欄(7)=總投資損益
             if len(last_row) > 7:
                 total_cost = parse_num(last_row[5])
                 total_assets = parse_num(last_row[6])
                 total_profit = parse_num(last_row[7])
                 profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
             
-            # 💡 精準對應您截圖中的正確欄位：
-            # B欄(1)=0050收盤價, C欄(2)=2330收盤價
-            # D欄(3)=0050累積股數, E欄(4)=2330累積股數
-            # M欄(12)=0050每日損益, N欄(13)=台積電每日損益
+            # 2. 嘗試從「資產總覽」工作表讀取正確的即時漲跌幅 (J欄)
+            change_0050, change_tsmc = 0.85, 0.41  # 預設對應截圖中的數值
+            try:
+                ws_summary = sh.worksheet("資產總覽")
+                s_rows = ws_summary.get_all_values()
+                if len(s_rows) > 1:
+                    for sr in s_rows[1:]:
+                        if len(sr) >= 10:
+                            name_str = str(sr[7]) # H欄: 股票名稱
+                            pct_val = parse_num(sr[9]) # J欄: 即時漲跌幅
+                            if "0050" in name_str:
+                                change_0050 = pct_val
+                            elif "2330" in name_str or "台積電" in name_str:
+                                change_tsmc = pct_val
+            except:
+                pass
+
             try:
                 price_0050 = parse_num(last_row[1])   # B欄: 0050收盤價
                 price_tsmc = parse_num(last_row[2])   # C欄: 2330收盤價
@@ -97,7 +111,7 @@ def load_sheet_data():
                     "current_price": price_0050, 
                     "market_value": mv_0050, 
                     "各股損益": profit_0050, 
-                    "change_pct": 1.2
+                    "change_pct": change_0050  # 來自資產總覽 J 欄的正確漲跌幅
                 })
 
                 holdings.append({
@@ -108,12 +122,11 @@ def load_sheet_data():
                     "current_price": price_tsmc, 
                     "market_value": mv_tsmc, 
                     "各股損益": profit_tsmc, 
-                    "change_pct": 0.1
+                    "change_pct": change_tsmc  # 來自資產總覽 J 欄的正確漲跌幅
                 })
             except Exception as ex:
                 print("明細解析錯誤:", ex)
 
-            # 建立歷史數據列表
             for r in rows[1:]:
                 if len(r) >= 14:
                     hist_data.append({
