@@ -118,7 +118,7 @@ C_VAL = "#00E5FF"  # 霓虹青 (數值)
 C_PCT = "#00E676"  # 螢光綠 (百分比)
 
 def style_fig(fig, title):
-    """將圖表套用無邊界科技感主題，並加入動態十字追蹤輔助線 (Spikelines)"""
+    """套用無邊界科技感主題，加入垂直的日期追蹤虛線"""
     fig.update_layout(
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
         font=dict(size=16, color="#e0e0e0"), 
@@ -127,19 +127,16 @@ def style_fig(fig, title):
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
         margin=dict(l=20, r=20, t=85, b=30),
-        # 啟動全局 X 軸對齊互動模式 (畫出垂直虛線)
-        hovermode="x unified",
+        hovermode="x unified", # X 軸統一對齊標籤
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d",
-            # ✨ 加入 X 軸十字追蹤虛線 (游標指到哪，虛線畫到哪)
+            # ✨ 只有 X 軸顯示追蹤線 (這會產生一條垂直的虛線)
             showspikes=True, spikemode="across", spikedash="dash", 
-            spikecolor="rgba(255,255,255,0.7)", spikethickness=1
+            spikecolor="rgba(255,255,255,0.5)", spikethickness=1
         ), 
         yaxis=dict(
-            showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="",
-            # ✨ 加入 Y 軸十字追蹤虛線
-            showspikes=True, spikemode="across", spikedash="dash", 
-            spikecolor="rgba(255,255,255,0.7)", spikethickness=1
+            # ✨ 移除 Y 軸追蹤線，取消十字，畫面更乾淨
+            showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title=""
         )
     )
     return fig
@@ -343,10 +340,10 @@ with tab2:
             
         with c2_14:
             fig14 = px.histogram(df_hist, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
+            fig14 = style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)")
             fig14.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>損益區間: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>發生次數: %{{y}} 次</b></span><extra></extra>")
-            # Histogram 在 hovermode='x unified' 表現不好，針對這張關閉
             fig14.update_layout(hovermode="closest")
-            st.plotly_chart(style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)"), use_container_width=True)
+            st.plotly_chart(fig14, use_container_width=True)
             
         with c2_15:
             fig15 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
@@ -373,9 +370,10 @@ with tab2:
             df_hist["星期"] = pd.to_datetime(df_hist["真實日期"]).dt.weekday.map(WEEK_MAP)
             dow_avg = df_hist.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
+            fig18 = style_fig(fig18, "18. 星期別平均波動分析")
             fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig18.update_layout(hovermode="closest")
-            st.plotly_chart(style_fig(fig18, "18. 星期別平均波動分析"), use_container_width=True)
+            st.plotly_chart(fig18, use_container_width=True)
 
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
@@ -395,9 +393,10 @@ with tab2:
             
         with c2_20:
             fig20 = px.bar(df_txs, x="日期_dt", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig20 = style_fig(fig20, "20. 單筆資金進出分布")
             fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig20.update_layout(showlegend=False, hovermode="closest")
-            st.plotly_chart(style_fig(fig20, "20. 單筆資金進出分布"), use_container_width=True)
+            st.plotly_chart(fig20, use_container_width=True)
             
         with c2_21:
             fig21 = go.Figure(go.Scatter(x=df_txs['日期_dt'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
