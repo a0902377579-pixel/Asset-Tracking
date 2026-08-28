@@ -35,7 +35,7 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
-SPREADSHEET_NAME = "db_daily_stock_prices" 
+SPREADSHEET_NAME = "個人資產" 
 
 def load_sheet_data():
     client = get_gspread_client()
