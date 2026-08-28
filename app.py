@@ -35,6 +35,7 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
+# 已更新為您的真實試算表名稱
 SPREADSHEET_NAME = "個人資產" 
 
 def load_sheet_data():
@@ -88,23 +89,26 @@ def load_sheet_data():
 def load_bank_data():
     client = get_gspread_client()
     if not client:
-        return 58661.0, []
+        return 0.0, []
     try:
         sh = client.open(SPREADSHEET_NAME)
-        try:
-            ws_bank = sh.worksheet("銀行流水")
-            b_rows = ws_bank.get_all_values()
-            txs = []
-            if len(b_rows) > 1:
-                for r in b_rows[1:]:
-                    if len(r) >= 4:
-                        txs.append({"日期": r[0], "類型": r[1], "金額": float(r[2].replace(',', '') or 0), "備註": r[3]})
-            balance = sum([t["金額"] for t in txs]) + 58661 
-            return balance, txs
-        except:
-            return 58661.0, [{"日期": "2026-08-28", "類型": "現金", "金額": 58661.0, "備註": "初始結餘"}]
-    except:
-        return 58661.0, []
+        # 已更新為您原本的銀行流水分頁名稱：db_bank_ledger
+        ws_bank = sh.worksheet("db_bank_ledger")
+        b_rows = ws_bank.get_all_values()
+        txs = []
+        if len(b_rows) > 1:
+            for r in b_rows[1:]:
+                if len(r) >= 4:
+                    try:
+                        amt = float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)
+                    except:
+                        amt = 0.0
+                    txs.append({"日期": r[0], "類型": r[1], "金額": amt, "備註": r[3]})
+        
+        balance = sum([t["金額"] for t in txs])
+        return balance, txs
+    except Exception as e:
+        return 0.0, []
 
 # --- 🌈 視覺優化版卡片 ---
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -211,7 +215,7 @@ with tab1:
             })
             st.dataframe(df_holdings, use_container_width=True, hide_index=True)
     else:
-        st.info("目前試算表中尚無資料，請至第三頁寫入第一筆資料。")
+        st.info("目前試算表中尚無資料。")
 
 # ==========================================
 # 分頁 2：歷史損益與市值走勢
@@ -259,12 +263,7 @@ with tab3:
                     try:
                         client = get_gspread_client()
                         sh = client.open(SPREADSHEET_NAME)
-                        try:
-                            ws_bank = sh.worksheet("銀行流水")
-                        except:
-                            ws_bank = sh.add_worksheet(title="銀行流水", rows="100", cols="5")
-                            ws_bank.append_row(["日期", "類型", "金額", "備註"])
-                        
+                        ws_bank = sh.worksheet("db_bank_ledger")
                         ws_bank.append_row([str(rec_date), rec_type, f"{amount:,.0f}", note])
                         st.success("紀錄成功寫入 Google 試算表！畫面將自動更新。")
                         st.rerun()
