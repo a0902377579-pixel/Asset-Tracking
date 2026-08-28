@@ -20,7 +20,7 @@ st.set_page_config(
 # 20分鐘自動刷新 (1,200,000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# ✨ 這裡針對你嫌棄的「藍色直角方框」進行了暴力美化：大圓角、滿版延伸、漸層與陰影
+# 注入科技感 CSS 背景與卡片特效
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
@@ -30,13 +30,16 @@ st.markdown("""
         gap: 12px; 
         background-color: transparent;
         padding-bottom: 10px;
+        display: flex;
     }
     
-    /* 未選中的 Tab 樣式：圓角、深色背景、質感邊框 */
+    /* ✨ 將 Tab 寬度改為自動撐滿均分，徹底告別「文字有多寬框就多寬」的醜外型 */
     .stTabs [data-baseweb="tab"] { 
+        flex: 1;
+        justify-content: center;
         background-color: #1e2128; 
-        border-radius: 12px !important; /* 消除直角，改為圓滑大圓角 */
-        padding: 14px 28px !important; 
+        border-radius: 12px !important; 
+        padding: 14px 10px !important; 
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         color: #a0a5b1 !important;
         font-weight: 600;
@@ -51,7 +54,7 @@ st.markdown("""
         border-color: rgba(52, 152, 219, 0.5) !important;
     }
 
-    /* 被選中 (Active) 的 Tab 樣式：亮眼漸層、強烈陰影、完美消除四個直角 */
+    /* 被選中 (Active) 的 Tab 樣式：亮眼漸層、強烈陰影 */
     .stTabs [aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         color: white !important; 
