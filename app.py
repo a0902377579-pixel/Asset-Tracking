@@ -17,10 +17,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 20分鐘自動刷新 (1,200,000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# 注入科技感 CSS 背景與卡片特效
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
@@ -32,11 +30,7 @@ st.markdown("""
         border: 1px solid #333;
         border-bottom: none;
     }
-    .stTabs [aria-selected="true"] { 
-        background-color: #3498db; 
-        color: white !important; 
-        font-weight: bold; 
-    }
+    .stTabs [aria-selected="true"] { background-color: #3498db; color: white !important; font-weight: bold; }
     div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -45,7 +39,7 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 SPREADSHEET_NAME = "個人資產" 
 
 # ==========================================
-# 2. 核心資料讀取 (gspread 快取與防呆)
+# 2. 核心資料讀取
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
@@ -56,7 +50,7 @@ def get_gspread_client():
         )
         return gspread.authorize(creds)
     except Exception as e:
-        st.error(f"⚠️ 金鑰讀取失敗，請檢查 Streamlit Secrets: {e}")
+        st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
 def load_sheet_data():
@@ -91,27 +85,15 @@ def load_sheet_data():
                                 break
                         
                         if curr_price == 0.0 and shares > 0: curr_price = m_val / shares
-                        holdings.append({
-                            "stock_name": name, "shares": shares, "avg_cost": avg_cost, 
-                            "total_cost": cost, "current_price": curr_price, "market_value": m_val, 
-                            "各股損益": profit, "change_pct": chg_pct
-                        })
+                        holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
 
         profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
 
         ws_overview = sh.worksheet("每日損益追蹤")
-        hist_data = []
-        for r in ws_overview.get_all_values()[1:]:
-            if len(r) >= 14 and str(r[0]).strip() != "":
-                hist_data.append({
-                    "日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), 
-                    "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])
-                })
+        hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
                 
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
-    except Exception as e:
-        st.error(f"讀取試算表發生錯誤: {e}")
-        return None, None
+    except: return None, None
 
 def load_bank_data():
     client = get_gspread_client()
@@ -121,31 +103,32 @@ def load_bank_data():
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
         
-        txs = []
-        for r in sh.worksheet("db_bank_ledger").get_all_values()[1:]:
-            if len(r) >= 4 and str(r[0]).strip() != "":
-                try: amt = float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)
-                except: amt = 0.0
-                txs.append({"日期": r[0].strip(), "類型": r[1].strip(), "金額": amt, "備註": r[3].strip()})
+        txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0), "備註": r[3].strip()} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 4 and str(r[0]).strip() != ""]
         return b_val, txs
-    except: 
-        return 58661.0, []
+    except: return 58661.0, []
 
 # ==========================================
 # 3. 視覺化引擎 (Plotly 華麗格式化函數)
 # ==========================================
+# 定義懸停框的亮色系
+C_LBL = "#FFD700"  # 亮金黃 (標籤)
+C_VAL = "#00E5FF"  # 霓虹青 (數值)
+C_PCT = "#00E676"  # 螢光綠 (百分比)
+
 def style_fig(fig, title):
-    """將圖表套用無邊界科技感主題，優化標題顏色、懸停框邊線與日期格式"""
+    """將圖表套用無邊界科技感主題，優化標題顏色、懸停框邊線與日期格式，並全面放大字體"""
     fig.update_layout(
-        # 標題換成高亮度純白字體
-        title=dict(text=f"<b>{title}</b>", font=dict(size=19, color="#ffffff")),
+        # 標題變大並換亮金黃色，確保位置不會被切斷
+        title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
+        font=dict(size=16, color="#e0e0e0"), # 全局軸標籤與刻度加大
         template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
-        # 懸停詳細內容框：高級深灰底色 + 柔和微透白邊框
-        hoverlabel=dict(bgcolor="rgba(30, 35, 45, 0.95)", font_size=15, font_family="Arial, sans-serif", bordercolor="rgba(255, 255, 255, 0.2)"),
-        margin=dict(l=20, r=20, t=60, b=20),
-        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d"), # 強制 X 軸時間為數字格式
+        # 懸停詳細內容框：高級深灰底色 + 霓虹青邊框 + 超大字體
+        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
+        margin=dict(l=20, r=20, t=85, b=30), # 頂部留出 85px 空間放超大標題
+        # 強制 X 軸時間為數字格式 (%Y-%m-%d)
+        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d"), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
     return fig
@@ -164,9 +147,9 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
             
     return f"""
     <div style="background: {bg}; border-radius: 12px; padding: 20px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); height: 130px; position: relative; overflow: hidden; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{title}</p>
-        <p style="margin: 5px 0 0 0; font-size: 2.1rem; font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50;">{value_str}</p>
-        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg);">{icon}</div>
+        <p style="margin: 0; font-size: 1.2rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{title}</p>
+        <p style="margin: 5px 0 0 0; font-size: 2.3rem; font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50;">{value_str}</p>
+        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg);">{icon}</div>
     </div>
     """
 
@@ -225,24 +208,24 @@ with tab2:
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
             fig1 = px.pie(names=['股票總市值', '銀行帳戶餘額'], values=[dashboard_data["total_assets"], bank_balance], hole=0.5, color_discrete_sequence=['#3498db', '#f1c40f'])
-            fig1.update_traces(hovertemplate="<b>%{label}</b><br>金額: NT$ %{value:,.0f}<br>佔比: %{percent}<extra></extra>", textinfo='label+percent', textfont_size=14)
+            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
             st.plotly_chart(style_fig(fig1, "1. 總資產水庫配置"), use_container_width=True)
             
         with c2_2:
             fig2 = px.pie(df_h, names='stock_name', values='market_value', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig2.update_traces(hovertemplate="<b>%{label}</b><br>市值: NT$ %{value:,.0f}<br>佔比: %{percent}<extra></extra>", textinfo='label+percent')
+            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
             st.plotly_chart(style_fig(fig2, "2. 個股市值佔比"), use_container_width=True)
 
         with c2_3:
             fig3 = px.pie(df_h, names='stock_name', values='total_cost', hole=0.5, color_discrete_sequence=px.colors.qualitative.Set2)
-            fig3.update_traces(hovertemplate="<b>%{label}</b><br>投入成本: NT$ %{value:,.0f}<br>佔比: %{percent}<extra></extra>", textinfo='label+percent')
+            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
             st.plotly_chart(style_fig(fig3, "3. 投入本金佈局佔比"), use_container_width=True)
 
         c2_4, c2_5, c2_6 = st.columns(3)
         with c2_4:
             fig4 = px.treemap(df_h, path=['stock_name'], values='market_value', color='各股損益(%)', color_continuous_scale=['#09ab3b', '#222222', '#ff4b4b'], color_continuous_midpoint=0)
-            fig4.update_traces(hovertemplate="<b>%{label}</b><br>市值: NT$ %{value:,.0f}<br>帳面損益: %{color:+.2f}%<extra></extra>", textfont=dict(size=18, color="white"))
-            st.plotly_chart(style_fig(fig4, "4. 股票板塊熱力圖 (大小=市值, 色=賺賠)"), use_container_width=True)
+            fig4.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>帳面損益: %{{color:+.2f}}%</b></span><extra></extra>", textfont=dict(size=18, color="white"))
+            st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True)
 
         with c2_5:
             fig5 = go.Figure(go.Waterfall(
@@ -250,7 +233,7 @@ with tab2:
                 x=df_h['stock_name'].tolist() + ["淨損益總計"], y=df_h['各股損益'].tolist() + [dashboard_data["total_profit"]],
                 decreasing={"marker":{"color":"#09ab3b"}}, increasing={"marker":{"color":"#ff4b4b"}}, totals={"marker":{"color":"#3498db"}}
             ))
-            fig5.update_traces(hovertemplate="<b>%{x}</b><br>損益金額: NT$ %{y:+,.0f}<extra></extra>", texttemplate="%{y:+,.0s}", textposition="outside")
+            fig5.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>損益金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>", texttemplate="%{y:+,.0s}", textposition="outside")
             st.plotly_chart(style_fig(fig5, "5. 各股獲利貢獻瀑布圖"), use_container_width=True)
 
         with c2_6:
@@ -258,7 +241,7 @@ with tab2:
                 go.Bar(name='總投入成本', x=df_h['stock_name'], y=df_h['total_cost'], marker_color='#9b59b6'),
                 go.Bar(name='當前總市值', x=df_h['stock_name'], y=df_h['market_value'], marker_color='#f1c40f')
             ])
-            fig6.update_traces(hovertemplate="<b>%{x}</b><br>金額: NT$ %{y:,.0f}<extra></extra>")
+            fig6.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             fig6.update_layout(barmode='group', hovermode="x unified")
             st.plotly_chart(style_fig(fig6, "6. 個股成本 vs 現值對比"), use_container_width=True)
 
@@ -269,7 +252,6 @@ with tab2:
         df_hist["真實日期"] = pd.to_datetime(df_hist["日期"]).dt.strftime('%Y-%m-%d')
         df_hist = df_hist.sort_values("真實日期")
         
-        # 運算延伸指標
         df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
         df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
         df_hist["單日漲跌幅(%)"] = (df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1) * 100).fillna(0)
@@ -280,28 +262,28 @@ with tab2:
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['總投資損益'], mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=3)))
-            fig7.update_traces(hovertemplate="<b>日期: %{x}</b><br>累積損益: NT$ %{y:+,.0f}<extra></extra>")
+            fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig7, "7. 總投資累積損益面積圖"), use_container_width=True)
             
         with c2_8:
             fig8 = go.Figure()
             fig8.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
             fig8.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
-            fig8.update_traces(hovertemplate="<b>%{data.name}</b><br>日期: %{x}<br>金額: NT$ %{y:,.0f}<extra></extra>")
+            fig8.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             fig8.update_layout(hovermode="x unified")
             st.plotly_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), use_container_width=True)
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
             fig9 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['ROI(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
-            fig9.update_traces(hovertemplate="<b>日期: %{x}</b><br>投資報酬率: %{y:+.2f}%<extra></extra>")
+            fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>投資報酬率: %{{y:+.2f}}%</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig9, "9. 投資報酬率 (ROI) 走勢"), use_container_width=True)
 
         with c2_10:
             fig10 = go.Figure()
             fig10.add_trace(go.Bar(x=df_hist['真實日期'], y=df_hist['0050每日損益'], name='0050', marker_color='#3498db'))
             fig10.add_trace(go.Bar(x=df_hist['真實日期'], y=df_hist['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
-            fig10.update_traces(hovertemplate="<b>%{data.name}</b><br>日期: %{x}<br>部位損益: NT$ %{y:+,.0f}<extra></extra>")
+            fig10.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>部位損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig10.update_layout(barmode='relative', hovermode="x unified")
             st.plotly_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), use_container_width=True)
             
@@ -310,14 +292,14 @@ with tab2:
             fig11 = go.Figure()
             fig11.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['0050每日損益'].cumsum(), mode='lines', name='0050 累計', line=dict(color='#3498db')))
             fig11.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['台積電每日損益'].cumsum(), mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
-            fig11.update_traces(hovertemplate="<b>%{data.name}</b><br>日期: %{x}<br>累計貢獻: NT$ %{y:+,.0f}<extra></extra>")
+            fig11.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>累計貢獻: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig11.update_layout(hovermode="x unified")
             st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True)
 
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
             fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="rgba(255,255,255,0.5)", dash="dash"))
-            fig12.update_traces(hovertemplate="<b>總成本: NT$ %{x:,.0f}</b><br>總市值: NT$ %{y:,.0f}<br>ROI: %{marker.color:+.2f}%<extra></extra>", marker=dict(size=8, opacity=0.8))
+            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True)
 
         st.divider()
@@ -326,36 +308,36 @@ with tab2:
         with c2_13:
             vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist['單日損益變化']]
             fig13 = go.Figure(go.Bar(x=df_hist['真實日期'], y=df_hist['單日損益變化'], marker_color=vol_colors))
-            fig13.update_traces(hovertemplate="<b>日期: %{x}</b><br>單日波動金額: NT$ %{y:+,.0f}<extra></extra>")
+            fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig13, "13. 單日總損益震盪圖"), use_container_width=True)
             
         with c2_14:
             fig14 = px.histogram(df_hist, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
-            fig14.update_traces(hovertemplate="<b>損益區間: NT$ %{x:,.0f}</b><br>發生次數: %{y} 次<extra></extra>")
+            fig14.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>損益區間: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>發生次數: %{{y}} 次</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)"), use_container_width=True)
             
         with c2_15:
             fig15 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
-            fig15.update_traces(hovertemplate="<b>日期: %{x}</b><br>高點回撤金額: NT$ %{y:,.0f}<extra></extra>")
+            fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), use_container_width=True)
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
             fig16 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
-            fig16.update_traces(hovertemplate="<b>日期: %{x}</b><br>單日漲跌幅: %{y:+.2f}%<extra></extra>")
+            fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{y:+.2f}}%</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), use_container_width=True)
 
         with c2_17:
             win_days, lose_days = len(df_hist[df_hist['單日損益變化'] > 0]), len(df_hist[df_hist['單日損益變化'] < 0])
             fig17 = px.pie(names=['上漲天數', '下跌天數'], values=[win_days, lose_days], hole=0.6, color_discrete_sequence=['#ff4b4b', '#09ab3b'])
-            fig17.update_traces(hovertemplate="<b>%{label}</b><br>天數: %{value} 天<br>佔比: %{percent}<extra></extra>", textinfo='label+percent')
+            fig17.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>天數: %{{value}} 天</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
             st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True)
 
         with c2_18:
             df_hist["星期"] = pd.to_datetime(df_hist["真實日期"]).dt.weekday.map(WEEK_MAP)
             dow_avg = df_hist.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
-            fig18.update_traces(hovertemplate="<b>星期%{x}</b><br>平均損益: NT$ %{y:+,.0f}<extra></extra>")
+            fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig18, "18. 星期別平均波動分析"), use_container_width=True)
 
     st.divider()
@@ -371,18 +353,18 @@ with tab2:
         c2_19, c2_20, c2_21 = st.columns(3)
         with c2_19:
             fig19 = px.sunburst(df_txs, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
-            fig19.update_traces(hovertemplate="<b>%{label}</b><br>累積金額: NT$ %{value:,.0f}<extra></extra>")
+            fig19.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>累積金額: NT$ %{{value:,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), use_container_width=True)
             
         with c2_20:
             fig20 = px.bar(df_txs, x="日期_dt", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
-            fig20.update_traces(hovertemplate="<b>日期: %{x}</b><br>異動金額: NT$ %{y:+,.0f}<extra></extra>")
+            fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig20.update_layout(showlegend=False)
             st.plotly_chart(style_fig(fig20, "20. 單筆資金進出分布"), use_container_width=True)
             
         with c2_21:
             fig21 = go.Figure(go.Scatter(x=df_txs['日期_dt'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
-            fig21.update_traces(hovertemplate="<b>日期: %{x}</b><br>累計淨金流: NT$ %{y:+,.0f}<extra></extra>")
+            fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig21, "21. 累計淨現金流走勢"), use_container_width=True)
     else:
         st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至「金流明細」新增紀錄。")
@@ -411,7 +393,7 @@ with tab4:
         st.markdown("#### ✍️ 記帳 / 資金異動")
         with st.form("bank_record_form"):
             rec_date = st.date_input("日期")
-            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
+            rec_type = st.selectbox("異rotype", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
             amount = st.number_input("金額 (元) 【扣款請直接輸入負數】", value=0.0, step=100.0)
             note = st.text_input("備註說明")
             
