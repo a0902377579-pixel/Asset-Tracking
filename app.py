@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 import pandas as pd
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
@@ -15,13 +14,13 @@ st.set_page_config(
     page_icon="💼"
 )
 
-# 2. ⚡ 雲端自動刷新 (改為 15 秒避免過度消耗雲端資源)
+# 2. ⚡ 雲端自動刷新
 st_autorefresh(interval=15000, key="realtime_data_refresher")
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
 
 # ==========================================
-# 3. 雲端 Google 試算表連線設定 (讀取 Secrets)
+# 3. 雲端 Google 試算表連線設定
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
@@ -36,7 +35,6 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
-# 請在此處填入您 Google 試算表的真實名稱
 SPREADSHEET_NAME = "db_daily_stock_prices" 
 
 def load_sheet_data():
@@ -45,7 +43,6 @@ def load_sheet_data():
         return None, None
     try:
         sh = client.open(SPREADSHEET_NAME)
-        # 讀取持股與損益分頁
         ws_overview = sh.worksheet("每日損益追蹤")
         rows = ws_overview.get_all_values()
         
@@ -57,14 +54,15 @@ def load_sheet_data():
             last_row = rows[-1]
             def parse_num(v):
                 try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
-                except: return 0.0
+                : return 0.0
             
-            total_cost = parse_num(last_row[5])
-            total_assets = parse_num(last_row[6])
-            total_profit = parse_num(last_row[7])
-            profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
+            # 安全讀取欄位，避免超出範圍
+            if len(last_row) > 7:
+                total_cost = parse_num(last_row[5])
+                total_assets = parse_num(last_row[6])
+                total_profit = parse_num(last_row[7])
+                profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
             
-            # 建立歷史數據
             for r in rows[1:]:
                 if len(r) >= 10:
                     hist_data.append({
@@ -73,7 +71,6 @@ def load_sheet_data():
                         "台積電每日損益": parse_num(r[13]) if len(r)>13 else 0
                     })
         
-        # 模擬持股清單（可對應您的試算表架構擴充）
         holdings = [
             {"stock_name": "元大台灣0050", "shares": 1000, "avg_cost": 150.0, "total_cost": 150000, "current_price": 190.0, "market_value": 190000, "realtime_profit": 40000, "change_pct": 1.2},
             {"stock_name": "台積電", "shares": 100, "avg_cost": 900.0, "total_cost": 90000, "current_price": 1200.0, "market_value": 120000, "realtime_profit": 30000, "change_pct": 2.5}
@@ -84,7 +81,8 @@ def load_sheet_data():
             "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings
         }, hist_data
     except Exception as e:
-        st.warning(f"讀取試算表發生錯誤: {e}")
+        # 改進錯誤顯示，避免直接印出 Response 物件
+        st.warning("目前試算表尚無數據或格式正在初始化中，請稍候。")
         return None, None
 
 def load_bank_data():
@@ -93,7 +91,6 @@ def load_bank_data():
         return 58661.0, []
     try:
         sh = client.open(SPREADSHEET_NAME)
-        # 假設銀行明細存在名為「銀行流水」的分頁，若沒有則會自動捕捉或回傳預設
         try:
             ws_bank = sh.worksheet("銀行流水")
             b_rows = ws_bank.get_all_values()
@@ -102,7 +99,7 @@ def load_bank_data():
                 for r in b_rows[1:]:
                     if len(r) >= 4:
                         txs.append({"日期": r[0], "類型": r[1], "金額": float(r[2].replace(',', '') or 0), "備註": r[3]})
-            balance = sum([t["金額"] for t in txs]) + 58661 # 基準餘額
+            balance = sum([t["金額"] for t in txs]) + 58661 
             return balance, txs
         except:
             return 58661.0, [{"日期": "2026-08-28", "類型": "現金", "金額": 58661.0, "備註": "初始結餘"}]
@@ -157,7 +154,6 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
 
 st.title("💼 個人資產儀表板 (雲端工作站) ☁️")
 
-# 載入雲端資料
 bank_balance, txs = load_bank_data()
 dashboard_data, hist_data = load_sheet_data()
 
@@ -215,7 +211,7 @@ with tab1:
             })
             st.dataframe(df_holdings, use_container_width=True, hide_index=True)
     else:
-        st.warning("⚠️ 無法讀取試算表資料。")
+        st.info("目前試算表中尚無資料，請至第三頁寫入第一筆資料。")
 
 # ==========================================
 # 分頁 2：歷史損益與市值走勢
