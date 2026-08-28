@@ -35,7 +35,6 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
-# 已更新為您的真實試算表名稱
 SPREADSHEET_NAME = "個人資產" 
 
 def load_sheet_data():
@@ -92,7 +91,6 @@ def load_bank_data():
         return 0.0, []
     try:
         sh = client.open(SPREADSHEET_NAME)
-        # 已更新為您原本的銀行流水分頁名稱：db_bank_ledger
         ws_bank = sh.worksheet("db_bank_ledger")
         b_rows = ws_bank.get_all_values()
         txs = []
@@ -213,7 +211,25 @@ with tab1:
                 "stock_name": "股票名稱", "shares": "總股數", "avg_cost": "平均成本", "total_cost": "總成本",
                 "current_price": "即時現價", "market_value": "即時市值", "realtime_profit": "即時總損益", "change_pct": "即時漲跌幅(%)"
             })
-            st.dataframe(df_holdings, use_container_width=True, hide_index=True)
+            
+            # 套用紅綠燈顏色樣式
+            def color_tw_market(row):
+                styles = [''] * len(row)
+                for i, col in enumerate(row.index):
+                    val = row[col]
+                    if col in ["即時總損益", "總損益(%)", "即時漲跌幅(%)"]:
+                        if pd.notna(val) and isinstance(val, (int, float)):
+                            if val > 0: styles[i] = 'color: #ff4b4b; font-weight: bold;'
+                            elif val < 0: styles[i] = 'color: #09ab3b; font-weight: bold;'
+                return styles
+
+            format_dict = {
+                "總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}",
+                "即時現價": "{:,.2f}", "即時市值": "{:,.0f}", "即時總損益": "{:+,.0f}",
+                "總損益(%)": "{:+.2f}%", "即時漲跌幅(%)": "{:+.2f}%"
+            }
+            styled_df = df_holdings.style.apply(color_tw_market, axis=1).format(format_dict)
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
     else:
         st.info("目前試算表中尚無資料。")
 
@@ -235,7 +251,25 @@ with tab2:
 
         st.divider()
         st.subheader("📜 歷史結算數據列表")
-        st.dataframe(df_hist.drop(columns=["真實日期", "星期"])[::-1], use_container_width=True, hide_index=True)
+        
+        df_hist_display = df_hist.drop(columns=["真實日期", "星期"]).copy()[::-1]
+        
+        def color_history(row):
+            styles = [''] * len(row)
+            for i, col in enumerate(row.index):
+                val = row[col]
+                if col in ["總投資損益", "0050每日損益", "台積電每日損益"]:
+                    if pd.notna(val) and isinstance(val, (int, float)):
+                        if val > 0: styles[i] = 'color: #ff4b4b; font-weight: bold;'
+                        elif val < 0: styles[i] = 'color: #09ab3b; font-weight: bold;'
+            return styles
+
+        format_hist_dict = {
+            "總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}",
+            "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}"
+        }
+        styled_hist = df_hist_display.style.apply(color_history, axis=1).format(format_hist_dict, na_rep="")
+        st.dataframe(styled_hist, use_container_width=True, hide_index=True)
     else:
         st.info("目前暫無每日歷史結算記錄。")
 
@@ -276,6 +310,18 @@ with tab3:
         st.markdown("#### 📋 帳戶流水明細")
         if txs:
             df_bank = pd.DataFrame(txs)
-            st.dataframe(df_bank, use_container_width=True, hide_index=True)
+            
+            def color_bank(row):
+                styles = [''] * len(row)
+                for i, col in enumerate(row.index):
+                    if col == "金額":
+                        val = row[col]
+                        if pd.notna(val) and isinstance(val, (int, float)):
+                            if val > 0: styles[i] = 'color: #ff4b4b; font-weight: bold;'
+                            elif val < 0: styles[i] = 'color: #09ab3b; font-weight: bold;'
+                return styles
+
+            styled_bank = pd.DataFrame(txs).style.apply(color_bank, axis=1).format({"金額": "{:+,.0f}"})
+            st.dataframe(styled_bank, use_container_width=True, hide_index=True)
         else:
             st.info("尚無銀行紀錄。")
