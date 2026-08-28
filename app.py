@@ -86,7 +86,7 @@ st.title("💼 個人資產儀表板 (雲端工作站) ☁️")
 # 4. 讀取資料
 # ==========================================
 client = get_gspread_client()
-db_name = "db_daily_stock_prices"  # 您的試算表名稱
+db_name = "個人資產"  # 您的試算表名稱
 
 def parse_num(val):
     if not val: return 0.0
