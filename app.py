@@ -72,10 +72,26 @@ def load_sheet_data():
                         "台積電每日損益": parse_num(r[13]) if len(r)>13 else 0
                     })
         
-        holdings = [
-            {"stock_name": "元大台灣0050", "shares": 1000, "avg_cost": 150.0, "total_cost": 150000, "current_price": 190.0, "market_value": 190000, "realtime_profit": 40000, "change_pct": 1.2},
-            {"stock_name": "台積電", "shares": 100, "avg_cost": 900.0, "total_cost": 90000, "current_price": 1200.0, "market_value": 120000, "realtime_profit": 30000, "change_pct": 2.5}
-        ]
+        # 精準計算各股市值與正確損益 (現價 × 股數 - 總成本)
+        holdings = []
+        # 範例：0050 (假設 1000 股，平均成本 150，現價以試算表或即時為準)
+        shares_0050, cost_0050, price_0050 = 1000, 150000, 190.0
+        mv_0050 = shares_0050 * price_0050
+        profit_0050 = mv_0050 - cost_0050
+        holdings.append({
+            "stock_name": "元大台灣0050", "shares": shares_0050, "avg_cost": cost_0050/shares_0050, 
+            "total_cost": cost_0050, "current_price": price_0050, "market_value": mv_0050, 
+            "realtime_profit": profit_0050, "change_pct": 1.2
+        })
+
+        shares_tsmc, cost_tsmc, price_tsmc = 100, 90000, 1200.0
+        mv_tsmc = shares_tsmc * price_tsmc
+        profit_tsmc = mv_tsmc - cost_tsmc
+        holdings.append({
+            "stock_name": "台積電", "shares": shares_tsmc, "avg_cost": cost_tsmc/shares_tsmc, 
+            "total_cost": cost_tsmc, "current_price": price_tsmc, "market_value": mv_tsmc, 
+            "realtime_profit": profit_tsmc, "change_pct": 2.5
+        })
         
         return {
             "total_assets": total_assets, "total_cost": total_cost, 
@@ -206,18 +222,24 @@ with tab1:
         st.subheader("📋 持股即時明細")
         if holdings:
             df_holdings = pd.DataFrame(holdings)
-            df_holdings["總損益(%)"] = df_holdings.apply(lambda x: (x["realtime_profit"] / x["total_cost"] * 100) if x["total_cost"] > 0 else 0.0, axis=1)
+            # 各股正確損益金額 = 市值 - 總成本
+            df_holdings["各股損益"] = df_holdings["market_value"] - df_holdings["total_cost"]
+            df_holdings["各股損益(%)"] = df_holdings.apply(lambda x: (x["各股損益"] / x["total_cost"] * 100) if x["total_cost"] > 0 else 0.0, axis=1)
+            
             df_holdings = df_holdings.rename(columns={
                 "stock_name": "股票名稱", "shares": "總股數", "avg_cost": "平均成本", "total_cost": "總成本",
                 "current_price": "即時現價", "market_value": "即時市值", "realtime_profit": "即時總損益", "change_pct": "即時漲跌幅(%)"
             })
             
-            # 套用紅綠燈顏色樣式
+            # 調整欄位順序，將「即時總損益」改為精準的「各股損益」
+            display_cols = ["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]
+            df_display = df_holdings[display_cols].copy()
+
             def color_tw_market(row):
                 styles = [''] * len(row)
                 for i, col in enumerate(row.index):
                     val = row[col]
-                    if col in ["即時總損益", "總損益(%)", "即時漲跌幅(%)"]:
+                    if col in ["各股損益", "各股損益(%)", "即時漲跌幅(%)"]:
                         if pd.notna(val) and isinstance(val, (int, float)):
                             if val > 0: styles[i] = 'color: #ff4b4b; font-weight: bold;'
                             elif val < 0: styles[i] = 'color: #09ab3b; font-weight: bold;'
@@ -225,10 +247,10 @@ with tab1:
 
             format_dict = {
                 "總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}",
-                "即時現價": "{:,.2f}", "即時市值": "{:,.0f}", "即時總損益": "{:+,.0f}",
-                "總損益(%)": "{:+.2f}%", "即時漲跌幅(%)": "{:+.2f}%"
+                "即時現價": "{:,.2f}", "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}",
+                "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"
             }
-            styled_df = df_holdings.style.apply(color_tw_market, axis=1).format(format_dict)
+            styled_df = df_display.style.apply(color_tw_market, axis=1).format(format_dict)
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
     else:
         st.info("目前試算表中尚無資料。")
