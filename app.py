@@ -60,14 +60,16 @@ def load_sheet_data():
         total_profit = 0.0
         
         if len(s_rows) > 1:
-            # 建立價格與漲跌幅字典 (從 H~J 欄)
             price_map = {}
             change_map = {}
+            # 從 H~J 欄讀取收盤價與漲跌幅
             for sr in s_rows[1:]:
                 if len(sr) >= 10 and sr[7]:
                     stock_key = sr[7].strip()
                     price_map[stock_key] = parse_num(sr[8])  # I欄: 即時收盤價
-                    change_map[stock_key] = parse_num(sr[9]) # J欄: 即時漲跌幅
+                    # 特別處理百分比符號與小數點
+                    raw_chg = str(sr[9]).replace('%', '').strip()
+                    change_map[stock_key] = parse_num(raw_chg) # J欄: 即時漲跌幅
 
             # 讀取左側 A~F 欄的持股明細
             for sr in s_rows[1:]:
@@ -84,7 +86,6 @@ def load_sheet_data():
                         total_assets += m_val
                         total_profit += profit
                         
-                        # 尋找對應的現價與漲跌幅
                         curr_price = 0.0
                         chg_pct = 0.0
                         for k, p in price_map.items():
@@ -135,9 +136,8 @@ def load_bank_data():
         return 58661.0, []
     try:
         sh = client.open(SPREADSHEET_NAME)
-        # 嘗試從資產總覽 L2 讀取銀行餘額，若無則從明細計算
         try:
-            ws_summary = sh.worksheet("資ans產總覽")
+            ws_summary = sh.worksheet("資產總覽")
             s_rows = ws_summary.get_all_values()
             if len(s_rows) > 1 and len(s_rows[1]) >= 12:
                 b_val = float(str(s_rows[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
