@@ -67,7 +67,6 @@ def load_sheet_data():
                 if len(sr) >= 10 and sr[7]:
                     stock_key = sr[7].strip()
                     price_map[stock_key] = parse_num(sr[8])  # I欄: 即時收盤價
-                    # 特別處理百分比符號與小數點
                     raw_chg = str(sr[9]).replace('%', '').strip()
                     change_map[stock_key] = parse_num(raw_chg) # J欄: 即時漲跌幅
 
@@ -88,11 +87,14 @@ def load_sheet_data():
                         
                         curr_price = 0.0
                         chg_pct = 0.0
+                        
+                        # 完美比對名稱 (支援 0050 與元大台灣50)
                         for k, p in price_map.items():
-                            if name in k or k in name:
+                            if ("0050" in name and "0050" in k) or ("台積電" in name and "台積電" in k) or (name in k or k in name):
                                 curr_price = p
                                 chg_pct = change_map.get(k, 0.0)
                                 break
+                        
                         if curr_price == 0.0 and shares > 0:
                             curr_price = m_val / shares
 
