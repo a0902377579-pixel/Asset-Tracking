@@ -4,7 +4,6 @@ import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 import gspread
 from google.oauth2.service_account import Credentials
-import json
 from datetime import datetime
 
 # 1. 頁面基本配置
@@ -14,8 +13,8 @@ st.set_page_config(
     page_icon="💼"
 )
 
-# 2. ⚡ 雲端自動刷新
-st_autorefresh(interval=15000, key="realtime_data_refresher")
+# 2. ⚡ 雲端自動刷新 (改為 20 分鐘刷新一次，配合 GoogleFinance 延遲與降低負載)
+st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
 
@@ -269,7 +268,6 @@ with tab1:
             display_cols = ["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]
             df_display = df_holdings[display_cols].copy()
 
-            # 將即時現價也加入紅綠燈色彩渲染（漲紅、跌綠）
             def color_tw_market(row):
                 styles = [''] * len(row)
                 for i, col in enumerate(row.index):
