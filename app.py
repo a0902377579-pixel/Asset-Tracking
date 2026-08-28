@@ -122,14 +122,15 @@ def style_fig(fig, title):
         font=dict(size=16, color="#e0e0e0"), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
         margin=dict(l=20, r=20, t=85, b=30), hovermode="x unified",
-        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#ffffff", spikethickness=2), 
+        # ✨ 追蹤線：純螢光洋紅 (#FF00FF)，加粗 2px
+        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
     return fig
 
 def add_zero_baseline(fig):
-    fig.add_hline(y=0, line_width=3, line_color="#000000")
-    fig.add_hline(y=0, line_dash="dash", line_color="#ffffff", line_width=3)
+    # ✨ 0 基準虛線：純亮金黃色 (#FFD700)，厚度 2px
+    fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -156,7 +157,7 @@ def style_profit_loss(s):
     return ['color: #ff4b4b; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #09ab3b; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else '') for v in s]
 
 # ==========================================
-# 4. 資料全域預處理 (提早處理，優化效能)
+# 4. 資料全域預處理
 # ==========================================
 bank_balance, txs = load_bank_data()
 dashboard_data, hist_data = load_sheet_data()
@@ -188,51 +189,54 @@ if txs:
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
 
 # ==========================================
-# 5. 側邊欄：控制中心與輸入表單
+# 5. 側邊欄：控制中心與切換輸入表單
 # ==========================================
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
     st.info("💡 資料寫入後，儀表板將自動重新整理。")
     
-    # --- 銀行流水平單 ---
-    st.markdown("### 🏦 新增銀行金流")
-    with st.form("bank_record_form"):
-        rec_date = st.date_input("入帳日期")
-        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
-        amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
-        note = st.text_input("備註說明")
-        
-        if st.form_submit_button("寫入金流紀錄"):
-            if amount != 0:
-                try:
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    sh.worksheet("db_bank_ledger").append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
-                    st.success("紀錄成功寫入！")
-                    st.rerun()
-                except Exception as e: st.error(f"寫入失敗: {e}")
-            else: st.warning("請輸入有效金額。")
-            
-    st.divider()
+    # ✨ 側邊欄設計兩個按鈕選項 (Tabs)
+    tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
+    # --- 銀行流水平單 ---
+    with tab_bank:
+        st.markdown("### 新增銀行金流")
+        with st.form("bank_record_form"):
+            rec_date = st.date_input("入帳日期")
+            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
+            amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
+            note = st.text_input("備註說明")
+            
+            if st.form_submit_button("寫入金流紀錄"):
+                if amount != 0:
+                    try:
+                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh.worksheet("db_bank_ledger").append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
+                        st.success("紀錄成功寫入！")
+                        st.rerun()
+                    except Exception as e: st.error(f"寫入失敗: {e}")
+                else: st.warning("請輸入有效金額。")
+                
     # --- 股票交易平單 ---
-    st.markdown("### 📈 新增股票交易")
-    with st.form("stock_record_form"):
-        s_date = st.date_input("交易日期")
-        s_name = st.text_input("股票名稱 (例: 元大台灣0050)")
-        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
-        s_price = st.number_input("成交單價", value=0.0, step=0.1)
-        s_fee = st.number_input("手續費/稅金", value=0.0, step=1.0)
-        
-        if st.form_submit_button("寫入股票紀錄"):
-            if s_shares != 0 and s_price > 0:
-                try:
-                    total_amt = (s_shares * s_price) + s_fee
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    sh.worksheet("db_stock_transactions").append_row([str(s_date), s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
-                    st.success("股票紀錄成功寫入！")
-                    st.rerun()
-                except Exception as e: st.error(f"寫入失敗: {e}")
-            else: st.warning("請輸入有效的股數與價格。")
+    with tab_stock:
+        st.markdown("### 新增股票交易")
+        with st.form("stock_record_form"):
+            s_date = st.date_input("交易日期")
+            s_name = st.text_input("股票名稱 (例: 元大台灣0050)")
+            s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
+            s_price = st.number_input("成交單價", value=0.0, step=0.1)
+            s_fee = st.number_input("手續費/稅金", value=0.0, step=1.0)
+            
+            if st.form_submit_button("寫入股票紀錄"):
+                if s_shares != 0 and s_price > 0:
+                    try:
+                        total_amt = (s_shares * s_price) + s_fee
+                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh.worksheet("db_stock_transactions").append_row([str(s_date), s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
+                        st.success("股票紀錄成功寫入！")
+                        st.rerun()
+                    except Exception as e: st.error(f"寫入失敗: {e}")
+                else: st.warning("請輸入有效的股數與價格。")
 
 # ==========================================
 # 主畫面開始
@@ -240,7 +244,6 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-# UI 改為精簡的兩個 Tab
 tab1, tab2 = st.tabs(["📊 總覽儀表板 (含歷史與金流表)", "🌌 終極數據戰情室 (21種圖表)"])
 
 # ------------------------------------------
@@ -270,7 +273,6 @@ with tab1:
 
     st.divider()
     
-    # --- 將歷史報表與金流明細整合到下方 ---
     col_hist, col_bank = st.columns(2)
     
     with col_hist:
@@ -286,7 +288,6 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            # 整理一下用來顯示的 Bank 表格
             df_bank_display = df_txs[["日期", "類型", "金額", "備註"]].copy()
             st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
         else:
@@ -392,7 +393,7 @@ with tab2:
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
-            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#ffffff", width=3, dash="dash"))
+            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
 
