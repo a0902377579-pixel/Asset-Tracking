@@ -22,7 +22,7 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 @st.cache_resource(ttl=600)
 def get_gspread_client():
     try:
-        creds_dict = json.loads(st.secrets["gcp_json"])
+        creds_dict = dict(st.secrets["gcp_json"])
         creds = Credentials.from_service_account_info(
             creds_dict, 
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
