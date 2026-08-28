@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="個人旗艦資產工作站", 
     layout="wide", 
     page_icon="💎", 
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # 將側邊欄預設為展開
 )
 
 # 20分鐘自動刷新 (1,200,000 毫秒)
@@ -110,39 +110,26 @@ def load_bank_data():
     except: return 58661.0, []
 
 # ==========================================
-# 3. 視覺化引擎 (Plotly 華麗格式化函數)
+# 3. 視覺化引擎與樣式函數
 # ==========================================
-C_LBL = "#FFD700"  # 亮金黃 (標籤)
-C_VAL = "#00E5FF"  # 霓虹青 (數值)
-C_PCT = "#00E676"  # 螢光綠 (百分比)
+C_LBL = "#FFD700"  # 亮金黃
+C_VAL = "#00E5FF"  # 霓虹青
+C_PCT = "#00E676"  # 螢光綠
 
 def style_fig(fig, title):
-    """套用無邊界科技感主題，加入高對比的亮色系游標追蹤虛線"""
     fig.update_layout(
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
-        font=dict(size=16, color="#e0e0e0"), 
-        template="plotly_dark", 
-        paper_bgcolor="rgba(0,0,0,0)", 
-        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(size=16, color="#e0e0e0"), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
-        margin=dict(l=20, r=20, t=85, b=30),
-        hovermode="x unified",
-        xaxis=dict(
-            showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d",
-            # ✨ 游標追蹤虛線：改為「螢光洋紅 (#FF00FF)」
-            showspikes=True, spikemode="across", spikedash="dash", 
-            spikecolor="#FF00FF", spikethickness=2
-        ), 
-        yaxis=dict(
-            showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title=""
-        )
+        margin=dict(l=20, r=20, t=85, b=30), hovermode="x unified",
+        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#ffffff", spikethickness=2), 
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
     return fig
 
 def add_zero_baseline(fig):
-    """✨ 為圖表加入亮金黃色的 0 基準虛線"""
-    # 移除黑白相間，改用單一的亮金黃色虛線
-    fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
+    fig.add_hline(y=0, line_width=3, line_color="#000000")
+    fig.add_hline(y=0, line_dash="dash", line_color="#ffffff", line_width=3)
     return fig
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -169,15 +156,92 @@ def style_profit_loss(s):
     return ['color: #ff4b4b; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #09ab3b; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else '') for v in s]
 
 # ==========================================
+# 4. 資料全域預處理 (提早處理，優化效能)
+# ==========================================
+bank_balance, txs = load_bank_data()
+dashboard_data, hist_data = load_sheet_data()
+
+df_h, df_hist, df_txs = None, None, None
+
+if dashboard_data and dashboard_data.get("holdings"):
+    df_h = pd.DataFrame(dashboard_data["holdings"])
+    df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
+
+if hist_data:
+    df_hist = pd.DataFrame(hist_data)
+    df_hist["真實日期"] = pd.to_datetime(df_hist["日期"]).dt.strftime('%Y-%m-%d')
+    df_hist = df_hist.sort_values("真實日期")
+    df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
+    df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
+    df_hist["單日漲跌幅(%)"] = (df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1) * 100).fillna(0)
+    df_hist["最高市值"] = df_hist["總市值"].cummax()
+    df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
+    df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
+    df_hist["星期"] = pd.to_datetime(df_hist["真實日期"]).dt.weekday.map(WEEK_MAP)
+
+if txs:
+    df_txs = pd.DataFrame(txs)
+    df_txs['日期_dt'] = pd.to_datetime(df_txs['日期']).dt.strftime('%Y-%m-%d')
+    df_txs = df_txs.sort_values('日期_dt')
+    df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
+    df_txs['金額絕對值'] = df_txs['金額'].abs()
+    df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
+
+# ==========================================
+# 5. 側邊欄：控制中心與輸入表單
+# ==========================================
+with st.sidebar:
+    st.title("⚙️ 異動控制中心")
+    st.info("💡 資料寫入後，儀表板將自動重新整理。")
+    
+    # --- 銀行流水平單 ---
+    st.markdown("### 🏦 新增銀行金流")
+    with st.form("bank_record_form"):
+        rec_date = st.date_input("入帳日期")
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
+        amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
+        note = st.text_input("備註說明")
+        
+        if st.form_submit_button("寫入金流紀錄"):
+            if amount != 0:
+                try:
+                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    sh.worksheet("db_bank_ledger").append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
+                    st.success("紀錄成功寫入！")
+                    st.rerun()
+                except Exception as e: st.error(f"寫入失敗: {e}")
+            else: st.warning("請輸入有效金額。")
+            
+    st.divider()
+    
+    # --- 股票交易平單 ---
+    st.markdown("### 📈 新增股票交易")
+    with st.form("stock_record_form"):
+        s_date = st.date_input("交易日期")
+        s_name = st.text_input("股票名稱 (例: 元大台灣0050)")
+        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
+        s_price = st.number_input("成交單價", value=0.0, step=0.1)
+        s_fee = st.number_input("手續費/稅金", value=0.0, step=1.0)
+        
+        if st.form_submit_button("寫入股票紀錄"):
+            if s_shares != 0 and s_price > 0:
+                try:
+                    total_amt = (s_shares * s_price) + s_fee
+                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    sh.worksheet("db_stock_transactions").append_row([str(s_date), s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
+                    st.success("股票紀錄成功寫入！")
+                    st.rerun()
+                except Exception as e: st.error(f"寫入失敗: {e}")
+            else: st.warning("請輸入有效的股數與價格。")
+
+# ==========================================
 # 主畫面開始
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-bank_balance, txs = load_bank_data()
-dashboard_data, hist_data = load_sheet_data()
-
-tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 終極數據戰情室 (21種圖表)", "📜 歷史報表", "🏦 金流明細"])
+# UI 改為精簡的兩個 Tab
+tab1, tab2 = st.tabs(["📊 總覽儀表板 (含歷史與金流表)", "🌌 終極數據戰情室 (21種圖表)"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -192,10 +256,7 @@ with tab1:
         c4.markdown(create_colorful_card("帳面總損益", f"{d['total_profit']:+,.0f}", "🔥", is_profit=True, num_val=d['total_profit']), unsafe_allow_html=True)
         c5.markdown(create_colorful_card("總獲利率 (%)", f"{d['profit_rate']:+.2f}%", "📈", is_profit=True, num_val=d['profit_rate']), unsafe_allow_html=True)
 
-        if d.get("holdings"):
-            df_h = pd.DataFrame(d["holdings"])
-            df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
-            
+        if df_h is not None:
             st.subheader("📋 投資組合即時明細")
             df_display = df_h.rename(columns={
                 "stock_name":"股票名稱", "shares":"總股數", "avg_cost":"平均成本", 
@@ -205,17 +266,37 @@ with tab1:
             styled_df = df_display.style.apply(style_profit_loss, subset=["即時現價", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]) \
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
-            
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
+    st.divider()
+    
+    # --- 將歷史報表與金流明細整合到下方 ---
+    col_hist, col_bank = st.columns(2)
+    
+    with col_hist:
+        st.subheader("📜 歷史每日結算報表")
+        if df_hist is not None:
+            df_hist_display = df_hist.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "星期", "真實日期"], errors='ignore').copy()[::-1]
+            styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "ROI(%)"]) \
+                            .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "ROI(%)": "{:+.2f}%"})
+            st.dataframe(styled_hist, use_container_width=True, hide_index=True)
+        else:
+            st.info("目前暫無歷史紀錄。")
+            
+    with col_bank:
+        st.subheader("🏦 銀行帳戶資金流水明細")
+        if df_txs is not None:
+            # 整理一下用來顯示的 Bank 表格
+            df_bank_display = df_txs[["日期", "類型", "金額", "備註"]].copy()
+            st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
+        else:
+            st.info("尚無銀行紀錄。")
+
 # ------------------------------------------
-# 分頁 2：🌌 終極數據戰情室 (21 張滿配版圖表)
+# 分頁 2：🌌 終極數據戰情室 (21 張圖表)
 # ------------------------------------------
 with tab2:
-    if dashboard_data and dashboard_data.get("holdings"):
-        df_h = pd.DataFrame(dashboard_data["holdings"])
-        df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
-        
+    if df_h is not None:
         st.markdown("### 🔍 展區一：資產版圖與持股透視")
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
@@ -259,18 +340,7 @@ with tab2:
 
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
-    if hist_data:
-        df_hist = pd.DataFrame(hist_data)
-        df_hist["真實日期"] = pd.to_datetime(df_hist["日期"]).dt.strftime('%Y-%m-%d')
-        df_hist = df_hist.sort_values("真實日期")
-        
-        df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
-        df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
-        df_hist["單日漲跌幅(%)"] = (df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1) * 100).fillna(0)
-        df_hist["最高市值"] = df_hist["總市值"].cummax()
-        df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
-        df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
-
+    if df_hist is not None:
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
@@ -322,8 +392,7 @@ with tab2:
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
-            # 散點圖特製的對角線 (損益兩平線)
-            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
+            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#ffffff", width=3, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
 
@@ -367,7 +436,6 @@ with tab2:
             st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True)
 
         with c2_18:
-            df_hist["星期"] = pd.to_datetime(df_hist["真實日期"]).dt.weekday.map(WEEK_MAP)
             dow_avg = df_hist.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
             fig18 = style_fig(fig18, "18. 星期別平均波動分析")
@@ -377,14 +445,7 @@ with tab2:
 
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
-    if txs:
-        df_txs = pd.DataFrame(txs)
-        df_txs['日期_dt'] = pd.to_datetime(df_txs['日期']).dt.strftime('%Y-%m-%d')
-        df_txs = df_txs.sort_values('日期_dt')
-        df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
-        df_txs['金額絕對值'] = df_txs['金額'].abs()
-        df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
-
+    if df_txs is not None:
         c2_19, c2_20, c2_21 = st.columns(3)
         with c2_19:
             fig19 = px.sunburst(df_txs, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
@@ -405,53 +466,4 @@ with tab2:
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
     else:
-        st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至「金流明細」新增紀錄。")
-
-# ------------------------------------------
-# 分頁 3：歷史報表 
-# ------------------------------------------
-with tab3:
-    st.subheader("📜 歷史每日結算報表")
-    if hist_data:
-        df_hist_display = df_hist.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "星期"], errors='ignore').copy()[::-1]
-        styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "ROI(%)"]) \
-                        .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "ROI(%)": "{:+.2f}%"})
-        st.dataframe(styled_hist, use_container_width=True, hide_index=True)
-    else:
-        st.info("目前暫無歷史紀錄。")
-
-# ------------------------------------------
-# 分頁 4：金流明細與記帳
-# ------------------------------------------
-with tab4:
-    st.subheader("🏦 銀行帳戶資金流水")
-    col_form, col_list = st.columns([1, 2])
-    
-    with col_form:
-        st.markdown("#### ✍️ 記帳 / 資金異動")
-        with st.form("bank_record_form"):
-            rec_date = st.date_input("日期")
-            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
-            amount = st.number_input("金額 (元) 【扣款請直接輸入負數】", value=0.0, step=100.0)
-            note = st.text_input("備註說明")
-            
-            if st.form_submit_button("寫入試算表"):
-                if amount != 0:
-                    try:
-                        client = get_gspread_client()
-                        sh = client.open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
-                        st.success("紀錄成功寫入！畫面將自動更新。")
-                        st.rerun()
-                    except Exception as e: 
-                        st.error(f"寫入失敗: {e}")
-                else: 
-                    st.warning("請輸入有效金額。")
-
-    with col_list:
-        st.markdown("#### 📋 帳戶流水明細")
-        if txs:
-            df_bank = pd.DataFrame(txs)
-            st.dataframe(df_bank.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
-        else:
-            st.info("尚無銀行紀錄。")
+        st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至左側控制中心新增紀錄。")
