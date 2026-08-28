@@ -59,30 +59,32 @@ def load_sheet_data():
                 except: 
                     return 0.0
             
-            # F欄(索引5)=總累積成本, G欄(索引6)=總市值, H欄(索引7)=總投資損益
+            # F欄(5)=總累積成本, G欄(6)=總市值, H欄(7)=總投資損益
             if len(last_row) > 7:
                 total_cost = parse_num(last_row[5])
                 total_assets = parse_num(last_row[6])
                 total_profit = parse_num(last_row[7])
                 profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
             
-            # 精準從試算表最後一列抓取真實數據：
-            # B欄(1)=0050收盤價, C欄(2)=0050股數, D欄(3)=2330收盤價, E欄(4)=2330股數
-            # M欄(12)=0050損益(5084), N欄(13)=台積電損益(46)
+            # 💡 精準對應您截圖中的正確欄位：
+            # B欄(1)=0050收盤價, C欄(2)=2330收盤價
+            # D欄(3)=0050累積股數, E欄(4)=2330累積股數
+            # M欄(12)=0050每日損益, N欄(13)=台積電每日損益
             try:
                 price_0050 = parse_num(last_row[1])   # B欄: 0050收盤價
-                shares_0050 = parse_num(last_row[2])  # C欄: 0050累積股數 (1809)
-                price_tsmc = parse_num(last_row[3])   # D欄: 2330收盤價
-                shares_tsmc = parse_num(last_row[4])  # E欄: 2330累積股數 (50)
+                price_tsmc = parse_num(last_row[2])   # C欄: 2330收盤價
+                shares_0050 = parse_num(last_row[3])  # D欄: 0050累積股數
+                shares_tsmc = parse_num(last_row[4])  # E欄: 2330累積股數
                 
-                profit_0050 = parse_num(last_row[12]) # M欄: 0050每日損益 (5084)
-                profit_tsmc = parse_num(last_row[13]) # N欄: 台積電每日損益 (46)
+                profit_0050 = parse_num(last_row[12]) # M欄: 0050每日損益
+                profit_tsmc = parse_num(last_row[13]) # N欄: 台積電每日損益
                 
-                # 計算個股市值與成本
+                # 計算 0050
                 mv_0050 = shares_0050 * price_0050
                 cost_0050 = mv_0050 - profit_0050
                 avg_cost_0050 = cost_0050 / shares_0050 if shares_0050 > 0 else 0
                 
+                # 計算台積電
                 mv_tsmc = shares_tsmc * price_tsmc
                 cost_tsmc = mv_tsmc - profit_tsmc
                 avg_cost_tsmc = cost_tsmc / shares_tsmc if shares_tsmc > 0 else 0
@@ -109,15 +111,15 @@ def load_sheet_data():
                     "change_pct": 0.1
                 })
             except Exception as ex:
-                print("解析明細錯誤:", ex)
+                print("明細解析錯誤:", ex)
 
             # 建立歷史數據列表
             for r in rows[1:]:
-                if len(r) >= 10:
+                if len(r) >= 14:
                     hist_data.append({
                         "日期": r[0], "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), 
-                        "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]) if len(r)>12 else 0,
-                        "台積電每日損益": parse_num(r[13]) if len(r)>13 else 0
+                        "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]),
+                        "台積電每日損益": parse_num(r[13])
                     })
         
         return {
