@@ -6,17 +6,20 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 
+# ==========================================
 # 1. 頁面基本配置
+# ==========================================
 st.set_page_config(
     page_title="個人資產儀表板 (雲端工作站)",
     layout="wide",
     page_icon="💼"
 )
 
-# 2. ⚡ 雲端自動刷新 (改為 20 分鐘刷新一次，配合 GoogleFinance 延遲與降低負載)
+# 2. ⚡ 雲端自動刷新 (改為 20 分鐘 = 1200000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
+SPREADSHEET_NAME = "個人資產" 
 
 # ==========================================
 # 3. 雲端 Google 試算表連線設定
@@ -34,8 +37,6 @@ def get_gspread_client():
         st.error(f"Google 金鑰讀取失敗，請檢查 Secrets 設定: {e}")
         return None
 
-SPREADSHEET_NAME = "個人資產" 
-
 def load_sheet_data():
     client = get_gspread_client()
     if not client:
@@ -49,7 +50,7 @@ def load_sheet_data():
             except: 
                 return 0.0
 
-        # 1. 直接從「資產總覽」讀取正確的持股與成本數據
+        # 1. 讀取「資產總覽」
         ws_summary = sh.worksheet("資產總覽")
         s_rows = ws_summary.get_all_values()
         
@@ -61,6 +62,7 @@ def load_sheet_data():
         if len(s_rows) > 1:
             price_map = {}
             change_map = {}
+            # 先抓取即時報價與漲跌幅對照
             for sr in s_rows[1:]:
                 if len(sr) >= 10 and sr[7]:
                     stock_key = sr[7].strip()
@@ -68,6 +70,7 @@ def load_sheet_data():
                     raw_chg = str(sr[9]).replace('%', '').strip()
                     change_map[stock_key] = parse_num(raw_chg) # J欄: 即時漲跌幅
 
+            # 讀取主要持股清單
             for sr in s_rows[1:]:
                 if len(sr) >= 6 and sr[0]:
                     name = sr[0].strip() # A欄: 股票名稱
@@ -113,7 +116,8 @@ def load_sheet_data():
         hist_data = []
         if len(rows) > 1:
             for r in rows[1:]:
-                if len(r) >= 14:
+                # 加入過濾條件，避免抓到空行
+                if len(r) >= 14 and str(r[0]).strip() != "":
                     hist_data.append({
                         "日期": r[0], "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), 
                         "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]),
@@ -134,6 +138,7 @@ def load_bank_data():
         return 58661.0, []
     try:
         sh = client.open(SPREADSHEET_NAME)
+        # 1. 抓取銀行餘額
         try:
             ws_summary = sh.worksheet("資產總覽")
             s_rows = ws_summary.get_all_values()
@@ -144,12 +149,14 @@ def load_bank_data():
         except:
             b_val = 58661.0
 
+        # 2. 抓取帳戶流水明細
         ws_bank = sh.worksheet("db_bank_ledger")
         b_rows = ws_bank.get_all_values()
         txs = []
         if len(b_rows) > 1:
             for r in b_rows[1:]:
-                if len(r) >= 4:
+                # ✨ 防呆機制：日期不是空白的才讀取，自動略過不小心產生的空行
+                if len(r) >= 4 and str(r[0]).strip() != "":
                     try:
                         amt = float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)
                     except:
@@ -160,7 +167,9 @@ def load_bank_data():
     except Exception as e:
         return 58661.0, []
 
-# --- 🌈 視覺優化版卡片 ---
+# ==========================================
+# UI 元件：彩色資訊卡片
+# ==========================================
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
         bg_gradient = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)"
@@ -206,6 +215,9 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
     """
     return html
 
+# ==========================================
+# 主畫面開始
+# ==========================================
 st.title("💼 個人資產儀表板 (雲端工作站) ☁️")
 
 bank_balance, txs = load_bank_data()
@@ -213,9 +225,9 @@ dashboard_data, hist_data = load_sheet_data()
 
 tab1, tab2, tab3 = st.tabs(["📊 即時資產現況", "📈 歷史損益與市值走勢", "🏦 銀行帳戶明細"])
 
-# ==========================================
+# ------------------------------------------
 # 分頁 1：即時資產現況
-# ==========================================
+# ------------------------------------------
 with tab1:
     if dashboard_data:
         total_assets = dashboard_data.get("total_assets", 0.0)
@@ -288,9 +300,9 @@ with tab1:
     else:
         st.info("目前試算表中尚無資料。")
 
-# ==========================================
+# ------------------------------------------
 # 分頁 2：歷史損益與市值走勢
-# ==========================================
+# ------------------------------------------
 with tab2:
     st.subheader("📈 歷史市值與累積損益走勢")
     if hist_data:
@@ -328,9 +340,9 @@ with tab2:
     else:
         st.info("目前暫無每日歷史結算記錄。")
 
-# ==========================================
+# ------------------------------------------
 # 分頁 3：銀行帳戶明細與記帳表單
-# ==========================================
+# ------------------------------------------
 with tab3:
     st.subheader("🏦 銀行帳戶資金流水")
     st.markdown(create_colorful_card("銀行帳戶活存總結餘", f"NT$ {bank_balance:,.0f}", icon="💰", theme="gold"), unsafe_allow_html=True)
@@ -353,7 +365,11 @@ with tab3:
                         client = get_gspread_client()
                         sh = client.open(SPREADSHEET_NAME)
                         ws_bank = sh.worksheet("db_bank_ledger")
-                        ws_bank.append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
+                        # ✨ 修正點：帶入真實數字 amount，並加上 value_input_option="USER_ENTERED" 讓 Google Sheet 判別為數字
+                        ws_bank.append_row(
+                            [str(rec_date), rec_type, amount, note], 
+                            value_input_option="USER_ENTERED"
+                        )
                         st.success("紀錄成功寫入 Google 試算表！畫面將自動更新。")
                         st.rerun()
                     except Exception as e:
