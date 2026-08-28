@@ -8,32 +8,60 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# 1. 頁面基本配置與自訂 CSS
+# 1. 頁面基本配置與頂級美化 CSS
 # ==========================================
 st.set_page_config(
     page_title="個人旗艦資產工作站", 
     layout="wide", 
     page_icon="💎", 
-    initial_sidebar_state="expanded" # 將側邊欄預設為展開
+    initial_sidebar_state="expanded"
 )
 
 # 20分鐘自動刷新 (1,200,000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# 注入科技感 CSS 背景與卡片特效
+# ✨ 這裡針對你嫌棄的「藍色直角方框」進行了暴力美化：大圓角、滿版延伸、漸層與陰影
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    
+    /* 調整所有 Tab 分頁的容器間距 */
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 12px; 
+        background-color: transparent;
+        padding-bottom: 10px;
+    }
+    
+    /* 未選中的 Tab 樣式：圓角、深色背景、質感邊框 */
     .stTabs [data-baseweb="tab"] { 
         background-color: #1e2128; 
-        border-radius: 8px 8px 0px 0px; 
-        padding: 12px 24px; 
-        border: 1px solid #333;
-        border-bottom: none;
+        border-radius: 12px !important; /* 消除直角，改為圓滑大圓角 */
+        padding: 14px 28px !important; 
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #a0a5b1 !important;
+        font-weight: 600;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
     }
-    .stTabs [aria-selected="true"] { background-color: #3498db; color: white !important; font-weight: bold; }
-    div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
+    
+    /* 滑鼠懸停時的微光效果 */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #2a2e39;
+        color: #ffffff !important;
+        border-color: rgba(52, 152, 219, 0.5) !important;
+    }
+
+    /* 被選中 (Active) 的 Tab 樣式：亮眼漸層、強烈陰影、完美消除四個直角 */
+    .stTabs [aria-selected="true"] { 
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
+        color: white !important; 
+        font-weight: bold !important; 
+        border-radius: 12px !important; 
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4) !important;
+    }
+    
+    div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,14 +150,12 @@ def style_fig(fig, title):
         font=dict(size=16, color="#e0e0e0"), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
         margin=dict(l=20, r=20, t=85, b=30), hovermode="x unified",
-        # ✨ 追蹤線：純螢光洋紅 (#FF00FF)，加粗 2px
         xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
     return fig
 
 def add_zero_baseline(fig):
-    # ✨ 0 基準虛線：純亮金黃色 (#FFD700)，厚度 2px
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
 
@@ -195,10 +221,8 @@ with st.sidebar:
     st.title("⚙️ 異動控制中心")
     st.info("💡 資料寫入後，儀表板將自動重新整理。")
     
-    # ✨ 側邊欄設計兩個按鈕選項 (Tabs)
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
-    # --- 銀行流水平單 ---
     with tab_bank:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
@@ -217,7 +241,6 @@ with st.sidebar:
                     except Exception as e: st.error(f"寫入失敗: {e}")
                 else: st.warning("請輸入有效金額。")
                 
-    # --- 股票交易平單 ---
     with tab_stock:
         st.markdown("### 新增股票交易")
         with st.form("stock_record_form"):
