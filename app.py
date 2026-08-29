@@ -140,7 +140,8 @@ def load_bank_data():
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
         
-        txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0), "備註": r[3].strip()} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 4 and str(r[0]).strip() != ""]
+        # 移除備註的讀取，讓資料結構更乾淨
+        txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 3 and str(r[0]).strip() != ""]
         return b_val, txs
     except: return 58661.0, []
 
@@ -291,20 +292,28 @@ with st.sidebar:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
             rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today())
-            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
-            amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
-            note = st.text_input("備註說明")
+            # ✨ 精簡下拉選項
+            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"])
+            # ✨ 移除負數提示，強制轉換為絕對值
+            amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0)
             
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
-                if amount != 0:
+                if amount > 0:
                     try:
                         fmt_date = rec_date.strftime('%Y/%m/%d')
+                        # ✨ 自動正負號判斷引擎
+                        if rec_type in ["現金", "跨行轉", "委代入", "電匯"]:
+                            final_amount = amount
+                        else:  # 轉帳提、證券款
+                            final_amount = -amount
+                            
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, amount, note], value_input_option="USER_ENTERED")
+                        # 補上一個空字串 "" 以防破壞原有的四格欄位結構
+                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount, ""], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入！")
                         st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
-                else: st.warning("請輸入有效金額。")
+                else: st.warning("請輸入有效金額 (大於 0)。")
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
@@ -401,7 +410,8 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
+            # ✨ 徹底移除 "備註" 欄位，僅保留日期、類型、金額
+            df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
                             .set_properties(subset=['類型'], **{'text-align': 'left'})
@@ -585,5 +595,3 @@ with tab2:
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
-    else:
-        st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至左側控制中心新增紀錄。")
