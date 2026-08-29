@@ -19,52 +19,55 @@ st.set_page_config(
 
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# ✨ 終極 CSS 美化：流線大膠囊狀滿版 Tab 按鈕
+# ✨ 終極 CSS 暴力美化：強制消滅原生直角與紅色底線，打造純粹大膠囊！
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 強制 Tab 容器滿版並設定間距 */
-    .stTabs [data-baseweb="tab-list"] { 
+    /* 容器滿版並設定間距，消滅原生底線 */
+    div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
-        gap: 15px; 
-        background-color: transparent;
+        gap: 15px !important; 
+        background-color: transparent !important;
+        border-bottom: none !important;
     }
     
-    /* 未選中的 Tab：大圓角(膠囊狀)、強制撐滿寬度、無邊界感 */
-    .stTabs [data-baseweb="tab"] { 
+    /* 徹底隱藏選中時原生的醜陋底線 (紅線/藍線) */
+    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
+        display: none !important;
+        background-color: transparent !important;
+    }
+    
+    /* 未選中的 Tab：完美 50px 膠囊狀 */
+    button[data-baseweb="tab"] { 
         flex: 1 1 0 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
         background-color: #1e2128 !important; 
-        border-radius: 50px !important;  /* 改為 50px 形成完美膠囊外型 */
-        padding: 15px 0px !important; 
-        border: none !important;
-        color: #a0a5b1 !important;
-        font-weight: 600;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        border-radius: 50px !important;  
+        padding: 12px 0px !important; 
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        margin: 0 !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
     
-    /* 確保 Tab 內的文字置中且撐開 */
-    .stTabs [data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
+    /* 確保字體顏色與置中 */
+    button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
         width: 100%;
         text-align: center;
-        font-size: 1.1rem;
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        color: #a0a5b1 !important;
     }
     
-    /* 隱藏底部的原生高亮線條 */
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none !important;
-    }
-    
-    /* 被選中 (Active) 的 Tab：亮眼漸層、發光陰影 */
-    .stTabs [aria-selected="true"] { 
+    /* 被選中 (Active) 的 Tab：發光漸層 */
+    button[data-baseweb="tab"][aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
         color: white !important; 
         font-weight: bold !important; 
-        box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
     
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
@@ -114,12 +117,10 @@ def load_sheet_data():
                     if cost > 0 or m_val > 0:
                         total_cost += cost; total_assets += m_val; total_profit += profit
                         curr_price, chg_pct = 0.0, 0.0
-                        
                         for k, p in price_map.items():
                             if ("0050" in name and "0050" in k) or ("台積電" in name and "台積電" in k) or (name in k or k in name):
                                 curr_price, chg_pct = p, change_map.get(k, 0.0)
                                 break
-                        
                         if curr_price == 0.0 and shares > 0: curr_price = m_val / shares
                         holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
 
@@ -194,7 +195,7 @@ dashboard_data, hist_data = load_sheet_data()
 
 df_h, df_hist, df_txs = None, None, None
 
-# ✨ 移除了含有代號的台積電，直接統一使用中文
+# 全域預設股價字典，確保在宣告表單前有資料
 stock_price_dict = {"元大台灣0050": 0.0, "台積電": 0.0}
 stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 
@@ -212,7 +213,6 @@ if hist_data:
     df_hist = pd.DataFrame(hist_data)
     df_hist["真實日期"] = pd.to_datetime(df_hist["日期"], errors='coerce')
     df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
-    
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
     df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
     
@@ -229,7 +229,6 @@ if txs:
     df_txs = df_txs.dropna(subset=['日期_dt']).sort_values('日期_dt')
     df_txs['星期'] = df_txs['日期_dt'].dt.weekday.map(WEEK_MAP)
     df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
-    
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
@@ -237,6 +236,45 @@ if txs:
 # ==========================================
 # 5. 側邊欄：控制中心與聯動輸入表單
 # ==========================================
+# 初始化 Session State，避免第一次載入時報錯
+if "stock_selector" not in st.session_state:
+    st.session_state.stock_selector = stock_options[0]
+if "s_price" not in st.session_state:
+    st.session_state.s_price = float(stock_price_dict.get(stock_options[0], 0.0))
+if "s_shares" not in st.session_state:
+    st.session_state.s_shares = 0
+if "s_fee" not in st.session_state:
+    st.session_state.s_fee = 0.0
+
+# 聯動更新股價
+def on_stock_change():
+    sel = st.session_state.stock_selector
+    if sel != "其他 (手動輸入新股)":
+        st.session_state.s_price = float(stock_price_dict.get(sel, 0.0))
+    else:
+        st.session_state.s_price = 0.0
+    calc_fee()
+
+# 聯動精算手續費
+def calc_fee():
+    shares = st.session_state.s_shares
+    price = st.session_state.s_price
+    name = st.session_state.stock_selector
+    if name == "其他 (手動輸入新股)":
+        name = st.session_state.get("s_name_input", "")
+        
+    if shares == 0 or price == 0.0:
+        st.session_state.s_fee = 0.0
+        return
+        
+    cost = abs(shares) * price
+    broker_fee = max(20, int(cost * 0.001425 * 0.6))
+    tax = 0
+    if shares < 0: 
+        tax_rate = 0.001 if "00" in name else 0.003
+        tax = int(cost * tax_rate)
+    st.session_state.s_fee = float(broker_fee + tax)
+
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
@@ -264,53 +302,28 @@ with st.sidebar:
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
-        
-        selected_stock = st.selectbox("選擇操作標的", stock_options)
+        # 股票名稱改由 Selectbox 驅動，綁定 on_change 瞬間觸發更新
+        selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change)
         
         if selected_stock == "其他 (手動輸入新股)":
-            s_name = st.text_input("輸入股票名稱")
-            default_price = 0.0
-        else:
-            s_name = selected_stock
-            default_price = stock_price_dict.get(s_name, 0.0)
-
-        def calc_fee():
-            shares = st.session_state.s_shares
-            price = st.session_state.s_price
-            name = st.session_state.s_name if selected_stock == "其他 (手動輸入新股)" else selected_stock
-            if shares == 0 or price == 0.0:
-                st.session_state.s_fee = 0.0
-                return
+            st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee)
             
-            cost = abs(shares) * price
-            broker_fee = max(20, int(cost * 0.001425 * 0.6))
-            tax = 0
-            if shares < 0: 
-                tax_rate = 0.001 if "00" in name else 0.003
-                tax = int(cost * tax_rate)
-            st.session_state.s_fee = float(broker_fee + tax)
-
-        s_date = st.date_input("交易日期", key="s_date")
-        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1, key="s_shares", on_change=calc_fee)
-        s_price = st.number_input("成交單價", value=float(default_price), step=0.1, key="s_price", on_change=calc_fee)
-        
-        base_cost = abs(s_shares) * s_price
-        broker_fee = max(20, int(base_cost * 0.001425 * 0.6)) if base_cost > 0 else 0
-        tax = 0
-        if s_shares < 0: 
-            tax_rate = 0.001 if "00" in s_name else 0.003
-            tax = int(base_cost * tax_rate)
-        auto_calculated_fee = float(broker_fee + tax)
-        
-        s_fee = st.number_input("手續費/稅金 (已自動帶入中信費率)", value=auto_calculated_fee, step=1.0, key="s_fee")
+        s_date = st.date_input("交易日期")
+        st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee)
+        st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee)
+        st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee")
         
         if st.button("寫入股票紀錄", use_container_width=True):
-            if s_shares != 0 and s_price > 0 and s_name.strip() != "":
+            shares = st.session_state.s_shares
+            price = st.session_state.s_price
+            name = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
+            
+            if shares != 0 and price > 0 and name.strip() != "":
                 try:
                     s_date_fmt = s_date.strftime('%Y/%m/%d')
-                    total_amt = (s_shares * s_price) + s_fee
+                    total_amt = (shares * price) + st.session_state.s_fee
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
+                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
                     st.success("股票紀錄成功寫入！")
                     st.rerun()
                 except Exception as e: st.error(f"寫入失敗: {e}")
@@ -370,7 +383,11 @@ with tab1:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
-            st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
+            # ✨ 將明細中的「類型」欄位置右對齊
+            styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
+                            .format({"金額": "{:+,.0f}"})\
+                            .set_properties(subset=['類型'], **{'text-align': 'right'})
+            st.dataframe(styled_bank, use_container_width=True, hide_index=True)
         else:
             st.info("尚無銀行紀錄。")
 
