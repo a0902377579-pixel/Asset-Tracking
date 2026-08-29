@@ -24,8 +24,8 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 暴力覆寫 Tab 原生樣式，無視標籤是 button 還是 div */
-    [data-baseweb="tab-list"] { 
+    /* 強制 Tab 容器滿版並設定間距 */
+    div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
         gap: 15px !important; 
@@ -33,12 +33,14 @@ st.markdown("""
         border-bottom: none !important;
     }
     
-    [data-baseweb="tab-highlight"], [data-baseweb="tab-border"] {
+    /* 徹底隱藏選中時原生的醜陋底線 */
+    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
         display: none !important;
         background-color: transparent !important;
     }
     
-    [data-baseweb="tab"] { 
+    /* 未選中的 Tab：完美 50px 膠囊狀 */
+    button[data-baseweb="tab"] { 
         flex: 1 1 0 !important;
         background-color: #1e2128 !important; 
         border-radius: 50px !important;  
@@ -48,7 +50,8 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
     
-    [data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
+    /* 確保字體顏色與置中 */
+    button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
         width: 100%;
         text-align: center;
         font-size: 18px !important;
@@ -56,13 +59,13 @@ st.markdown("""
         color: #a0a5b1 !important;
     }
     
-    [data-baseweb="tab"][aria-selected="true"] { 
+    /* 被選中 (Active) 的 Tab：發光漸層 */
+    button[data-baseweb="tab"][aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
-    
-    [data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
         color: white !important; 
         font-weight: bold !important; 
     }
@@ -75,7 +78,7 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 SPREADSHEET_NAME = "個人資產" 
 
 # ==========================================
-# 2. 核心資料讀取 (✨ 加入快取防護)
+# 2. 核心資料讀取
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
@@ -89,7 +92,6 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-# ✨ 加入 cache_data，防止瘋狂點擊加號導致 Google API 封鎖
 @st.cache_data(ttl=600, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
@@ -285,6 +287,14 @@ with st.sidebar:
     st.title("⚙️ 異動控制中心")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     
+    # ✨ 加入手動強制更新按鈕
+    if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
+        load_sheet_data.clear()
+        load_bank_data.clear()
+        st.rerun()
+    
+    st.divider()
+    
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
     with tab_bank:
@@ -306,7 +316,6 @@ with st.sidebar:
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
                         sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
                         
-                        # ✨ 寫入後強制清除快取，重新抓取資料
                         load_bank_data.clear()
                         load_sheet_data.clear()
                         
@@ -353,7 +362,6 @@ with st.sidebar:
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
                     sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
                     
-                    # ✨ 寫入後強制清除快取，重新抓取資料
                     load_sheet_data.clear()
                     load_bank_data.clear()
                     
