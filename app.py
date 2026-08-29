@@ -147,15 +147,25 @@ def load_bank_data():
 # ==========================================
 # 3. 視覺化引擎與樣式函數
 # ==========================================
-C_LBL = "#FFD700"; C_VAL = "#00E5FF"; C_PCT = "#00E676"
+C_LBL = "#FFD700"  
+C_VAL = "#00E5FF"  
+C_PCT = "#00E676"  
 
 def style_fig(fig, title):
     fig.update_layout(
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
-        font=dict(size=16, color="#e0e0e0"), template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(size=16, color="#e0e0e0"), 
+        template="plotly_dark", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
-        margin=dict(l=20, r=20, t=85, b=30), hovermode="x unified",
-        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2), 
+        margin=dict(l=20, r=20, t=85, b=80), # ✨ 加大底部邊距，留給斜角文字空間
+        hovermode="x unified",
+        xaxis=dict(
+            showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
+            showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
+            tickangle=45 # ✨ 強制 X 軸文字由左上往右下傾斜 45 度
+        ), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
     return fig
@@ -310,7 +320,6 @@ with st.sidebar:
         st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee)
         st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee")
         
-        # ✨ 修改提示文字的顏色：使用深色/高對比色確保在淺色模式也清晰可見
         current_shares = st.session_state.s_shares
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
@@ -501,7 +510,7 @@ with tab2:
 
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
-            fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
+            fig12 = style_fig(fig12, "12. 資擴展散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
