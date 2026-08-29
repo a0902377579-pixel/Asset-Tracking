@@ -310,18 +310,18 @@ with st.sidebar:
         st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee)
         st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee")
         
-        # ✨ 新增：動態交割總額提示框 (強制單行不換行)
+        # ✨ 修改提示文字的顏色：使用深色/高對比色確保在淺色模式也清晰可見
         current_shares = st.session_state.s_shares
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
         if current_shares > 0:
             est_total = (current_shares * current_price) + current_fee
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #bae6fd; white-space: nowrap; font-size: 14px; margin-bottom: 15px;">💵 <b>預估扣款:</b> NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #095c9e; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         elif current_shares < 0:
             est_total = abs(current_shares * current_price) - current_fee
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #a7f3d0; white-space: nowrap; font-size: 14px; margin-bottom: 15px;">💰 <b>預估入帳:</b> NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #0a7029; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.1); border-left: 5px solid #a0a5b1; color: #e0e0e0; white-space: nowrap; font-size: 14px; margin-bottom: 15px;">💡 <b>預估交割:</b> NT$ 0</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.05); border-left: 5px solid #a0a5b1; color: #4a4a4a; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
         
         if st.button("寫入股票紀錄", use_container_width=True):
             shares = st.session_state.s_shares
@@ -393,7 +393,6 @@ with tab1:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
-            # ✨ 修正類型欄位置左對齊
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
                             .set_properties(subset=['類型'], **{'text-align': 'left'})
