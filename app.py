@@ -8,7 +8,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# 1. 頁面基本配置與頂級美化 CSS
+# 1. 頁面基本配置與自訂 CSS
 # ==========================================
 st.set_page_config(
     page_title="個人旗艦資產工作站", 
@@ -17,53 +17,38 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 20分鐘自動刷新 (1,200,000 毫秒)
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# 注入科技感 CSS 背景與卡片特效
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 調整所有 Tab 分頁的容器間距 */
+    /* 強制 Tab 標籤撐滿整個寬度，絕對平均分配 */
     .stTabs [data-baseweb="tab-list"] { 
-        gap: 12px; 
+        display: flex !important;
+        width: 100% !important;
+        gap: 8px; 
         background-color: transparent;
-        padding-bottom: 10px;
-        display: flex;
     }
-    
-    /* ✨ 將 Tab 寬度改為自動撐滿均分，徹底告別「文字有多寬框就多寬」的醜外型 */
     .stTabs [data-baseweb="tab"] { 
-        flex: 1;
-        justify-content: center;
+        flex-grow: 1 !important;
+        display: flex !important;
+        justify-content: center !important;
         background-color: #1e2128; 
-        border-radius: 12px !important; 
-        padding: 14px 10px !important; 
+        border-radius: 10px 10px 0px 0px !important; 
+        padding: 12px 0px !important; 
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-bottom: none !important;
         color: #a0a5b1 !important;
         font-weight: 600;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
     }
-    
-    /* 滑鼠懸停時的微光效果 */
-    .stTabs [data-baseweb="tab"]:hover {
-        background-color: #2a2e39;
-        color: #ffffff !important;
-        border-color: rgba(52, 152, 219, 0.5) !important;
-    }
-
-    /* 被選中 (Active) 的 Tab 樣式：亮眼漸層、強烈陰影 */
     .stTabs [aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         color: white !important; 
         font-weight: bold !important; 
-        border-radius: 12px !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4) !important;
     }
-    
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -199,20 +184,27 @@ if dashboard_data and dashboard_data.get("holdings"):
 
 if hist_data:
     df_hist = pd.DataFrame(hist_data)
-    df_hist["真實日期"] = pd.to_datetime(df_hist["日期"]).dt.strftime('%Y-%m-%d')
-    df_hist = df_hist.sort_values("真實日期")
+    # 使用 errors='coerce' 防止日期格式錯亂，確保穩定性
+    df_hist["真實日期"] = pd.to_datetime(df_hist["日期"], errors='coerce')
+    df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
+    
+    df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
+    df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%y/%m/%d') + " (" + df_hist["星期"] + ")"
+    
     df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
     df_hist["單日漲跌幅(%)"] = (df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1) * 100).fillna(0)
     df_hist["最高市值"] = df_hist["總市值"].cummax()
     df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
     df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
-    df_hist["星期"] = pd.to_datetime(df_hist["真實日期"]).dt.weekday.map(WEEK_MAP)
 
 if txs:
     df_txs = pd.DataFrame(txs)
-    df_txs['日期_dt'] = pd.to_datetime(df_txs['日期']).dt.strftime('%Y-%m-%d')
-    df_txs = df_txs.sort_values('日期_dt')
+    df_txs['日期_dt'] = pd.to_datetime(df_txs['日期'], errors='coerce')
+    df_txs = df_txs.dropna(subset=['日期_dt']).sort_values('日期_dt')
+    df_txs['星期'] = df_txs['日期_dt'].dt.weekday.map(WEEK_MAP)
+    df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%y/%m/%d') + " (" + df_txs['星期'] + ")"
+    
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
@@ -234,11 +226,12 @@ with st.sidebar:
             amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
             note = st.text_input("備註說明")
             
-            if st.form_submit_button("寫入金流紀錄"):
+            if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount != 0:
                     try:
+                        formatted_date = rec_date.strftime('%y/%m/%d') # 自動轉為 YY/MM/DD
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([str(rec_date), rec_type, amount, note], value_input_option="USER_ENTERED")
+                        sh.worksheet("db_bank_ledger").append_row([formatted_date, rec_type, amount, note], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入！")
                         st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
@@ -246,23 +239,42 @@ with st.sidebar:
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
-        with st.form("stock_record_form"):
-            s_date = st.date_input("交易日期")
-            s_name = st.text_input("股票名稱 (例: 元大台灣0050)")
-            s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
-            s_price = st.number_input("成交單價", value=0.0, step=0.1)
-            s_fee = st.number_input("手續費/稅金", value=0.0, step=1.0)
+        # 為了動態計算手續費，移除了 st.form，改用獨立 Session State 聯動
+        def calc_fee():
+            shares = st.session_state.s_shares
+            price = st.session_state.s_price
+            name = st.session_state.s_name
+            if shares == 0 or price == 0.0:
+                st.session_state.s_fee = 0.0
+                return
             
-            if st.form_submit_button("寫入股票紀錄"):
-                if s_shares != 0 and s_price > 0:
-                    try:
-                        total_amt = (s_shares * s_price) + s_fee
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_stock_transactions").append_row([str(s_date), s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
-                        st.success("股票紀錄成功寫入！")
-                        st.rerun()
-                    except Exception as e: st.error(f"寫入失敗: {e}")
-                else: st.warning("請輸入有效的股數與價格。")
+            cost = abs(shares) * price
+            broker_fee = max(20, int(cost * 0.001425 * 0.6)) # 中信金 6折, 低消 20
+            tax = 0
+            if shares < 0: # 賣出收稅
+                tax_rate = 0.001 if "0050" in name else 0.003
+                tax = int(cost * tax_rate)
+            st.session_state.s_fee = float(broker_fee + tax)
+
+        st.date_input("交易日期", key="s_date")
+        st.text_input("股票名稱 (例: 0050)", key="s_name", on_change=calc_fee)
+        st.number_input("股數 (買入為正，賣出為負)", value=0, step=1, key="s_shares", on_change=calc_fee)
+        st.number_input("成交單價", value=0.0, step=0.1, key="s_price", on_change=calc_fee)
+        st.number_input("手續費/稅金 (已自動試算中信費率)", value=0.0, step=1.0, key="s_fee")
+        
+        if st.button("寫入股票紀錄", use_container_width=True):
+            s_shares = st.session_state.s_shares
+            s_price = st.session_state.s_price
+            if s_shares != 0 and s_price > 0:
+                try:
+                    s_date_fmt = st.session_state.s_date.strftime('%y/%m/%d')
+                    total_amt = (s_shares * s_price) + st.session_state.s_fee
+                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, st.session_state.s_name, s_shares, s_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                    st.success("股票紀錄成功寫入！")
+                    st.rerun()
+                except Exception as e: st.error(f"寫入失敗: {e}")
+            else: st.warning("請輸入有效的股數與價格。")
 
 # ==========================================
 # 主畫面開始
@@ -304,7 +316,12 @@ with tab1:
     with col_hist:
         st.subheader("📜 歷史每日結算報表")
         if df_hist is not None:
-            df_hist_display = df_hist.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "星期", "真實日期"], errors='ignore').copy()[::-1]
+            # ✨ 只過濾出星期一到五的資料顯示
+            df_hist_filtered = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
+            df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期", "星期"], errors='ignore')[::-1]
+            # 將整理好包含星期的日期欄位移到最前面
+            df_hist_display.insert(0, '日期', df_hist_filtered['日期_顯示'][::-1])
+            
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "ROI(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "ROI(%)": "{:+.2f}%"})
             st.dataframe(styled_hist, use_container_width=True, hide_index=True)
@@ -314,7 +331,7 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            df_bank_display = df_txs[["日期", "類型", "金額", "備註"]].copy()
+            df_bank_display = df_txs[["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
             st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
         else:
             st.info("尚無銀行紀錄。")
