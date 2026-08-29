@@ -164,7 +164,7 @@ def style_fig(fig, title):
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
             showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
-            tickangle=-45 # ✨ 強制 X 軸文字改為 -45 度，右上往左下傾斜
+            tickangle=-45 
         ), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
@@ -225,7 +225,7 @@ if hist_data:
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
     df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
     
-    df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
+    df_hist["總損益(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
     df_hist["單日漲跌幅(%)"] = (df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1) * 100).fillna(0)
     df_hist["最高市值"] = df_hist["總市值"].cummax()
@@ -367,7 +367,7 @@ with tab1:
         c2.markdown(create_colorful_card("總投入成本", f"NT$ {d['total_cost']:,.0f}", "📥", "blue"), unsafe_allow_html=True)
         c3.markdown(create_colorful_card("銀行活存餘額", f"NT$ {bank_balance:,.0f}", "🏦", "gold"), unsafe_allow_html=True)
         c4.markdown(create_colorful_card("帳面總損益", f"{d['total_profit']:+,.0f}", "🔥", is_profit=True, num_val=d['total_profit']), unsafe_allow_html=True)
-        c5.markdown(create_colorful_card("總獲利率 (%)", f"{d['profit_rate']:+.2f}%", "📈", is_profit=True, num_val=d['profit_rate']), unsafe_allow_html=True)
+        c5.markdown(create_colorful_card("總損益 (%)", f"{d['profit_rate']:+.2f}%", "📈", is_profit=True, num_val=d['profit_rate']), unsafe_allow_html=True)
 
         if df_h is not None:
             st.subheader("📋 投資組合即時明細")
@@ -392,8 +392,8 @@ with tab1:
             df_hist_filtered['日期'] = df_hist_filtered['日期_顯示']
             df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期_顯示", "星期"], errors='ignore')[::-1]
             
-            styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "ROI(%)"]) \
-                            .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "ROI(%)": "{:+.2f}%"})
+            styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
+                            .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             st.dataframe(styled_hist, use_container_width=True, hide_index=True)
         else:
             st.info("目前暫無歷史紀錄。")
@@ -486,10 +486,10 @@ with tab2:
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
-            fig9 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['ROI(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
-            fig9 = style_fig(fig9, "9. 投資報酬率 (ROI) 走勢")
+            fig9 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['總損益(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
+            fig9 = style_fig(fig9, "9. 總損益 (%) 走勢")
             fig9 = add_zero_baseline(fig9) 
-            fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>投資報酬率: %{{y:+.2f}}%</b></span><extra></extra>")
+            fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{y:+.2f}}%</b></span><extra></extra>")
             st.plotly_chart(fig9, use_container_width=True)
 
         with c2_10:
@@ -509,10 +509,10 @@ with tab2:
             st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True)
 
         with c2_12:
-            fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
+            fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10)
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
-            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
+            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
 
         st.divider()
