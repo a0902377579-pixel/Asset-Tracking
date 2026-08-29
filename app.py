@@ -19,7 +19,7 @@ st.set_page_config(
 
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# ✨ 終極 CSS 美化：流線膠囊狀滿版 Tab 按鈕
+# ✨ 終極 CSS 美化：流線大膠囊狀滿版 Tab 按鈕
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
@@ -32,18 +32,26 @@ st.markdown("""
         background-color: transparent;
     }
     
-    /* 未選中的 Tab：大圓角(膠囊狀)、深色背景、無邊界感 */
+    /* 未選中的 Tab：大圓角(膠囊狀)、強制撐滿寬度、無邊界感 */
     .stTabs [data-baseweb="tab"] { 
         flex: 1 1 0 !important;
         display: flex !important;
         justify-content: center !important;
+        align-items: center !important;
         background-color: #1e2128 !important; 
-        border-radius: 30px !important;  /* 超大圓角 */
-        padding: 12px 0px !important; 
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 50px !important;  /* 改為 50px 形成完美膠囊外型 */
+        padding: 15px 0px !important; 
+        border: none !important;
         color: #a0a5b1 !important;
         font-weight: 600;
         box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    
+    /* 確保 Tab 內的文字置中且撐開 */
+    .stTabs [data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
+        width: 100%;
+        text-align: center;
+        font-size: 1.1rem;
     }
     
     /* 隱藏底部的原生高亮線條 */
@@ -56,7 +64,6 @@ st.markdown("""
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         color: white !important; 
         font-weight: bold !important; 
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
         box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
     
@@ -187,14 +194,14 @@ dashboard_data, hist_data = load_sheet_data()
 
 df_h, df_hist, df_txs = None, None, None
 
-stock_price_dict = {"元大台灣0050": 0.0, "台積電(2330)": 0.0}
-stock_options = ["元大台灣0050", "台積電(2330)", "其他 (手動輸入新股)"]
+# ✨ 移除了含有代號的台積電，直接統一使用中文
+stock_price_dict = {"元大台灣0050": 0.0, "台積電": 0.0}
+stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 
 if dashboard_data and dashboard_data.get("holdings"):
     df_h = pd.DataFrame(dashboard_data["holdings"])
     df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
     
-    # 動態抓取使用者庫存清單與現價，供應給下拉選單
     for h in dashboard_data["holdings"]:
         name = h["stock_name"]
         if name not in stock_options:
@@ -207,7 +214,6 @@ if hist_data:
     df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
     
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
-    # ✨ 報表顯示專用格式：YYYY/MM/DD (星期)
     df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
     
     df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
@@ -222,7 +228,6 @@ if txs:
     df_txs['日期_dt'] = pd.to_datetime(df_txs['日期'], errors='coerce')
     df_txs = df_txs.dropna(subset=['日期_dt']).sort_values('日期_dt')
     df_txs['星期'] = df_txs['日期_dt'].dt.weekday.map(WEEK_MAP)
-    # ✨ 報表顯示專用格式：YYYY/MM/DD (星期)
     df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
     
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
@@ -238,7 +243,6 @@ with st.sidebar:
     
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
-    # --- 銀行流水平單 ---
     with tab_bank:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
@@ -250,7 +254,6 @@ with st.sidebar:
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount != 0:
                     try:
-                        # ✨ 寫入試算表統一為 YYYY/MM/DD
                         fmt_date = rec_date.strftime('%Y/%m/%d')
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
                         sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, amount, note], value_input_option="USER_ENTERED")
@@ -259,14 +262,11 @@ with st.sidebar:
                     except Exception as e: st.error(f"寫入失敗: {e}")
                 else: st.warning("請輸入有效金額。")
                 
-    # --- 股票交易平單 (不使用 st.form 以支援即時動態聯動) ---
     with tab_stock:
         st.markdown("### 新增股票交易")
         
-        # 1. 股票下拉選單
         selected_stock = st.selectbox("選擇操作標的", stock_options)
         
-        # 如果選擇手動輸入，顯示額外的文字框
         if selected_stock == "其他 (手動輸入新股)":
             s_name = st.text_input("輸入股票名稱")
             default_price = 0.0
@@ -274,22 +274,35 @@ with st.sidebar:
             s_name = selected_stock
             default_price = stock_price_dict.get(s_name, 0.0)
 
-        # 2. 交易資訊輸入
-        s_date = st.date_input("交易日期")
-        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
-        # 自動帶入抓到的現價
-        s_price = st.number_input("成交單價", value=float(default_price), step=0.1)
+        def calc_fee():
+            shares = st.session_state.s_shares
+            price = st.session_state.s_price
+            name = st.session_state.s_name if selected_stock == "其他 (手動輸入新股)" else selected_stock
+            if shares == 0 or price == 0.0:
+                st.session_state.s_fee = 0.0
+                return
+            
+            cost = abs(shares) * price
+            broker_fee = max(20, int(cost * 0.001425 * 0.6))
+            tax = 0
+            if shares < 0: 
+                tax_rate = 0.001 if "00" in name else 0.003
+                tax = int(cost * tax_rate)
+            st.session_state.s_fee = float(broker_fee + tax)
+
+        s_date = st.date_input("交易日期", key="s_date")
+        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1, key="s_shares", on_change=calc_fee)
+        s_price = st.number_input("成交單價", value=float(default_price), step=0.1, key="s_price", on_change=calc_fee)
         
-        # 3. 中信金手續費與稅金「自動運算引擎」
         base_cost = abs(s_shares) * s_price
         broker_fee = max(20, int(base_cost * 0.001425 * 0.6)) if base_cost > 0 else 0
         tax = 0
-        if s_shares < 0: # 只有賣出要收稅
+        if s_shares < 0: 
             tax_rate = 0.001 if "00" in s_name else 0.003
             tax = int(base_cost * tax_rate)
         auto_calculated_fee = float(broker_fee + tax)
         
-        s_fee = st.number_input("手續費/稅金 (已自動帶入中信費率)", value=auto_calculated_fee, step=1.0)
+        s_fee = st.number_input("手續費/稅金 (已自動帶入中信費率)", value=auto_calculated_fee, step=1.0, key="s_fee")
         
         if st.button("寫入股票紀錄", use_container_width=True):
             if s_shares != 0 and s_price > 0 and s_name.strip() != "":
@@ -343,10 +356,7 @@ with tab1:
     with col_hist:
         st.subheader("📜 歷史每日結算報表")
         if df_hist is not None:
-            # ✨ 只過濾出星期一到五的開盤日資料
             df_hist_filtered = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
-            
-            # 清理不必要的欄位，並覆寫日期為 YYYY/MM/DD (星期)
             df_hist_filtered['日期'] = df_hist_filtered['日期_顯示']
             df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期_顯示", "星期"], errors='ignore')[::-1]
             
@@ -359,7 +369,6 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            # ✨ 資料翻轉 [::-1] 讓最新日期置頂，並套用含星期的日期格式
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
             st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
         else:
@@ -414,7 +423,6 @@ with tab2:
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
     if df_hist is not None:
-        # 將繪圖用的日期改為 2026/08/29 的字串格式，讓 X 軸統一乾淨
         df_hist['繪圖日期'] = df_hist['真實日期'].dt.strftime('%Y/%m/%d')
         
         c2_7, c2_8 = st.columns(2)
@@ -542,5 +550,3 @@ with tab2:
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
-    else:
-        st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至左側控制中心新增紀錄。")
