@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from streamlit_autorefresh import st_autorefresh
 import gspread
 from google.oauth2.service_account import Credentials
+import datetime
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -19,12 +20,11 @@ st.set_page_config(
 
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
-# ✨ 終極 CSS 暴力美化：強制消滅原生直角與紅色底線，打造純粹大膠囊！
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 容器滿版並設定間距，消滅原生底線 */
+    /* 強制 Tab 容器滿版並設定間距 */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
@@ -33,7 +33,7 @@ st.markdown("""
         border-bottom: none !important;
     }
     
-    /* 徹底隱藏選中時原生的醜陋底線 (紅線/藍線) */
+    /* 徹底隱藏選中時原生的醜陋底線 */
     div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
         display: none !important;
         background-color: transparent !important;
@@ -195,7 +195,6 @@ dashboard_data, hist_data = load_sheet_data()
 
 df_h, df_hist, df_txs = None, None, None
 
-# 全域預設股價字典，確保在宣告表單前有資料
 stock_price_dict = {"元大台灣0050": 0.0, "台積電": 0.0}
 stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 
@@ -236,7 +235,6 @@ if txs:
 # ==========================================
 # 5. 側邊欄：控制中心與聯動輸入表單
 # ==========================================
-# 初始化 Session State，避免第一次載入時報錯
 if "stock_selector" not in st.session_state:
     st.session_state.stock_selector = stock_options[0]
 if "s_price" not in st.session_state:
@@ -246,7 +244,6 @@ if "s_shares" not in st.session_state:
 if "s_fee" not in st.session_state:
     st.session_state.s_fee = 0.0
 
-# 聯動更新股價
 def on_stock_change():
     sel = st.session_state.stock_selector
     if sel != "其他 (手動輸入新股)":
@@ -255,7 +252,6 @@ def on_stock_change():
         st.session_state.s_price = 0.0
     calc_fee()
 
-# 聯動精算手續費
 def calc_fee():
     shares = st.session_state.s_shares
     price = st.session_state.s_price
@@ -284,7 +280,8 @@ with st.sidebar:
     with tab_bank:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
-            rec_date = st.date_input("入帳日期")
+            # ✨ 日期防呆：鎖定只能選今天以前 (包含今天)
+            rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today())
             rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳投", "委代入", "證券款", "電匯", "交割扣款"])
             amount = st.number_input("金額 (元) 【扣款請輸入負數】", value=0.0, step=100.0)
             note = st.text_input("備註說明")
@@ -302,16 +299,31 @@ with st.sidebar:
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
-        # 股票名稱改由 Selectbox 驅動，綁定 on_change 瞬間觸發更新
+        
         selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change)
         
         if selected_stock == "其他 (手動輸入新股)":
             st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee)
             
-        s_date = st.date_input("交易日期")
+        # ✨ 日期防呆：鎖定只能選今天以前 (包含今天)
+        s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today())
+        
         st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee)
         st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee)
         st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee")
+        
+        # ✨ 新增：動態交割總額提示框 (讓使用者安心核對)
+        current_shares = st.session_state.s_shares
+        current_price = st.session_state.s_price
+        current_fee = st.session_state.s_fee
+        if current_shares > 0:
+            est_total = (current_shares * current_price) + current_fee
+            st.info(f"💵 **預估交割扣款:** NT$ {est_total:,.0f}")
+        elif current_shares < 0:
+            est_total = abs(current_shares * current_price) - current_fee
+            st.info(f"💰 **預估交割入帳:** NT$ {est_total:,.0f}")
+        else:
+            st.info("💡 預估交割總額: NT$ 0")
         
         if st.button("寫入股票紀錄", use_container_width=True):
             shares = st.session_state.s_shares
@@ -383,7 +395,7 @@ with tab1:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
-            # ✨ 將明細中的「類型」欄位置右對齊
+            # ✨ 透過 CSS 強制把「類型」欄位置右對齊，讓表格更工整
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
                             .set_properties(subset=['類型'], **{'text-align': 'right'})
@@ -567,3 +579,5 @@ with tab2:
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
+    else:
+        st.info("💡 尚未有足夠的銀行明細來生成金流圖表，請至左側控制中心新增紀錄。")
