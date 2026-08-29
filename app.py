@@ -159,12 +159,12 @@ def style_fig(fig, title):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
-        margin=dict(l=20, r=20, t=85, b=80), # ✨ 加大底部邊距，留給斜角文字空間
+        margin=dict(l=20, r=20, t=85, b=80), 
         hovermode="x unified",
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
             showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
-            tickangle=45 # ✨ 強制 X 軸文字由左上往右下傾斜 45 度
+            tickangle=-45 # ✨ 強制 X 軸文字改為 -45 度，右上往左下傾斜
         ), 
         yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
     )
@@ -510,7 +510,7 @@ with tab2:
 
         with c2_12:
             fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="ROI(%)", color_continuous_scale="Turbo", size_max=10)
-            fig12 = style_fig(fig12, "12. 資擴展散點回歸圖 (虛線=損益兩平)")
+            fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>ROI: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
