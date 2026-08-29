@@ -140,7 +140,7 @@ def load_bank_data():
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
         
-        # 移除備註的讀取，讓資料結構更乾淨
+        # ✨ 修正長度判斷：因為已經沒有備註欄，只要有 3 格(日期、類型、金額)就讀取，解決新資料不見的問題
         txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 3 and str(r[0]).strip() != ""]
         return b_val, txs
     except: return 58661.0, []
@@ -292,24 +292,23 @@ with st.sidebar:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
             rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today())
-            # ✨ 精簡下拉選項
             rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"])
-            # ✨ 移除負數提示，強制轉換為絕對值
             amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0)
             
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount > 0:
                     try:
-                        fmt_date = rec_date.strftime('%Y/%m/%d')
-                        # ✨ 自動正負號判斷引擎
+                        # ✨ 加上隱藏的單引號，強迫 Google 試算表把它當純文字保留斜線
+                        fmt_date = f"'{rec_date.strftime('%Y/%m/%d')}"
+                        
                         if rec_type in ["現金", "跨行轉", "委代入", "電匯"]:
                             final_amount = amount
-                        else:  # 轉帳提、證券款
+                        else:  
                             final_amount = -amount
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        # 補上一個空字串 "" 以防破壞原有的四格欄位結構
-                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount, ""], value_input_option="USER_ENTERED")
+                        # ✨ 拔除多餘的備註欄位，只寫入三個核心值
+                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入！")
                         st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
@@ -348,7 +347,8 @@ with st.sidebar:
             
             if shares != 0 and price > 0 and name.strip() != "":
                 try:
-                    s_date_fmt = s_date.strftime('%Y/%m/%d')
+                    # ✨ 同樣加上隱藏單引號鎖定文字格式
+                    s_date_fmt = f"'{s_date.strftime('%Y/%m/%d')}"
                     total_amt = (shares * price) + st.session_state.s_fee
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
                     sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
@@ -410,7 +410,7 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            # ✨ 徹底移除 "備註" 欄位，僅保留日期、類型、金額
+            # ✨ 不顯示備註，版面最乾淨
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
