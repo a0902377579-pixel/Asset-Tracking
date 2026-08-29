@@ -8,7 +8,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ==========================================
-# 1. 頁面基本配置與自訂 CSS
+# 1. 頁面基本配置與頂級美化 CSS
 # ==========================================
 st.set_page_config(
     page_title="個人旗艦資產工作站", 
@@ -19,36 +19,47 @@ st.set_page_config(
 
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
+# ✨ 終極 CSS 美化：流線膠囊狀滿版 Tab 按鈕
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 強制 Tab 標籤撐滿整個寬度，絕對平均分配 */
+    /* 強制 Tab 容器滿版並設定間距 */
     .stTabs [data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
-        gap: 8px; 
+        gap: 15px; 
         background-color: transparent;
     }
+    
+    /* 未選中的 Tab：大圓角(膠囊狀)、深色背景、無邊界感 */
     .stTabs [data-baseweb="tab"] { 
-        flex-grow: 1 !important;
+        flex: 1 1 0 !important;
         display: flex !important;
         justify-content: center !important;
-        background-color: #1e2128; 
-        border-radius: 10px 10px 0px 0px !important; 
+        background-color: #1e2128 !important; 
+        border-radius: 30px !important;  /* 超大圓角 */
         padding: 12px 0px !important; 
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-bottom: none !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
         color: #a0a5b1 !important;
         font-weight: 600;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
+    
+    /* 隱藏底部的原生高亮線條 */
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    
+    /* 被選中 (Active) 的 Tab：亮眼漸層、發光陰影 */
     .stTabs [aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         color: white !important; 
         font-weight: bold !important; 
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
+    
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -128,9 +139,7 @@ def load_bank_data():
 # ==========================================
 # 3. 視覺化引擎與樣式函數
 # ==========================================
-C_LBL = "#FFD700"  # 亮金黃
-C_VAL = "#00E5FF"  # 霓虹青
-C_PCT = "#00E676"  # 螢光綠
+C_LBL = "#FFD700"; C_VAL = "#00E5FF"; C_PCT = "#00E676"
 
 def style_fig(fig, title):
     fig.update_layout(
@@ -178,18 +187,28 @@ dashboard_data, hist_data = load_sheet_data()
 
 df_h, df_hist, df_txs = None, None, None
 
+stock_price_dict = {"元大台灣0050": 0.0, "台積電(2330)": 0.0}
+stock_options = ["元大台灣0050", "台積電(2330)", "其他 (手動輸入新股)"]
+
 if dashboard_data and dashboard_data.get("holdings"):
     df_h = pd.DataFrame(dashboard_data["holdings"])
     df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
+    
+    # 動態抓取使用者庫存清單與現價，供應給下拉選單
+    for h in dashboard_data["holdings"]:
+        name = h["stock_name"]
+        if name not in stock_options:
+            stock_options.insert(0, name)
+        stock_price_dict[name] = h["current_price"]
 
 if hist_data:
     df_hist = pd.DataFrame(hist_data)
-    # 使用 errors='coerce' 防止日期格式錯亂，確保穩定性
     df_hist["真實日期"] = pd.to_datetime(df_hist["日期"], errors='coerce')
     df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
     
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
-    df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%y/%m/%d') + " (" + df_hist["星期"] + ")"
+    # ✨ 報表顯示專用格式：YYYY/MM/DD (星期)
+    df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
     
     df_hist["ROI(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
@@ -203,21 +222,23 @@ if txs:
     df_txs['日期_dt'] = pd.to_datetime(df_txs['日期'], errors='coerce')
     df_txs = df_txs.dropna(subset=['日期_dt']).sort_values('日期_dt')
     df_txs['星期'] = df_txs['日期_dt'].dt.weekday.map(WEEK_MAP)
-    df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%y/%m/%d') + " (" + df_txs['星期'] + ")"
+    # ✨ 報表顯示專用格式：YYYY/MM/DD (星期)
+    df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
     
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
 
 # ==========================================
-# 5. 側邊欄：控制中心與切換輸入表單
+# 5. 側邊欄：控制中心與聯動輸入表單
 # ==========================================
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
-    st.info("💡 資料寫入後，儀表板將自動重新整理。")
+    st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
+    # --- 銀行流水平單 ---
     with tab_bank:
         st.markdown("### 新增銀行金流")
         with st.form("bank_record_form"):
@@ -229,52 +250,58 @@ with st.sidebar:
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount != 0:
                     try:
-                        formatted_date = rec_date.strftime('%y/%m/%d') # 自動轉為 YY/MM/DD
+                        # ✨ 寫入試算表統一為 YYYY/MM/DD
+                        fmt_date = rec_date.strftime('%Y/%m/%d')
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([formatted_date, rec_type, amount, note], value_input_option="USER_ENTERED")
+                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, amount, note], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入！")
                         st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
                 else: st.warning("請輸入有效金額。")
                 
+    # --- 股票交易平單 (不使用 st.form 以支援即時動態聯動) ---
     with tab_stock:
         st.markdown("### 新增股票交易")
-        # 為了動態計算手續費，移除了 st.form，改用獨立 Session State 聯動
-        def calc_fee():
-            shares = st.session_state.s_shares
-            price = st.session_state.s_price
-            name = st.session_state.s_name
-            if shares == 0 or price == 0.0:
-                st.session_state.s_fee = 0.0
-                return
-            
-            cost = abs(shares) * price
-            broker_fee = max(20, int(cost * 0.001425 * 0.6)) # 中信金 6折, 低消 20
-            tax = 0
-            if shares < 0: # 賣出收稅
-                tax_rate = 0.001 if "0050" in name else 0.003
-                tax = int(cost * tax_rate)
-            st.session_state.s_fee = float(broker_fee + tax)
+        
+        # 1. 股票下拉選單
+        selected_stock = st.selectbox("選擇操作標的", stock_options)
+        
+        # 如果選擇手動輸入，顯示額外的文字框
+        if selected_stock == "其他 (手動輸入新股)":
+            s_name = st.text_input("輸入股票名稱")
+            default_price = 0.0
+        else:
+            s_name = selected_stock
+            default_price = stock_price_dict.get(s_name, 0.0)
 
-        st.date_input("交易日期", key="s_date")
-        st.text_input("股票名稱 (例: 0050)", key="s_name", on_change=calc_fee)
-        st.number_input("股數 (買入為正，賣出為負)", value=0, step=1, key="s_shares", on_change=calc_fee)
-        st.number_input("成交單價", value=0.0, step=0.1, key="s_price", on_change=calc_fee)
-        st.number_input("手續費/稅金 (已自動試算中信費率)", value=0.0, step=1.0, key="s_fee")
+        # 2. 交易資訊輸入
+        s_date = st.date_input("交易日期")
+        s_shares = st.number_input("股數 (買入為正，賣出為負)", value=0, step=1)
+        # 自動帶入抓到的現價
+        s_price = st.number_input("成交單價", value=float(default_price), step=0.1)
+        
+        # 3. 中信金手續費與稅金「自動運算引擎」
+        base_cost = abs(s_shares) * s_price
+        broker_fee = max(20, int(base_cost * 0.001425 * 0.6)) if base_cost > 0 else 0
+        tax = 0
+        if s_shares < 0: # 只有賣出要收稅
+            tax_rate = 0.001 if "00" in s_name else 0.003
+            tax = int(base_cost * tax_rate)
+        auto_calculated_fee = float(broker_fee + tax)
+        
+        s_fee = st.number_input("手續費/稅金 (已自動帶入中信費率)", value=auto_calculated_fee, step=1.0)
         
         if st.button("寫入股票紀錄", use_container_width=True):
-            s_shares = st.session_state.s_shares
-            s_price = st.session_state.s_price
-            if s_shares != 0 and s_price > 0:
+            if s_shares != 0 and s_price > 0 and s_name.strip() != "":
                 try:
-                    s_date_fmt = st.session_state.s_date.strftime('%y/%m/%d')
-                    total_amt = (s_shares * s_price) + st.session_state.s_fee
+                    s_date_fmt = s_date.strftime('%Y/%m/%d')
+                    total_amt = (s_shares * s_price) + s_fee
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, st.session_state.s_name, s_shares, s_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, s_name, s_shares, s_price, s_fee, total_amt], value_input_option="USER_ENTERED")
                     st.success("股票紀錄成功寫入！")
                     st.rerun()
                 except Exception as e: st.error(f"寫入失敗: {e}")
-            else: st.warning("請輸入有效的股數與價格。")
+            else: st.warning("請確認股數、價格與股票名稱填寫正確。")
 
 # ==========================================
 # 主畫面開始
@@ -282,7 +309,7 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-tab1, tab2 = st.tabs(["📊 總覽儀表板 (含歷史與金流表)", "🌌 終極數據戰情室 (21種圖表)"])
+tab1, tab2 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -316,11 +343,12 @@ with tab1:
     with col_hist:
         st.subheader("📜 歷史每日結算報表")
         if df_hist is not None:
-            # ✨ 只過濾出星期一到五的資料顯示
+            # ✨ 只過濾出星期一到五的開盤日資料
             df_hist_filtered = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
-            df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期", "星期"], errors='ignore')[::-1]
-            # 將整理好包含星期的日期欄位移到最前面
-            df_hist_display.insert(0, '日期', df_hist_filtered['日期_顯示'][::-1])
+            
+            # 清理不必要的欄位，並覆寫日期為 YYYY/MM/DD (星期)
+            df_hist_filtered['日期'] = df_hist_filtered['日期_顯示']
+            df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期_顯示", "星期"], errors='ignore')[::-1]
             
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "ROI(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "ROI(%)": "{:+.2f}%"})
@@ -331,7 +359,8 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            df_bank_display = df_txs[["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
+            # ✨ 資料翻轉 [::-1] 讓最新日期置頂，並套用含星期的日期格式
+            df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額", "備註"]].copy().rename(columns={"日期_顯示": "日期"})
             st.dataframe(df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"}), use_container_width=True, hide_index=True)
         else:
             st.info("尚無銀行紀錄。")
@@ -385,15 +414,18 @@ with tab2:
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
     if df_hist is not None:
+        # 將繪圖用的日期改為 2026/08/29 的字串格式，讓 X 軸統一乾淨
+        df_hist['繪圖日期'] = df_hist['真實日期'].dt.strftime('%Y/%m/%d')
+        
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
             fig7.add_trace(go.Scatter(
-                x=df_hist['真實日期'], y=df_hist['總投資損益'].clip(lower=0), customdata=df_hist['總投資損益'],
+                x=df_hist['繪圖日期'], y=df_hist['總投資損益'].clip(lower=0), customdata=df_hist['總投資損益'],
                 mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), name="獲利"
             ))
             fig7.add_trace(go.Scatter(
-                x=df_hist['真實日期'], y=df_hist['總投資損益'].clip(upper=0), customdata=df_hist['總投資損益'],
+                x=df_hist['繪圖日期'], y=df_hist['總投資損益'].clip(upper=0), customdata=df_hist['總投資損益'],
                 mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), name="虧損"
             ))
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
@@ -404,14 +436,14 @@ with tab2:
             
         with c2_8:
             fig8 = go.Figure()
-            fig8.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
-            fig8.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
+            fig8.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
+            fig8.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
             fig8.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), use_container_width=True)
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
-            fig9 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['ROI(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
+            fig9 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['ROI(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
             fig9 = style_fig(fig9, "9. 投資報酬率 (ROI) 走勢")
             fig9 = add_zero_baseline(fig9) 
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>投資報酬率: %{{y:+.2f}}%</b></span><extra></extra>")
@@ -419,8 +451,8 @@ with tab2:
 
         with c2_10:
             fig10 = go.Figure()
-            fig10.add_trace(go.Bar(x=df_hist['真實日期'], y=df_hist['0050每日損益'], name='0050', marker_color='#3498db'))
-            fig10.add_trace(go.Bar(x=df_hist['真實日期'], y=df_hist['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
+            fig10.add_trace(go.Bar(x=df_hist['繪圖日期'], y=df_hist['0050每日損益'], name='0050', marker_color='#3498db'))
+            fig10.add_trace(go.Bar(x=df_hist['繪圖日期'], y=df_hist['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
             fig10.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>部位損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig10.update_layout(barmode='relative')
             st.plotly_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), use_container_width=True)
@@ -428,8 +460,8 @@ with tab2:
         c2_11, c2_12 = st.columns(2)
         with c2_11:
             fig11 = go.Figure()
-            fig11.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['0050每日損益'].cumsum(), mode='lines', name='0050 累計', line=dict(color='#3498db')))
-            fig11.add_trace(go.Scatter(x=df_hist['真實日期'], y=df_hist['台積電每日損益'].cumsum(), mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
+            fig11.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['0050每日損益'].cumsum(), mode='lines', name='0050 累計', line=dict(color='#3498db')))
+            fig11.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['台積電每日損益'].cumsum(), mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
             fig11.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>累計貢獻: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True)
 
@@ -445,7 +477,7 @@ with tab2:
         c2_13, c2_14, c2_15 = st.columns(3)
         with c2_13:
             vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist['單日損益變化']]
-            fig13 = go.Figure(go.Bar(x=df_hist['真實日期'], y=df_hist['單日損益變化'], marker_color=vol_colors))
+            fig13 = go.Figure(go.Bar(x=df_hist['繪圖日期'], y=df_hist['單日損益變化'], marker_color=vol_colors))
             fig13 = style_fig(fig13, "13. 單日總損益震盪圖")
             fig13 = add_zero_baseline(fig13) 
             fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
@@ -459,7 +491,7 @@ with tab2:
             st.plotly_chart(fig14, use_container_width=True)
             
         with c2_15:
-            fig15 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
+            fig15 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
             fig15 = style_fig(fig15, "15. 歷史最大回撤 (Drawdown)")
             fig15 = add_zero_baseline(fig15) 
             fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
@@ -467,7 +499,7 @@ with tab2:
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
-            fig16 = go.Figure(go.Scatter(x=df_hist['真實日期'], y=df_hist['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
+            fig16 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
             fig16 = style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢")
             fig16 = add_zero_baseline(fig16) 
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{y:+.2f}}%</b></span><extra></extra>")
@@ -490,6 +522,7 @@ with tab2:
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
     if df_txs is not None:
+        df_txs['繪圖日期'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d')
         c2_19, c2_20, c2_21 = st.columns(3)
         with c2_19:
             fig19 = px.sunburst(df_txs, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
@@ -497,14 +530,14 @@ with tab2:
             st.plotly_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), use_container_width=True)
             
         with c2_20:
-            fig20 = px.bar(df_txs, x="日期_dt", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig20 = px.bar(df_txs, x="繪圖日期", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
             fig20 = style_fig(fig20, "20. 單筆資金進出分布")
             fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig20.update_layout(showlegend=False, hovermode="closest")
             st.plotly_chart(fig20, use_container_width=True)
             
         with c2_21:
-            fig21 = go.Figure(go.Scatter(x=df_txs['日期_dt'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
+            fig21 = go.Figure(go.Scatter(x=df_txs['繪圖日期'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
             fig21 = style_fig(fig21, "21. 累計淨現金流走勢")
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
