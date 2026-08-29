@@ -24,7 +24,8 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    div[data-baseweb="tab-list"] { 
+    /* 暴力覆寫 Tab 原生樣式，無視標籤是 button 還是 div */
+    [data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
         gap: 15px !important; 
@@ -32,12 +33,12 @@ st.markdown("""
         border-bottom: none !important;
     }
     
-    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
+    [data-baseweb="tab-highlight"], [data-baseweb="tab-border"] {
         display: none !important;
         background-color: transparent !important;
     }
     
-    button[data-baseweb="tab"] { 
+    [data-baseweb="tab"] { 
         flex: 1 1 0 !important;
         background-color: #1e2128 !important; 
         border-radius: 50px !important;  
@@ -47,7 +48,7 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
     
-    button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
+    [data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
         width: 100%;
         text-align: center;
         font-size: 18px !important;
@@ -55,12 +56,13 @@ st.markdown("""
         color: #a0a5b1 !important;
     }
     
-    button[data-baseweb="tab"][aria-selected="true"] { 
+    [data-baseweb="tab"][aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
-    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+    
+    [data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
         color: white !important; 
         font-weight: bold !important; 
     }
@@ -73,7 +75,7 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 SPREADSHEET_NAME = "個人資產" 
 
 # ==========================================
-# 2. 核心資料讀取
+# 2. 核心資料讀取 (✨ 加入快取防護)
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
@@ -87,6 +89,8 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
+# ✨ 加入 cache_data，防止瘋狂點擊加號導致 Google API 封鎖
+@st.cache_data(ttl=600, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -127,6 +131,7 @@ def load_sheet_data():
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
     except: return None, None
 
+@st.cache_data(ttl=600, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -292,7 +297,6 @@ with st.sidebar:
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount > 0:
                     try:
-                        # ✨ 取消單引號，回歸原始日期型態，以修復數學公式錯誤
                         fmt_date = rec_date.strftime('%Y/%m/%d')
                         if rec_type in ["現金", "跨行轉", "委代入", "電匯"]:
                             final_amount = amount
@@ -301,6 +305,11 @@ with st.sidebar:
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
                         sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
+                        
+                        # ✨ 寫入後強制清除快取，重新抓取資料
+                        load_bank_data.clear()
+                        load_sheet_data.clear()
+                        
                         st.success("紀錄成功寫入！")
                         st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
@@ -339,11 +348,15 @@ with st.sidebar:
             
             if shares != 0 and price > 0 and name.strip() != "":
                 try:
-                    # ✨ 取消單引號，回歸原始日期型態
                     s_date_fmt = s_date.strftime('%Y/%m/%d')
                     total_amt = (shares * price) + st.session_state.s_fee
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
                     sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                    
+                    # ✨ 寫入後強制清除快取，重新抓取資料
+                    load_sheet_data.clear()
+                    load_bank_data.clear()
+                    
                     st.success("股票紀錄成功寫入！")
                     st.rerun()
                 except Exception as e: st.error(f"寫入失敗: {e}")
