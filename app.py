@@ -24,7 +24,6 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 強制 Tab 容器滿版並設定間距 */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
@@ -33,13 +32,11 @@ st.markdown("""
         border-bottom: none !important;
     }
     
-    /* 徹底隱藏選中時原生的醜陋底線 */
     div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
         display: none !important;
         background-color: transparent !important;
     }
     
-    /* 未選中的 Tab：完美 50px 膠囊狀 */
     button[data-baseweb="tab"] { 
         flex: 1 1 0 !important;
         background-color: #1e2128 !important; 
@@ -50,7 +47,6 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
     
-    /* 確保字體顏色與置中 */
     button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
         width: 100%;
         text-align: center;
@@ -59,7 +55,6 @@ st.markdown("""
         color: #a0a5b1 !important;
     }
     
-    /* 被選中 (Active) 的 Tab：發光漸層 */
     button[data-baseweb="tab"][aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -140,7 +135,6 @@ def load_bank_data():
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
         
-        # ✨ 修正長度判斷：因為已經沒有備註欄，只要有 3 格(日期、類型、金額)就讀取，解決新資料不見的問題
         txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 3 and str(r[0]).strip() != ""]
         return b_val, txs
     except: return 58661.0, []
@@ -298,16 +292,14 @@ with st.sidebar:
             if st.form_submit_button("寫入金流紀錄", use_container_width=True):
                 if amount > 0:
                     try:
-                        # ✨ 加上隱藏的單引號，強迫 Google 試算表把它當純文字保留斜線
-                        fmt_date = f"'{rec_date.strftime('%Y/%m/%d')}"
-                        
+                        # ✨ 取消單引號，回歸原始日期型態，以修復數學公式錯誤
+                        fmt_date = rec_date.strftime('%Y/%m/%d')
                         if rec_type in ["現金", "跨行轉", "委代入", "電匯"]:
                             final_amount = amount
                         else:  
                             final_amount = -amount
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        # ✨ 拔除多餘的備註欄位，只寫入三個核心值
                         sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
                         st.success("紀錄成功寫入！")
                         st.rerun()
@@ -347,8 +339,8 @@ with st.sidebar:
             
             if shares != 0 and price > 0 and name.strip() != "":
                 try:
-                    # ✨ 同樣加上隱藏單引號鎖定文字格式
-                    s_date_fmt = f"'{s_date.strftime('%Y/%m/%d')}"
+                    # ✨ 取消單引號，回歸原始日期型態
+                    s_date_fmt = s_date.strftime('%Y/%m/%d')
                     total_amt = (shares * price) + st.session_state.s_fee
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
                     sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
@@ -410,7 +402,6 @@ with tab1:
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
-            # ✨ 不顯示備註，版面最乾淨
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
