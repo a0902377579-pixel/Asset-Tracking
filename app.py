@@ -359,8 +359,7 @@ with st.sidebar:
             est_total = abs(current_shares * current_price) - current_fee
             st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #2ecc71; color: #2ecc71; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.05); border-left: 5px solid #a0a5b1; color: #e0e0e0; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True); font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
-        
+            st.markdown('<div style="padding: 10px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.05); border-left: 5px solid #a0a5b1; color: #e0e0e0; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
         if st.button("寫入股票紀錄", use_container_width=True):
             shares = st.session_state.s_shares
             price = st.session_state.s_price
