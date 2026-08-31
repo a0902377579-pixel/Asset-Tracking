@@ -353,24 +353,40 @@ with st.sidebar:
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
         
-        # 修正黑色模式下的背景與文字對比
+        # 改用高對比、亮底深字的樣式，在暗色與亮色模式下都極度清晰
         st.markdown("""
         <style>
-            .est-box { padding: 10px; border-radius: 8px; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px; }
-            /* 白色模式樣式 */
-            .est-blue { background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #095c9e; }
-            .est-green { background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #0a7029; }
-            .est-gray { background-color: rgba(0, 0, 0, 0.05); border-left: 5px solid #a0a5b1; color: #4a4a4a; }
+            .est-box { 
+                padding: 12px 15px; 
+                border-radius: 8px; 
+                font-weight: 900; 
+                white-space: nowrap; 
+                font-size: 16px; 
+                margin-bottom: 15px; 
+                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            }
+            /* 預估扣款：明亮的藍色背景搭配深色粗體字 */
+            .est-blue { 
+                background-color: #74b9ff !important; 
+                border-left: 6px solid #0984e3 !important; 
+                color: #0c2461 !important; 
+            }
+            /* 預估入帳：明亮的綠色背景搭配深色粗體字 */
+            .est-green { 
+                background-color: #55efc4 !important; 
+                border-left: 6px solid #00b894 !important; 
+                color: #004d40 !important; 
+            }
+            /* 預估交割：明亮的灰白色背景搭配深色粗體字 */
+            .est-gray { 
+                background-color: #dfe6e9 !important; 
+                border-left: 6px solid #636e72 !important; 
+                color: #2d3436 !important; 
+            }
             
-            /* 黑色模式：加亮背景與文字，確保清晰 */
-            @media (prefers-color-scheme: dark) {
-                .est-blue { background-color: rgba(52, 152, 219, 0.3) !important; border-left: 5px solid #54a0ff !important; }
-                .est-green { background-color: rgba(46, 204, 113, 0.3) !important; border-left: 5px solid #2ecc71 !important; }
-                .est-gray { background-color: rgba(255, 255, 255, 0.15) !important; border-left: 5px solid #ffffff !important; }
-                
-                .est-blue *, .est-green *, .est-gray * { 
-                    color: #74b9ff !important; 
-                }
+            /* 強制內部文字同步變色 */
+            .est-blue *, .est-green *, .est-gray * { 
+                color: inherit !important; 
             }
         </style>
         """, unsafe_allow_html=True)
