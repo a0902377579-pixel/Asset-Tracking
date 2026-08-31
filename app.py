@@ -315,24 +315,22 @@ with st.sidebar:
         if "bank_confirm" not in st.session_state:
             st.session_state.bank_confirm = False
 
-        with st.form("bank_record_form"):
-            rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today())
-            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"])
-            amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0)
-            
-            # 修正：改為只有當金額等於 0 時才反灰，大於 0 即可寫入
-            is_zero = (amount == 0)
-            submitted = st.form_submit_button("寫入金流紀錄", use_container_width=True, disabled=is_zero)
-            
-            if submitted:
-                st.session_state.bank_confirm = True
+        # 移除 st.form，改用一般互動輸入，即時生效
+        rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date")
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"], key="bank_type")
+        amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount")
+        
+        is_zero = (amount == 0)
+        
+        if st.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
+            st.session_state.bank_confirm = True
 
         # 二次確認畫面
         if st.session_state.bank_confirm:
             st.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
             c_yes, c_no = st.columns(2)
             with c_yes:
-                if st.button("✅ 確認寫入", use_container_width=True):
+                if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
                         fmt_date = rec_date.strftime('%Y/%m/%d')
                         final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
@@ -348,7 +346,7 @@ with st.sidebar:
                     except Exception as e: 
                         st.error(f"寫入失敗: {e}")
             with c_no:
-                if st.button("❌ 取消", use_container_width=True):
+                if st.button("❌ 取消", use_container_width=True, key="bank_no"):
                     st.session_state.bank_confirm = False
                     st.rerun()
                 
