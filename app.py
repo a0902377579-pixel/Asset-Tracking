@@ -519,17 +519,19 @@ with tab2:
                 hoverinfo='skip', showlegend=False
             ))
             
-            # 3. 負責顯示 Hover 的隱形軌跡 (透明線)
-            # 事先在 Python 判斷好正負與對應的顏色，直接塞給圖表，保證 100% 精準
+            # 3. 負責顯示 Hover 的隱形軌跡
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
             
             fig7.add_trace(go.Scatter(
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
                 customdata=np.column_stack((c7_vals, c7_colors)),
-                mode='lines', line=dict(color='rgba(0,0,0,0)', width=0), 
-                name="", # 讓名稱留空
-                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
+                mode='markers', 
+                # 使用極小(接近隱形)的 marker，這樣 Plotly 的 Hover 邊框與提示色塊就能抓到動態的紅綠色！
+                marker=dict(color=c7_colors, size=0.001, opacity=1), 
+                name="", 
+                # 加入 ■ 圖案並讓其跟隨正負變色
+                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>■ 累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
             
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
