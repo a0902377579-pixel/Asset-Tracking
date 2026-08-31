@@ -514,15 +514,16 @@ with tab2:
                 hoverinfo='skip', showlegend=False
             ))
             
-            # 3. 負責顯示 Hover 的軌跡，將 marker 大小改為 8
+            # 3. 完美解決方案：疊加一個「高度為 0 的隱形長條圖」來專門觸發 Hover
+            # 長條圖的提示框天生就是完美的方形，且高度為 0 不會在圖表上留下任何點或線
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
             
-            fig7.add_trace(go.Scatter(
-                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
+            fig7.add_trace(go.Bar(
+                x=df_hist_plot['繪圖日期'], 
+                y=[0] * len(df_hist_plot),  # 全部設為 0，畫面上看不見
                 customdata=np.column_stack((c7_vals, c7_colors)),
-                mode='markers', 
-                marker=dict(symbol='square', color=c7_colors, size=8, opacity=1), 
+                marker_color=c7_colors,     # 這會讓提示框的方塊自動變成紅/綠色
                 name="", 
                 hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
