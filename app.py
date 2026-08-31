@@ -353,17 +353,22 @@ with st.sidebar:
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
         
-        # 加上通用後代選擇器強制變色
+        # 修正黑色模式下的背景與文字對比
         st.markdown("""
         <style>
             .est-box { padding: 10px; border-radius: 8px; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px; }
+            /* 白色模式樣式 */
             .est-blue { background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #095c9e; }
             .est-green { background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #0a7029; }
             .est-gray { background-color: rgba(0, 0, 0, 0.05); border-left: 5px solid #a0a5b1; color: #4a4a4a; }
             
-            /* 黑色模式：強制內部所有文字改為淺藍色 */
+            /* 黑色模式：加亮背景與文字，確保清晰 */
             @media (prefers-color-scheme: dark) {
-                .est-blue, .est-blue *, .est-green, .est-green *, .est-gray, .est-gray * { 
+                .est-blue { background-color: rgba(52, 152, 219, 0.3) !important; border-left: 5px solid #54a0ff !important; }
+                .est-green { background-color: rgba(46, 204, 113, 0.3) !important; border-left: 5px solid #2ecc71 !important; }
+                .est-gray { background-color: rgba(255, 255, 255, 0.15) !important; border-left: 5px solid #ffffff !important; }
+                
+                .est-blue *, .est-green *, .est-gray * { 
                     color: #74b9ff !important; 
                 }
             }
