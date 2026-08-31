@@ -522,7 +522,7 @@ with tab2:
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
                 customdata=np.column_stack((c7_vals, c7_colors)),
                 mode='markers', 
-                marker=dict(symbol='square', color=c7_colors, size=4, opacity=1), 
+                marker=dict(symbol='square', color=c7_colors, size=8, opacity=1), 
                 name="", 
                 hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
