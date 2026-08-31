@@ -24,7 +24,6 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 強制 Tab 容器滿版並設定間距 */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
@@ -33,13 +32,11 @@ st.markdown("""
         border-bottom: none !important;
     }
     
-    /* 徹底隱藏選中時原生的醜陋底線 */
     div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
         display: none !important;
         background-color: transparent !important;
     }
     
-    /* 未選中的 Tab：完美 50px 膠囊狀 */
     button[data-baseweb="tab"] { 
         flex: 1 1 0 !important;
         background-color: #1e2128 !important; 
@@ -50,7 +47,6 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
     
-    /* 確保字體顏色與置中 */
     button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
         width: 100%;
         text-align: center;
@@ -59,7 +55,6 @@ st.markdown("""
         color: #a0a5b1 !important;
     }
     
-    /* 被選中 (Active) 的 Tab：發光漸層 */
     button[data-baseweb="tab"][aria-selected="true"] { 
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
@@ -92,6 +87,7 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
+@st.cache_data(ttl=600, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -132,6 +128,7 @@ def load_sheet_data():
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
     except: return None, None
 
+@st.cache_data(ttl=600, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -186,17 +183,30 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)", "none", "#ffffff"
             
-    # ✨ 修正 RWD 縮放問題：動態字體大小 (clamp)、取消死板高度、加入彈性排版
     return f"""
-    <div style="background: {bg}; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
-        <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
-        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
+    <div style="background: {bg}; border-radius: 12px; padding: 20px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); height: 130px; position: relative; overflow: hidden; margin-bottom: 15px;">
+        <p style="margin: 0; font-size: 1.2rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{title}</p>
+        <p style="margin: 5px 0 0 0; font-size: 2.3rem; font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50;">{value_str}</p>
+        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg);">{icon}</div>
     </div>
     """
 
+# 一般報表用的上色邏輯 (單純看該格子的數值正負)
 def style_profit_loss(s):
     return ['color: #ff4b4b; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #09ab3b; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else '') for v in s]
+
+# ✨ 專為投資組合設計的「動態聯動」上色邏輯
+def style_portfolio_row(row):
+    styles = [''] * len(row)
+    for i, col in enumerate(row.index):
+        # 損益相關直接看自己欄位的值
+        if col in ['各股損益', '各股損益(%)']:
+            styles[i] = 'color: #ff4b4b; font-weight: bold;' if row[col] > 0 else ('color: #09ab3b; font-weight: bold;' if row[col] < 0 else '')
+        # 現價與漲跌幅統一跟隨「即時漲跌幅(%)」的正負號
+        elif col in ['即時現價', '即時漲跌幅(%)']:
+            chg = row['即時漲跌幅(%)']
+            styles[i] = 'color: #ff4b4b; font-weight: bold;' if chg > 0 else ('color: #09ab3b; font-weight: bold;' if chg < 0 else '')
+    return styles
 
 # ==========================================
 # 4. 資料全域預處理
@@ -396,7 +406,8 @@ with tab1:
                 "total_cost":"總成本", "current_price":"即時現價", "market_value":"即時市值", "change_pct":"即時漲跌幅(%)"
             })[["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]]
             
-            styled_df = df_display.style.apply(style_profit_loss, subset=["即時現價", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]) \
+            # ✨ 套用新的動態聯動上色邏輯
+            styled_df = df_display.style.apply(style_portfolio_row, axis=1) \
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
