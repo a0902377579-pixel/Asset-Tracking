@@ -92,7 +92,6 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-@st.cache_data(ttl=600, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -133,7 +132,6 @@ def load_sheet_data():
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
     except: return None, None
 
-@st.cache_data(ttl=600, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -188,11 +186,12 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)", "none", "#ffffff"
             
+    # ✨ 修正 RWD 縮放問題：動態字體大小 (clamp)、取消死板高度、加入彈性排版
     return f"""
-    <div style="background: {bg}; border-radius: 12px; padding: 20px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); height: 130px; position: relative; overflow: hidden; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 1.2rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{title}</p>
-        <p style="margin: 5px 0 0 0; font-size: 2.3rem; font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50;">{value_str}</p>
-        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg);">{icon}</div>
+    <div style="background: {bg}; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+        <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
+        <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
+        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
     </div>
     """
 
@@ -287,7 +286,6 @@ with st.sidebar:
     st.title("⚙️ 異動控制中心")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     
-    # ✨ 加入手動強制更新按鈕
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
         load_sheet_data.clear()
         load_bank_data.clear()
