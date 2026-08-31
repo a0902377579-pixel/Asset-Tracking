@@ -229,7 +229,7 @@ if hist_data:
     df_hist["真實日期"] = pd.to_datetime(df_hist["日期"], errors='coerce')
     df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
-    df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + " (" + df_hist["星期"] + ")"
+    df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + "(" + df_hist["星期"] + ")"
     
     df_hist["總損益(%)"] = (df_hist["總投資損益"] / df_hist["總累積成本"]) * 100
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0)
@@ -245,7 +245,7 @@ if txs:
     df_txs['日期_dt'] = pd.to_datetime(df_txs['日期'], errors='coerce')
     df_txs = df_txs.dropna(subset=['日期_dt']).sort_values('日期_dt')
     df_txs['星期'] = df_txs['日期_dt'].dt.weekday.map(WEEK_MAP)
-    df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
+    df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + "(" + df_txs['星期'] + ")"
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
@@ -465,7 +465,7 @@ with tab2:
         with c2_4:
             fig4 = px.treemap(df_h, path=['stock_name'], values='market_value', color='各股損益(%)', color_continuous_scale=['#09ab3b', '#222222', '#ff4b4b'], color_continuous_midpoint=0)
             fig4.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>帳面損益: %{{color:+.2f}}%</b></span><extra></extra>", textfont=dict(size=18, color="white"))
-            fig4.update_layout(coloraxis_colorbar=dict(tickformat=".2f"))  # 強制色碼條保留2小位
+            fig4.update_layout(coloraxis_colorbar=dict(tickformat=".2f"))  
             st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True)
 
         with c2_5:
@@ -490,7 +490,7 @@ with tab2:
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
     if df_hist is not None:
         df_hist_plot = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
-        df_hist_plot['繪圖日期'] = df_hist_plot['真實日期'].dt.strftime('%Y/%m/%d')
+        df_hist_plot['繪圖日期'] = df_hist_plot['日期_顯示']
         
         c2_7, c2_8 = st.columns(2)
         with c2_7:
@@ -526,7 +526,7 @@ with tab2:
             fig9.update_xaxes(type='category')
             fig9 = add_zero_baseline(fig9) 
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{y:+.2f}}%</b></span><extra></extra>")
-            fig9.update_yaxes(tickformat=".2f")  # 強制 Y 軸保留 2 小位
+            fig9.update_yaxes(tickformat=".2f")  
             st.plotly_chart(fig9, use_container_width=True)
 
         with c2_10:
@@ -554,7 +554,7 @@ with tab2:
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
-            fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f")) # 強制色碼條保留2小位
+            fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f")) 
             st.plotly_chart(fig12, use_container_width=True)
 
         st.divider()
@@ -591,7 +591,7 @@ with tab2:
             fig16.update_xaxes(type='category')
             fig16 = add_zero_baseline(fig16) 
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{y:+.2f}}%</b></span><extra></extra>")
-            fig16.update_yaxes(tickformat=".2f")  # 強制 Y 軸保留 2 小位
+            fig16.update_yaxes(tickformat=".2f")  
             st.plotly_chart(fig16, use_container_width=True)
 
         with c2_17:
@@ -612,7 +612,7 @@ with tab2:
     st.markdown("### 🏦 展區四：現金流動脈分析")
     if df_txs is not None:
         df_txs_plot = df_txs.copy()
-        df_txs_plot['繪圖日期'] = df_txs_plot['日期_dt'].dt.strftime('%Y/%m/%d')
+        df_txs_plot['繪圖日期'] = df_txs_plot['日期_顯示']
         
         c2_19, c2_20, c2_21 = st.columns(3)
         with c2_19:
