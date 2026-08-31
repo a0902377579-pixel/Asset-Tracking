@@ -437,7 +437,7 @@ with tab1:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})\
-                            .set_properties(subset=['類型'], **{'text-align': 'left'})
+                            .set_properties(subset=['類型'], **{'text-align': 'right'})
             st.dataframe(styled_bank, use_container_width=True, hide_index=True)
         else:
             st.info("尚無銀行紀錄。")
