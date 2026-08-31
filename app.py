@@ -622,7 +622,8 @@ with tab2:
             st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True)
 
         with c2_18:
-            dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
+            # 在 mean() 後方加上 .round(0) 強制轉為整數
+            dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().round(0).reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
             fig18 = style_fig(fig18, "18. 星期別平均波動分析")
             fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
