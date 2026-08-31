@@ -366,7 +366,7 @@ with st.sidebar:
             @media (prefers-color-scheme: dark) {
                 .est-blue { color: #89cff0 !important; }
                 .est-green { background-color: rgba(46, 204, 113, 0.15); border-left: 5px solid #2ecc71; color: #89cff0 !important; }
-                .est-gray { background-color: rgba(255, 255, 255, 0.05); color: #ffffff !important; }
+                .est-gray { background-color: rgba(255, 255, 255, 0.05); color: #89cff0 !important; }
             }
         </style>
         """, unsafe_allow_html=True)
