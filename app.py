@@ -237,8 +237,6 @@ if hist_data:
     df_hist["最高市值"] = df_hist["總市值"].cummax()
     df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
     df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
-    
-    # ✨ 先在全域資料算好部位的累計獲利，避免過濾六日後導致數學計算斷層
     df_hist["0050累計"] = df_hist["0050每日損益"].cumsum()
     df_hist["台積電累計"] = df_hist["台積電每日損益"].cumsum()
 
@@ -250,8 +248,6 @@ if txs:
     df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
-    
-    # ✨ 在全域資料先算好累積現金流
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
 
 # ==========================================
@@ -449,18 +445,25 @@ with tab2:
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
             fig1 = px.pie(names=['股票總市值', '銀行帳戶餘額'], values=[dashboard_data["total_assets"], bank_balance], hole=0.5, color_discrete_sequence=['#3498db', '#f1c40f'])
-            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
-            st.plotly_chart(style_fig(fig1, "1. 總資產水庫配置"), use_container_width=True)
+            # ✨ 強制標籤外顯並加上左右邊界預防被切斷
+            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            fig1 = style_fig(fig1, "1. 總資產水庫配置")
+            fig1.update_layout(margin=dict(l=60, r=60))
+            st.plotly_chart(fig1, use_container_width=True)
             
         with c2_2:
             fig2 = px.pie(df_h, names='stock_name', values='market_value', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
-            st.plotly_chart(style_fig(fig2, "2. 個股市值佔比"), use_container_width=True)
+            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            fig2 = style_fig(fig2, "2. 個股市值佔比")
+            fig2.update_layout(margin=dict(l=60, r=60))
+            st.plotly_chart(fig2, use_container_width=True)
 
         with c2_3:
             fig3 = px.pie(df_h, names='stock_name', values='total_cost', hole=0.5, color_discrete_sequence=px.colors.qualitative.Set2)
-            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
-            st.plotly_chart(style_fig(fig3, "3. 投入本金佈局佔比"), use_container_width=True)
+            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            fig3 = style_fig(fig3, "3. 投入本金佈局佔比")
+            fig3.update_layout(margin=dict(l=60, r=60))
+            st.plotly_chart(fig3, use_container_width=True)
 
         c2_4, c2_5, c2_6 = st.columns(3)
         with c2_4:
@@ -489,7 +492,6 @@ with tab2:
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
     if df_hist is not None:
-        # ✨ 戰區二專用的「純平日資料表」，完美過濾掉六日
         df_hist_plot = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
         df_hist_plot['繪圖日期'] = df_hist_plot['真實日期'].dt.strftime('%Y/%m/%d')
         
@@ -505,7 +507,6 @@ with tab2:
                 mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), name="虧損"
             ))
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
-            # ✨ 強制去時間化，把X軸當作文字類別，保證沒有六日的斷層空白
             fig7.update_xaxes(type='category')
             fig7 = add_zero_baseline(fig7) 
             fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{customdata:+,.0f}}</b></span><extra></extra>")
@@ -543,7 +544,6 @@ with tab2:
         c2_11, c2_12 = st.columns(2)
         with c2_11:
             fig11 = go.Figure()
-            # ✨ 使用過濾前就算好的累計值，確保累加計算沒有遺漏
             fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['0050累計'], mode='lines', name='0050 累計', line=dict(color='#3498db')))
             fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電累計'], mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
             fig11 = style_fig(fig11, "11. 雙引擎累計獲利賽跑")
@@ -611,8 +611,8 @@ with tab2:
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
     if df_txs is not None:
-        # ✨ 戰區四專用的「純平日過濾版」
-        df_txs_plot = df_txs[df_txs['星期'].isin(['一', '二', '三', '四', '五'])].copy()
+        # ✨ 取消銀行金流的六日過濾機制，保留所有假日資料
+        df_txs_plot = df_txs.copy()
         df_txs_plot['繪圖日期'] = df_txs_plot['日期_dt'].dt.strftime('%Y/%m/%d')
         
         c2_19, c2_20, c2_21 = st.columns(3)
