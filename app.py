@@ -506,18 +506,35 @@ with tab2:
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
+            # 1. 獲利(紅)區域 - 隱藏 hover
             fig7.add_trace(go.Scatter(
-                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0), customdata=df_hist_plot['總投資損益'],
-                mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), name="獲利"
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0),
+                mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), 
+                hoverinfo='skip', showlegend=False
             ))
+            # 2. 虧損(綠)區域 - 隱藏 hover
             fig7.add_trace(go.Scatter(
-                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0), customdata=df_hist_plot['總投資損益'],
-                mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), name="虧損"
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0),
+                mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), 
+                hoverinfo='skip', showlegend=False
             ))
+            
+            # 3. 負責顯示 Hover 的隱形軌跡 (透明線)
+            # 事先在 Python 判斷好正負與對應的顏色，直接塞給圖表，保證 100% 精準
+            c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
+            c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
+            
+            fig7.add_trace(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
+                customdata=np.column_stack((c7_vals, c7_colors)),
+                mode='lines', line=dict(color='rgba(0,0,0,0)', width=0), 
+                name="", # 讓名稱留空
+                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
+            ))
+            
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
             fig7.update_xaxes(type='category')
             fig7 = add_zero_baseline(fig7) 
-            fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{customdata:+,.0f}}</b></span><extra></extra>")
             fig7.update_layout(showlegend=False)
             st.plotly_chart(fig7, use_container_width=True)
             
