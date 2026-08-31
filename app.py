@@ -320,8 +320,8 @@ with st.sidebar:
             rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"])
             amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0)
             
-            # 當金額為 0 時，將 disabled 設為 True，按鈕會自動反灰無法點擊
-            is_zero = (amount <= 0)
+            # 修正：改為只有當金額等於 0 時才反灰，大於 0 即可寫入
+            is_zero = (amount == 0)
             submitted = st.form_submit_button("寫入金流紀錄", use_container_width=True, disabled=is_zero)
             
             if submitted:
