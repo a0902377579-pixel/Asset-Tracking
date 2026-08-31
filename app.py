@@ -311,19 +311,23 @@ with st.sidebar:
     with tab_bank:
         st.markdown("### 新增銀行金流")
         
-        # 初始化確認狀態
         if "bank_confirm" not in st.session_state:
             st.session_state.bank_confirm = False
 
-        # 移除 st.form，改用一般互動輸入，即時生效
-        rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date")
-        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"], key="bank_type")
-        amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount")
+        # 當確認中時，將所有輸入欄位鎖定 (disabled=True)
+        is_locked = st.session_state.bank_confirm
+
+        rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"], key="bank_type", disabled=is_locked)
+        amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         
         is_zero = (amount == 0)
         
-        if st.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
-            st.session_state.bank_confirm = True
+        # 確認中時隱藏「寫入」按鈕，避免重複觸發
+        if not st.session_state.bank_confirm:
+            if st.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
+                st.session_state.bank_confirm = True
+                st.rerun()
 
         # 二次確認畫面
         if st.session_state.bank_confirm:
@@ -353,16 +357,21 @@ with st.sidebar:
     with tab_stock:
         st.markdown("### 新增股票交易")
         
-        selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change)
+        if "stock_confirm" not in st.session_state:
+            st.session_state.stock_confirm = False
+
+        is_stock_locked = st.session_state.stock_confirm
+
+        selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change, disabled=is_stock_locked)
         
         if selected_stock == "其他 (手動輸入新股)":
-            st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee)
+            st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee, disabled=is_stock_locked)
             
-        s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today())
+        s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today(), disabled=is_stock_locked)
         
-        st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee)
-        st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee)
-        st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee")
+        st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee, disabled=is_stock_locked)
+        st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee, disabled=is_stock_locked)
+        st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee", disabled=is_stock_locked)
         
         current_shares = st.session_state.s_shares
         current_price = st.session_state.s_price
@@ -387,20 +396,16 @@ with st.sidebar:
         else:
             st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
         
-        # 初始化股票確認狀態
-        if "stock_confirm" not in st.session_state:
-            st.session_state.stock_confirm = False
-
         name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
-        # 當股數為 0 或名稱空白時自動將按鈕反灰
         is_stock_zero = (current_shares == 0 or not name_check.strip())
         
-        if st.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
-            st.session_state.stock_confirm = True
+        if not st.session_state.stock_confirm:
+            if st.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
+                st.session_state.stock_confirm = True
+                st.rerun()
 
         # 股票二次確認畫面
         if st.session_state.stock_confirm:
-            # 計算含手續費/稅金的總金額
             total_amt_check = (current_shares * current_price) + st.session_state.s_fee
             
             st.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
