@@ -354,12 +354,12 @@ with st.sidebar:
         current_fee = st.session_state.s_fee
         if current_shares > 0:
             est_total = (current_shares * current_price) + current_fee
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #095c9e; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #74b9ff; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         elif current_shares < 0:
             est_total = abs(current_shares * current_price) - current_fee
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #0a7029; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #2ecc71; color: #2ecc71; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.05); border-left: 5px solid #a0a5b1; color: #4a4a4a; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding: 10px; border-radius: 8px; background-color: rgba(255, 255, 255, 0.05); border-left: 5px solid #a0a5b1; color: #e0e0e0; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True); font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px;">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
         
         if st.button("寫入股票紀錄", use_container_width=True):
             shares = st.session_state.s_shares
