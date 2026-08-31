@@ -310,30 +310,47 @@ with st.sidebar:
     
     with tab_bank:
         st.markdown("### 新增銀行金流")
+        
+        # 初始化確認狀態
+        if "bank_confirm" not in st.session_state:
+            st.session_state.bank_confirm = False
+
         with st.form("bank_record_form"):
             rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today())
             rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"])
             amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0)
             
-            if st.form_submit_button("寫入金流紀錄", use_container_width=True):
-                if amount > 0:
+            # 當金額為 0 時，將 disabled 設為 True，按鈕會自動反灰無法點擊
+            is_zero = (amount <= 0)
+            submitted = st.form_submit_button("寫入金流紀錄", use_container_width=True, disabled=is_zero)
+            
+            if submitted:
+                st.session_state.bank_confirm = True
+
+        # 二次確認畫面
+        if st.session_state.bank_confirm:
+            st.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
+            c_yes, c_no = st.columns(2)
+            with c_yes:
+                if st.button("✅ 確認寫入", use_container_width=True):
                     try:
                         fmt_date = rec_date.strftime('%Y/%m/%d')
-                        if rec_type in ["現金", "跨行轉", "委代入", "電匯"]:
-                            final_amount = amount
-                        else:  
-                            final_amount = -amount
+                        final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
                         sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
                         
                         load_bank_data.clear()
                         load_sheet_data.clear()
-                        
+                        st.session_state.bank_confirm = False
                         st.success("紀錄成功寫入！")
                         st.rerun()
-                    except Exception as e: st.error(f"寫入失敗: {e}")
-                else: st.warning("請輸入有效金額 (大於 0)。")
+                    except Exception as e: 
+                        st.error(f"寫入失敗: {e}")
+            with c_no:
+                if st.button("❌ 取消", use_container_width=True):
+                    st.session_state.bank_confirm = False
+                    st.rerun()
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
@@ -353,41 +370,13 @@ with st.sidebar:
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
         
-        # 改用高對比、亮底深字的樣式，在暗色與亮色模式下都極度清晰
         st.markdown("""
         <style>
-            .est-box { 
-                padding: 12px 15px; 
-                border-radius: 8px; 
-                font-weight: 900; 
-                white-space: nowrap; 
-                font-size: 16px; 
-                margin-bottom: 15px; 
-                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            }
-            /* 預估扣款：明亮的藍色背景搭配深色粗體字 */
-            .est-blue { 
-                background-color: #74b9ff !important; 
-                border-left: 6px solid #0984e3 !important; 
-                color: #0c2461 !important; 
-            }
-            /* 預估入帳：明亮的綠色背景搭配深色粗體字 */
-            .est-green { 
-                background-color: #55efc4 !important; 
-                border-left: 6px solid #00b894 !important; 
-                color: #004d40 !important; 
-            }
-            /* 預估交割：明亮的灰白色背景搭配深色粗體字 */
-            .est-gray { 
-                background-color: #dfe6e9 !important; 
-                border-left: 6px solid #636e72 !important; 
-                color: #2d3436 !important; 
-            }
-            
-            /* 強制內部文字同步變色 */
-            .est-blue *, .est-green *, .est-gray * { 
-                color: inherit !important; 
-            }
+            .est-box { padding: 12px 15px; border-radius: 8px; font-weight: 900; white-space: nowrap; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+            .est-blue { background-color: #74b9ff !important; border-left: 6px solid #0984e3 !important; color: #0c2461 !important; }
+            .est-green { background-color: #55efc4 !important; border-left: 6px solid #00b894 !important; color: #004d40 !important; }
+            .est-gray { background-color: #dfe6e9 !important; border-left: 6px solid #636e72 !important; color: #2d3436 !important; }
+            .est-blue *, .est-green *, .est-gray * { color: inherit !important; }
         </style>
         """, unsafe_allow_html=True)
         
@@ -399,26 +388,41 @@ with st.sidebar:
             st.markdown(f'<div class="est-box est-green">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
-            
-        if st.button("寫入股票紀錄", use_container_width=True):
-            shares = st.session_state.s_shares
-            price = st.session_state.s_price
-            name = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
-            
-            if shares != 0 and price > 0 and name.strip() != "":
-                try:
-                    s_date_fmt = s_date.strftime('%Y/%m/%d')
-                    total_amt = (shares * price) + st.session_state.s_fee
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name, shares, price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
-                    
-                    load_sheet_data.clear()
-                    load_bank_data.clear()
-                    
-                    st.success("股票紀錄成功寫入！")
+        
+        # 初始化股票確認狀態
+        if "stock_confirm" not in st.session_state:
+            st.session_state.stock_confirm = False
+
+        name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
+        # 當股數為 0 或名稱空白時自動將按鈕反灰
+        is_stock_zero = (current_shares == 0 or not name_check.strip())
+        
+        if st.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
+            st.session_state.stock_confirm = True
+
+        # 股票二次確認畫面
+        if st.session_state.stock_confirm:
+            st.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}")
+            sc_yes, sc_no = st.columns(2)
+            with sc_yes:
+                if st.button("✅ 確認寫入股票", use_container_width=True):
+                    try:
+                        s_date_fmt = s_date.strftime('%Y/%m/%d')
+                        total_amt = (current_shares * current_price) + st.session_state.s_fee
+                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name_check, current_shares, current_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                        
+                        load_sheet_data.clear()
+                        load_bank_data.clear()
+                        st.session_state.stock_confirm = False
+                        st.success("股票紀錄成功寫入！")
+                        st.rerun()
+                    except Exception as e: 
+                        st.error(f"寫入失敗: {e}")
+            with sc_no:
+                if st.button("❌ 取消寫入", use_container_width=True):
+                    st.session_state.stock_confirm = False
                     st.rerun()
-                except Exception as e: st.error(f"寫入失敗: {e}")
-            else: st.warning("請確認股數、價格與股票名稱填寫正確。")
 
 # ==========================================
 # 主畫面開始
