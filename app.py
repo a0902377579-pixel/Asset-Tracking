@@ -436,9 +436,17 @@ with tab1:
         if df_txs is not None:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
-                            .format({"金額": "{:+,.0f}"})\
-                            .set_properties(subset=['類型'], **{'text-align': 'right'})
-            st.dataframe(styled_bank, use_container_width=True, hide_index=True)
+                            .format({"金額": "{:+,.0f}"})
+            
+            # 使用 Streamlit 內建的 column_config 強制將「類型」靠右對齊
+            st.dataframe(
+                styled_bank, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "類型": st.column_config.TextColumn("類型", alignment="right")
+                }
+            )
         else:
             st.info("尚無銀行紀錄。")
 
