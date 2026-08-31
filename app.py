@@ -184,25 +184,21 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)", "none", "#ffffff"
             
     return f"""
-    <div style="background: {bg}; border-radius: 12px; padding: 20px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); height: 130px; position: relative; overflow: hidden; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 1.2rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{title}</p>
-        <p style="margin: 5px 0 0 0; font-size: 2.3rem; font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50;">{value_str}</p>
-        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg);">{icon}</div>
+    <div style="background: {bg}; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+        <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
+        <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
+        <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
     </div>
     """
 
-# 一般報表用的上色邏輯 (單純看該格子的數值正負)
 def style_profit_loss(s):
     return ['color: #ff4b4b; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #09ab3b; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else '') for v in s]
 
-# ✨ 專為投資組合設計的「動態聯動」上色邏輯
 def style_portfolio_row(row):
     styles = [''] * len(row)
     for i, col in enumerate(row.index):
-        # 損益相關直接看自己欄位的值
         if col in ['各股損益', '各股損益(%)']:
             styles[i] = 'color: #ff4b4b; font-weight: bold;' if row[col] > 0 else ('color: #09ab3b; font-weight: bold;' if row[col] < 0 else '')
-        # 現價與漲跌幅統一跟隨「即時漲跌幅(%)」的正負號
         elif col in ['即時現價', '即時漲跌幅(%)']:
             chg = row['即時漲跌幅(%)']
             styles[i] = 'color: #ff4b4b; font-weight: bold;' if chg > 0 else ('color: #09ab3b; font-weight: bold;' if chg < 0 else '')
@@ -222,7 +218,6 @@ stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 if dashboard_data and dashboard_data.get("holdings"):
     df_h = pd.DataFrame(dashboard_data["holdings"])
     df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1)
-    
     for h in dashboard_data["holdings"]:
         name = h["stock_name"]
         if name not in stock_options:
@@ -242,6 +237,10 @@ if hist_data:
     df_hist["最高市值"] = df_hist["總市值"].cummax()
     df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
     df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
+    
+    # ✨ 先在全域資料算好部位的累計獲利，避免過濾六日後導致數學計算斷層
+    df_hist["0050累計"] = df_hist["0050每日損益"].cumsum()
+    df_hist["台積電累計"] = df_hist["台積電每日損益"].cumsum()
 
 if txs:
     df_txs = pd.DataFrame(txs)
@@ -251,6 +250,8 @@ if txs:
     df_txs['日期_顯示'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d') + " (" + df_txs['星期'] + ")"
     df_txs['流向'] = df_txs['金額'].apply(lambda x: '流出 (支出/買股)' if x < 0 else '流入 (存錢/賣股)')
     df_txs['金額絕對值'] = df_txs['金額'].abs()
+    
+    # ✨ 在全域資料先算好累積現金流
     df_txs['累計淨現金流'] = df_txs['金額'].cumsum()
 
 # ==========================================
@@ -406,7 +407,6 @@ with tab1:
                 "total_cost":"總成本", "current_price":"即時現價", "market_value":"即時市值", "change_pct":"即時漲跌幅(%)"
             })[["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]]
             
-            # ✨ 套用新的動態聯動上色邏輯
             styled_df = df_display.style.apply(style_portfolio_row, axis=1) \
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
@@ -489,20 +489,24 @@ with tab2:
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
     if df_hist is not None:
-        df_hist['繪圖日期'] = df_hist['真實日期'].dt.strftime('%Y/%m/%d')
+        # ✨ 戰區二專用的「純平日資料表」，完美過濾掉六日
+        df_hist_plot = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
+        df_hist_plot['繪圖日期'] = df_hist_plot['真實日期'].dt.strftime('%Y/%m/%d')
         
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
             fig7.add_trace(go.Scatter(
-                x=df_hist['繪圖日期'], y=df_hist['總投資損益'].clip(lower=0), customdata=df_hist['總投資損益'],
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0), customdata=df_hist_plot['總投資損益'],
                 mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), name="獲利"
             ))
             fig7.add_trace(go.Scatter(
-                x=df_hist['繪圖日期'], y=df_hist['總投資損益'].clip(upper=0), customdata=df_hist['總投資損益'],
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0), customdata=df_hist_plot['總投資損益'],
                 mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), name="虧損"
             ))
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
+            # ✨ 強制去時間化，把X軸當作文字類別，保證沒有六日的斷層空白
+            fig7.update_xaxes(type='category')
             fig7 = add_zero_baseline(fig7) 
             fig7.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累積損益: NT$ %{{customdata:+,.0f}}</b></span><extra></extra>")
             fig7.update_layout(showlegend=False)
@@ -510,39 +514,47 @@ with tab2:
             
         with c2_8:
             fig8 = go.Figure()
-            fig8.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
-            fig8.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
+            fig8.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
+            fig8.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
+            fig8 = style_fig(fig8, "8. 總市值與 20 日均線乖離")
+            fig8.update_xaxes(type='category')
             fig8.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), use_container_width=True)
+            st.plotly_chart(fig8, use_container_width=True)
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
-            fig9 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['總損益(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
+            fig9 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總損益(%)'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
             fig9 = style_fig(fig9, "9. 總損益 (%) 走勢")
+            fig9.update_xaxes(type='category')
             fig9 = add_zero_baseline(fig9) 
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{y:+.2f}}%</b></span><extra></extra>")
             st.plotly_chart(fig9, use_container_width=True)
 
         with c2_10:
             fig10 = go.Figure()
-            fig10.add_trace(go.Bar(x=df_hist['繪圖日期'], y=df_hist['0050每日損益'], name='0050', marker_color='#3498db'))
-            fig10.add_trace(go.Bar(x=df_hist['繪圖日期'], y=df_hist['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
+            fig10.add_trace(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['0050每日損益'], name='0050', marker_color='#3498db'))
+            fig10.add_trace(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
+            fig10 = style_fig(fig10, "10. 每日損益部位貢獻疊加")
+            fig10.update_xaxes(type='category')
             fig10.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>部位損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig10.update_layout(barmode='relative')
-            st.plotly_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), use_container_width=True)
+            st.plotly_chart(fig10, use_container_width=True)
             
         c2_11, c2_12 = st.columns(2)
         with c2_11:
             fig11 = go.Figure()
-            fig11.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['0050每日損益'].cumsum(), mode='lines', name='0050 累計', line=dict(color='#3498db')))
-            fig11.add_trace(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['台積電每日損益'].cumsum(), mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
+            # ✨ 使用過濾前就算好的累計值，確保累加計算沒有遺漏
+            fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['0050累計'], mode='lines', name='0050 累計', line=dict(color='#3498db')))
+            fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電累計'], mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
+            fig11 = style_fig(fig11, "11. 雙引擎累計獲利賽跑")
+            fig11.update_xaxes(type='category')
             fig11.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>累計貢獻: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True)
+            st.plotly_chart(fig11, use_container_width=True)
 
         with c2_12:
-            fig12 = px.scatter(df_hist, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10)
+            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10)
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
-            fig12.add_shape(type="line", x0=df_hist["總累積成本"].min(), y0=df_hist["總累積成本"].min(), x1=df_hist["總累積成本"].max(), y1=df_hist["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
+            fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{marker.color:+.2f}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             st.plotly_chart(fig12, use_container_width=True)
 
@@ -550,43 +562,46 @@ with tab2:
         st.markdown("### ⚠️ 展區三：風險回撤與規律矩陣")
         c2_13, c2_14, c2_15 = st.columns(3)
         with c2_13:
-            vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist['單日損益變化']]
-            fig13 = go.Figure(go.Bar(x=df_hist['繪圖日期'], y=df_hist['單日損益變化'], marker_color=vol_colors))
+            vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist_plot['單日損益變化']]
+            fig13 = go.Figure(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日損益變化'], marker_color=vol_colors))
             fig13 = style_fig(fig13, "13. 單日總損益震盪圖")
+            fig13.update_xaxes(type='category')
             fig13 = add_zero_baseline(fig13) 
             fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig13, use_container_width=True)
             
         with c2_14:
-            fig14 = px.histogram(df_hist, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
+            fig14 = px.histogram(df_hist_plot, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
             fig14 = style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)")
             fig14.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>損益區間: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>發生次數: %{{y}} 次</b></span><extra></extra>")
             fig14.update_layout(hovermode="closest")
             st.plotly_chart(fig14, use_container_width=True)
             
         with c2_15:
-            fig15 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
+            fig15 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
             fig15 = style_fig(fig15, "15. 歷史最大回撤 (Drawdown)")
+            fig15.update_xaxes(type='category')
             fig15 = add_zero_baseline(fig15) 
             fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig15, use_container_width=True)
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
-            fig16 = go.Figure(go.Scatter(x=df_hist['繪圖日期'], y=df_hist['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
+            fig16 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日漲跌幅(%)'], mode='lines', line=dict(color='#1abc9c', width=2)))
             fig16 = style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢")
+            fig16.update_xaxes(type='category')
             fig16 = add_zero_baseline(fig16) 
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{y:+.2f}}%</b></span><extra></extra>")
             st.plotly_chart(fig16, use_container_width=True)
 
         with c2_17:
-            win_days, lose_days = len(df_hist[df_hist['單日損益變化'] > 0]), len(df_hist[df_hist['單日損益變化'] < 0])
+            win_days, lose_days = len(df_hist_plot[df_hist_plot['單日損益變化'] > 0]), len(df_hist_plot[df_hist_plot['單日損益變化'] < 0])
             fig17 = px.pie(names=['上漲天數', '下跌天數'], values=[win_days, lose_days], hole=0.6, color_discrete_sequence=['#ff4b4b', '#09ab3b'])
             fig17.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>天數: %{{value}} 天</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent')
             st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True)
 
         with c2_18:
-            dow_avg = df_hist.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
+            dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
             fig18 = style_fig(fig18, "18. 星期別平均波動分析")
             fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
@@ -596,23 +611,28 @@ with tab2:
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
     if df_txs is not None:
-        df_txs['繪圖日期'] = df_txs['日期_dt'].dt.strftime('%Y/%m/%d')
+        # ✨ 戰區四專用的「純平日過濾版」
+        df_txs_plot = df_txs[df_txs['星期'].isin(['一', '二', '三', '四', '五'])].copy()
+        df_txs_plot['繪圖日期'] = df_txs_plot['日期_dt'].dt.strftime('%Y/%m/%d')
+        
         c2_19, c2_20, c2_21 = st.columns(3)
         with c2_19:
-            fig19 = px.sunburst(df_txs, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig19 = px.sunburst(df_txs_plot, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
             fig19.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>累積金額: NT$ %{{value:,.0f}}</b></span><extra></extra>")
             st.plotly_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), use_container_width=True)
             
         with c2_20:
-            fig20 = px.bar(df_txs, x="繪圖日期", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig20 = px.bar(df_txs_plot, x="繪圖日期", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
             fig20 = style_fig(fig20, "20. 單筆資金進出分布")
+            fig20.update_xaxes(type='category')
             fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig20.update_layout(showlegend=False, hovermode="closest")
             st.plotly_chart(fig20, use_container_width=True)
             
         with c2_21:
-            fig21 = go.Figure(go.Scatter(x=df_txs['繪圖日期'], y=df_txs['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
+            fig21 = go.Figure(go.Scatter(x=df_txs_plot['繪圖日期'], y=df_txs_plot['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
             fig21 = style_fig(fig21, "21. 累計淨現金流走勢")
+            fig21.update_xaxes(type='category')
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
