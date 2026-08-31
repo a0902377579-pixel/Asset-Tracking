@@ -314,7 +314,6 @@ with st.sidebar:
         if "bank_confirm" not in st.session_state:
             st.session_state.bank_confirm = False
 
-        # 當確認中時，將所有輸入欄位鎖定 (disabled=True)
         is_locked = st.session_state.bank_confirm
 
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
@@ -323,7 +322,7 @@ with st.sidebar:
         
         is_zero = (amount == 0)
         
-        # 確認中時隱藏「寫入」按鈕，避免重複觸發
+        # 只有在非確認狀態才顯示寫入按鈕
         if not st.session_state.bank_confirm:
             if st.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
                 st.session_state.bank_confirm = True
