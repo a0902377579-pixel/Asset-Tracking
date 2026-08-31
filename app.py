@@ -514,7 +514,7 @@ with tab2:
                 hoverinfo='skip', showlegend=False
             ))
             
-            # 3. 負責顯示 Hover 的隱形軌跡，將 symbol 設為 square 以顯示正方形提示框
+            # 3. 負責顯示 Hover 的軌跡，將 marker 大小改為 8
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
             
@@ -522,7 +522,7 @@ with tab2:
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
                 customdata=np.column_stack((c7_vals, c7_colors)),
                 mode='markers', 
-                marker=dict(symbol='square', color=c7_colors, size=0.001, opacity=1), 
+                marker=dict(symbol='square', color=c7_colors, size=8, opacity=1), 
                 name="", 
                 hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
@@ -577,11 +577,14 @@ with tab2:
             st.plotly_chart(fig11, use_container_width=True)
 
         with c2_12:
-            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str'])
+            # 在 custom_data 中加入 '繪圖日期'
+            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
-            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
-            # 加上 hovermode="closest" 取消 unified 黑點
+            
+            # 在 hovertemplate 呼叫 customdata[1] 顯示日期
+            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
+            
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
             st.plotly_chart(fig12, use_container_width=True)
 
