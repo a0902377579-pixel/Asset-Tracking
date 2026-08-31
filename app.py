@@ -322,16 +322,16 @@ with st.sidebar:
         
         is_zero = (amount == 0)
         
-        # 只有在非確認狀態才顯示寫入按鈕
+        # 建立一個容器專門用來乾淨切換按鈕，避免殘影
+        action_container = st.empty()
+
         if not st.session_state.bank_confirm:
-            if st.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
+            if action_container.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
                 st.session_state.bank_confirm = True
                 st.rerun()
-
-        # 二次確認畫面
-        if st.session_state.bank_confirm:
-            st.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
-            c_yes, c_no = st.columns(2)
+        else:
+            action_container.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
+            c_yes, c_no = action_container.columns(2)
             with c_yes:
                 if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
@@ -398,8 +398,10 @@ with st.sidebar:
         name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
         is_stock_zero = (current_shares == 0 or not name_check.strip())
         
+        stock_action_container = st.empty()
+
         if not st.session_state.stock_confirm:
-            if st.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
+            if stock_action_container.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
                 st.session_state.stock_confirm = True
                 st.rerun()
 
@@ -407,8 +409,8 @@ with st.sidebar:
         if st.session_state.stock_confirm:
             total_amt_check = (current_shares * current_price) + st.session_state.s_fee
             
-            st.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
-            sc_yes, sc_no = st.columns(2)
+            stock_action_container.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
+            sc_yes, sc_no = stock_action_container.columns(2)
             with sc_yes:
                 if st.button("✅ 確認寫入股票", use_container_width=True, key="stock_yes"):
                     try:
