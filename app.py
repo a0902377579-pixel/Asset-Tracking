@@ -445,24 +445,21 @@ with tab2:
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
             fig1 = px.pie(names=['股票總市值', '銀行帳戶餘額'], values=[dashboard_data["total_assets"], bank_balance], hole=0.5, color_discrete_sequence=['#3498db', '#f1c40f'])
-            # ✨ 強制標籤外顯並加上左右邊界預防被切斷
-            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            # ✨ 改回 textposition='inside' 並設定為白色粗體
+            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
             fig1 = style_fig(fig1, "1. 總資產水庫配置")
-            fig1.update_layout(margin=dict(l=60, r=60))
             st.plotly_chart(fig1, use_container_width=True)
             
         with c2_2:
             fig2 = px.pie(df_h, names='stock_name', values='market_value', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
             fig2 = style_fig(fig2, "2. 個股市值佔比")
-            fig2.update_layout(margin=dict(l=60, r=60))
             st.plotly_chart(fig2, use_container_width=True)
 
         with c2_3:
             fig3 = px.pie(df_h, names='stock_name', values='total_cost', hole=0.5, color_discrete_sequence=px.colors.qualitative.Set2)
-            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='outside', textfont=dict(color='#e0e0e0', size=14))
+            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent}}</b></span><extra></extra>", textinfo='label+percent', textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
             fig3 = style_fig(fig3, "3. 投入本金佈局佔比")
-            fig3.update_layout(margin=dict(l=60, r=60))
             st.plotly_chart(fig3, use_container_width=True)
 
         c2_4, c2_5, c2_6 = st.columns(3)
@@ -611,7 +608,6 @@ with tab2:
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
     if df_txs is not None:
-        # ✨ 取消銀行金流的六日過濾機制，保留所有假日資料
         df_txs_plot = df_txs.copy()
         df_txs_plot['繪圖日期'] = df_txs_plot['日期_dt'].dt.strftime('%Y/%m/%d')
         
