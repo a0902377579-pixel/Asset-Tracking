@@ -353,20 +353,18 @@ with st.sidebar:
         current_price = st.session_state.s_price
         current_fee = st.session_state.s_fee
         
-        # 注入自動適應亮暗模式的 CSS（黑色模式字體更亮）
+        # 注入自動適應亮暗模式的 CSS（黑色模式統一改為淺藍色）
         st.markdown("""
         <style>
             .est-box { padding: 10px; border-radius: 8px; font-weight: bold; white-space: nowrap; font-size: 15px; margin-bottom: 15px; }
-            /* 白色模式：深色字體 */
+            /* 白色模式：維持原本的深色樣式 */
             .est-blue { background-color: rgba(52, 152, 219, 0.15); border-left: 5px solid #3498db; color: #095c9e; }
             .est-green { background-color: rgba(9, 171, 59, 0.15); border-left: 5px solid #09ab3b; color: #0a7029; }
             .est-gray { background-color: rgba(0, 0, 0, 0.05); border-left: 5px solid #a0a5b1; color: #4a4a4a; }
             
-            /* 黑色模式：更亮的字體顏色 */
+            /* 黑色模式：統一改為淺藍色 */
             @media (prefers-color-scheme: dark) {
-                .est-blue { color: #89cff0 !important; }
-                .est-green { background-color: rgba(46, 204, 113, 0.15); border-left: 5px solid #2ecc71; color: #89cff0 !important; }
-                .est-gray { background-color: rgba(255, 255, 255, 0.05); color: #89cff0 !important; }
+                .est-blue, .est-green, .est-gray { color: #74b9ff !important; }
             }
         </style>
         """, unsafe_allow_html=True)
