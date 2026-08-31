@@ -205,7 +205,7 @@ def style_portfolio_row(row):
     return styles
 
 # ==========================================
-# 4. 資料全域預處理 (在此處強力四捨五入並綁定字串格式)
+# 4. 資料全域預處理
 # ==========================================
 bank_balance, txs = load_bank_data()
 dashboard_data, hist_data = load_sheet_data()
@@ -217,9 +217,7 @@ stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 
 if dashboard_data and dashboard_data.get("holdings"):
     df_h = pd.DataFrame(dashboard_data["holdings"])
-    # 先四捨五入到第二位
     df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1).astype(float).round(2)
-    # 產出專用的字串給 Hover 顯示
     df_h["各股損益_str"] = df_h["各股損益(%)"].apply(lambda x: f"{x:+.2f}")
     
     for h in dashboard_data["holdings"]:
@@ -235,12 +233,10 @@ if hist_data:
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
     df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + "(" + df_hist["星期"] + ")"
     
-    # 嚴格四捨五入轉換，避免任何無窮小數
     df_hist["總損益(%)"] = ((df_hist["總投資損益"] / df_hist["總累積成本"]) * 100).fillna(0).astype(float).round(2)
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0).astype(float)
     df_hist["單日漲跌幅(%)"] = ((df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1)) * 100).fillna(0).astype(float).round(2)
     
-    # 產出專用的字串給 Hover 顯示，強制帶入 + 號與 2 小位
     df_hist["總損益_str"] = df_hist["總損益(%)"].apply(lambda x: f"{x:+.2f}")
     df_hist["單日漲跌幅_str"] = df_hist["單日漲跌幅(%)"].apply(lambda x: f"{x:+.2f}")
 
@@ -474,7 +470,6 @@ with tab2:
         c2_4, c2_5, c2_6 = st.columns(3)
         with c2_4:
             fig4 = px.treemap(df_h, path=['stock_name'], values='market_value', color='各股損益(%)', color_continuous_scale=['#09ab3b', '#222222', '#ff4b4b'], color_continuous_midpoint=0, custom_data=['各股損益_str'])
-            # 這裡把 % 綁定到 customdata[0]，強制顯示已格式化的字串
             fig4.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>帳面損益: %{{customdata[0]}}%</b></span><extra></extra>", textfont=dict(size=18, color="white"))
             fig4.update_layout(coloraxis_colorbar=dict(tickformat=".2f"))  
             st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True)
@@ -519,7 +514,7 @@ with tab2:
                 hoverinfo='skip', showlegend=False
             ))
             
-            # 3. 負責顯示 Hover 的隱形軌跡
+            # 3. 負責顯示 Hover 的隱形軌跡，將 symbol 設為 square 以顯示正方形提示框
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
             
@@ -527,11 +522,9 @@ with tab2:
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'], 
                 customdata=np.column_stack((c7_vals, c7_colors)),
                 mode='markers', 
-                # 使用極小(接近隱形)的 marker，這樣 Plotly 的 Hover 邊框與提示色塊就能抓到動態的紅綠色！
-                marker=dict(color=c7_colors, size=0.001, opacity=1), 
+                marker=dict(symbol='square', color=c7_colors, size=0.001, opacity=1), 
                 name="", 
-                # 加入 ■ 圖案並讓其跟隨正負變色
-                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>■ 累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
+                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
             
             fig7 = style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)")
@@ -553,13 +546,12 @@ with tab2:
         with c2_9:
             fig9 = go.Figure(go.Scatter(
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總損益(%)'], 
-                customdata=df_hist_plot['總損益_str'], # 綁定純字串
+                customdata=df_hist_plot['總損益_str'], 
                 mode='lines+markers', line=dict(color='#9b59b6', width=2)
             ))
             fig9 = style_fig(fig9, "9. 總損益 (%) 走勢")
             fig9.update_xaxes(type='category')
             fig9 = add_zero_baseline(fig9) 
-            # 直接讀取 %{customdata} 確保格式不跑掉
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata}}%</b></span><extra></extra>")
             fig9.update_yaxes(tickformat=".2f")  
             st.plotly_chart(fig9, use_container_width=True)
@@ -589,7 +581,8 @@ with tab2:
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
-            fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f")) 
+            # 加上 hovermode="closest" 取消 unified 黑點
+            fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
             st.plotly_chart(fig12, use_container_width=True)
 
         st.divider()
@@ -623,13 +616,12 @@ with tab2:
         with c2_16:
             fig16 = go.Figure(go.Scatter(
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日漲跌幅(%)'], 
-                customdata=df_hist_plot['單日漲跌幅_str'], # 綁定純字串
+                customdata=df_hist_plot['單日漲跌幅_str'], 
                 mode='lines', line=dict(color='#1abc9c', width=2)
             ))
             fig16 = style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢")
             fig16.update_xaxes(type='category')
             fig16 = add_zero_baseline(fig16) 
-            # 直接讀取 %{customdata} 確保格式不跑掉
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{customdata}}%</b></span><extra></extra>")
             fig16.update_yaxes(tickformat=".2f")  
             st.plotly_chart(fig16, use_container_width=True)
@@ -641,7 +633,6 @@ with tab2:
             st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True)
 
         with c2_18:
-            # 在 mean() 後方加上 .round(0) 強制轉為整數
             dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().round(0).reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
             fig18 = style_fig(fig18, "18. 星期別平均波動分析")
