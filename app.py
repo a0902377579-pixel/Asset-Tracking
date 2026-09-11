@@ -317,7 +317,8 @@ with st.sidebar:
         is_locked = st.session_state.bank_confirm
 
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯"], key="bank_type", disabled=is_locked)
+        # 新增「定期定額」選項
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         
         is_zero = (amount == 0)
@@ -336,6 +337,7 @@ with st.sidebar:
                 if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
                         fmt_date = rec_date.strftime('%Y/%m/%d')
+                        # 定期定額不在入帳名單內，會自動進入 else 轉為負號扣款
                         final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
