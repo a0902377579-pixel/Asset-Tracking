@@ -173,18 +173,20 @@ def add_zero_baseline(fig):
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
-        bg = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)"
-        if num_val > 0: text_c, glow_shadow = "#ff4b4b", "0 8px 20px rgba(255, 75, 75, 0.3)"
-        elif num_val < 0: text_c, glow_shadow = "#09ab3b", "0 8px 20px rgba(9, 171, 59, 0.3)"
-        else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
+        if num_val > 0: bg, text_c, glow_shadow = "linear-gradient(270deg, #ff4b4b, #c0392b, #8e44ad, #ff4b4b)", "#ffffff", "0 8px 20px rgba(255, 75, 75, 0.3)"
+        elif num_val < 0: bg, text_c, glow_shadow = "linear-gradient(270deg, #09ab3b, #27ae60, #16a085, #09ab3b)", "#ffffff", "0 8px 20px rgba(9, 171, 59, 0.3)"
+        else: bg, text_c, glow_shadow = "linear-gradient(270deg, #1e2128, #2c3e50, #1e2128, #1e2128)", "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
     else:
-        if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
-        elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(135deg, #2b5876 0%, #4e4376 100%)", "0 8px 20px rgba(78, 67, 118, 0.5)", "#a7f3d0"
-        elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(135deg, #FF8008 0%, #FFC837 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
-        else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #13151a 100%)", "none", "#ffffff"
+        if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(270deg, #667eea, #764ba2, #9b59b6, #667eea)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
+        elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(270deg, #2b5876, #4e4376, #3498db, #2b5876)", "0 8px 20px rgba(78, 67, 118, 0.5)", "#a7f3d0"
+        elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(270deg, #FF8008, #FFC837, #f39c12, #FF8008)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
+        else: bg, glow_shadow, text_c = "linear-gradient(270deg, #1e2128, #2c3e50, #1e2128, #1e2128)", "none", "#ffffff"
             
     return f"""
-    <div style="background: {bg}; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <style>
+        @keyframes flow-card {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}
+    </style>
+    <div style="background: {bg}; background-size: 400% 400%; animation: flow-card 6s ease infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
@@ -317,13 +319,11 @@ with st.sidebar:
         is_locked = st.session_state.bank_confirm
 
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        # 新增「定期定額」選項
         rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         
         is_zero = (amount == 0)
         
-        # 建立一個容器專門用來乾淨切換按鈕，避免殘影
         action_container = st.empty()
 
         if not st.session_state.bank_confirm:
@@ -337,7 +337,6 @@ with st.sidebar:
                 if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
                         fmt_date = rec_date.strftime('%Y/%m/%d')
-                        # 定期定額不在入帳名單內，會自動進入 else 轉為負號扣款
                         final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
                             
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
@@ -439,7 +438,7 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板", "🌌 終極數據戰情室", "🎯 定期定額與願景"])
+tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)", "🎯 定期定額與願景"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -490,7 +489,6 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            # 使用 Streamlit 內建的 column_config 強制將「類型」靠右對齊
             st.dataframe(
                 styled_bank, 
                 use_container_width=True, 
@@ -561,29 +559,25 @@ with tab2:
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
-            # 1. 獲利(紅)區域 - 隱藏 hover
             fig7.add_trace(go.Scatter(
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0),
                 mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), 
                 hoverinfo='skip', showlegend=False
             ))
-            # 2. 虧損(綠)區域 - 隱藏 hover
             fig7.add_trace(go.Scatter(
                 x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0),
                 mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), 
                 hoverinfo='skip', showlegend=False
             ))
             
-            # 3. 完美解決方案：疊加一個「高度為 0 的隱形長條圖」來專門觸發 Hover
-            # 長條圖的提示框天生就是完美的方形，且高度為 0 不會在圖表上留下任何點或線
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
             
             fig7.add_trace(go.Bar(
                 x=df_hist_plot['繪圖日期'], 
-                y=[0] * len(df_hist_plot),  # 全部設為 0，畫面上看不見
+                y=[0] * len(df_hist_plot), 
                 customdata=np.column_stack((c7_vals, c7_colors)),
-                marker_color=c7_colors,     # 這會讓提示框的方塊自動變成紅/綠色
+                marker_color=c7_colors, 
                 name="", 
                 hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
             ))
@@ -638,14 +632,10 @@ with tab2:
             st.plotly_chart(fig11, use_container_width=True)
 
         with c2_12:
-            # 在 custom_data 中加入 '繪圖日期'
             fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
             fig12 = style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)")
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
-            
-            # 在 hovertemplate 呼叫 customdata[1] 顯示日期
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
-            
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
             st.plotly_chart(fig12, use_container_width=True)
 
@@ -769,7 +759,6 @@ with tab3:
     st.markdown("### 💸 紀律引擎：0050 定期定額透視")
     c3_1, c3_2 = st.columns(2)
     
-    # 計算 0050 相關數據
     current_0050_value = 0
     current_0050_shares = 0
     current_0050_cost = 0
@@ -783,7 +772,7 @@ with tab3:
     avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
     
-    # 模擬歷年配息 (假設平均殖利率 3.5%)
+    # 預估殖利率設定為 3.5%
     est_dividends = current_0050_cost * 0.035
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
@@ -796,56 +785,3 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
-
-    st.divider()
-    
-    st.markdown("### 🗼 動態視覺里程碑：東京自由行")
-    
-    goal_amount = 300000
-    progress_pct = min(current_0050_value / goal_amount * 100, 100)
-    
-    # 注入互動藝術流光特效 CSS
-    st.markdown("""
-    <style>
-    @keyframes gradient-flow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    .art-bar {
-        background: linear-gradient(270deg, #3498db, #9b59b6, #e74c3c, #f1c40f);
-        background-size: 800% 800%;
-        animation: gradient-flow 6s ease infinite;
-        box-shadow: 0 0 20px rgba(155, 89, 182, 0.6);
-        border-radius: 50px;
-        transition: width 1.5s ease-in-out;
-    }
-    .tier-text { font-size: 14px; font-weight: bold; color: #b2bec3; }
-    .tier-active { color: #f1c40f; text-shadow: 0 0 8px rgba(241, 196, 15, 0.5); }
-    </style>
-    """, unsafe_allow_html=True)
-
-    t1_class = "tier-active" if progress_pct >= 20 else "tier-text"
-    t2_class = "tier-active" if progress_pct >= 50 else "tier-text"
-    t3_class = "tier-active" if progress_pct >= 100 else "tier-text"
-
-    st.markdown(f"""
-    <div style="background-color: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-            <span style="font-size: 22px; font-weight: 900; color: #a7f3d0;">目前累積: NT$ {current_0050_value:,.0f}</span>
-            <span style="font-size: 22px; font-weight: 900; color: #fef08a;">目標: NT$ {goal_amount:,.0f}</span>
-        </div>
-        <div style="width: 100%; background-color: #1e2128; border-radius: 50px; height: 32px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
-            <div class="art-bar" style="width: {progress_pct}%; height: 100%;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 0 10px;">
-            <span class="{t1_class}">✈️ 20%: 機票與住宿</span>
-            <span class="{t2_class}">🍣 50%: 迪士尼 & 築地爆吃</span>
-            <span class="{t3_class}">🛍️ 100%: 略過神社，純購物行程</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if progress_pct >= 100:
-        st.balloons()
-        st.success("🎉 目標達成！立刻訂機票，開啟無預算上限的東京純購物之旅！")
