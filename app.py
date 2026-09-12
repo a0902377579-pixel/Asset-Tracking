@@ -900,12 +900,11 @@ with tab3:
 
     blocks_str = ''.join(html_blocks)
     
-    # 完全套用 "平均持倉成本 vs 現價" (theme="blue") 的背景參數與 10欄置中 Grid 佈局
     full_html = (
         f'<style>'
-        f'@keyframes sweep-grid-light {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
+        f'@keyframes sweep-matrix-dark {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%); background-size: 200% auto; animation: sweep-grid-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%); background-size: 200% auto; animation: sweep-matrix-dark 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(36, 59, 85, 0.4); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 10px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
@@ -985,15 +984,15 @@ with tab3:
     df_future = pd.DataFrame(future_data)
     fig_future = go.Figure()
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>全庫存總計</span>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>0050 (含定期定額)</span>", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>台積電 (單純放著長)</span>", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
     fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
