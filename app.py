@@ -12,7 +12,7 @@ import datetime
 # 1. 頁面基本配置與頂級美化 CSS
 # ==========================================
 st.set_page_config(
-    page_title="個人旗艦資Asset工作站", 
+    page_title="個人旗艦資產工作站", 
     layout="wide", 
     page_icon="💎", 
     initial_sidebar_state="expanded"
@@ -754,16 +754,25 @@ with tab2:
 # 分頁 3：🎯 定期定額與願景
 # ------------------------------------------
 with tab3:
-    # 1. 預先計算 0050 的基底狀態
+    # 1. 預先獨立計算 0050 與 台積電 的基底狀態
     current_0050_value = 0
     current_0050_shares = 0
     current_0050_cost = 0
+    
+    current_tsmc_value = 0
+    current_tsmc_cost = 0
+    
     if df_h is not None:
         stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
         if not stock_0050.empty:
             current_0050_value = stock_0050['market_value'].sum()
             current_0050_shares = stock_0050['shares'].sum()
             current_0050_cost = stock_0050['total_cost'].sum()
+            
+        stock_tsmc = df_h[df_h['stock_name'].str.contains('台積電', na=False)]
+        if not stock_tsmc.empty:
+            current_tsmc_value = stock_tsmc['market_value'].sum()
+            current_tsmc_cost = stock_tsmc['total_cost'].sum()
             
     avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
@@ -828,9 +837,11 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     full_html = (
         f'<style>'
-        f'@keyframes sweep-bg {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
+        # 改為 45 度角斜向掃描，動畫時間縮短至 3s 讓動態感更明顯
+        f'@keyframes sweep-45 {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 200% 200%; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(90deg, #0d1117 0%, #1f2f4c 50%, #0d1117 100%); background-size: 200% 100%; animation: sweep-bg 8s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 25px rgba(0,0,0,0.5); margin-bottom: 30px;">'
+        # 換成更淺、更通透的蒼穹科技藍
+        f'<div style="background: linear-gradient(45deg, #1f4068 0%, #325b84 25%, #4779a3 50%, #325b84 75%, #1f4068 100%); background-size: 200% 200%; animation: sweep-45 3s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
@@ -842,14 +853,14 @@ with tab3:
     st.divider()
 
     # ==========================================
-    # 🎯 區塊二：複利雪球時光機
+    # 🎯 區塊二：多重資產複利雪球時光機
     # ==========================================
-    st.markdown("### ⏳ 複利雪球時光機 (真實日曆推演)")
+    st.markdown("### ⏳ 多重資產動態投影 (0050 + 台積電)")
     
     col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-    monthly_invest = col_s1.number_input("預測每月扣款 (依歷史均值自動帶入)", value=real_sip_avg, step=100)
+    monthly_invest = col_s1.number_input("預測每月扣款 (專攻 0050)", value=real_sip_avg, step=100)
     years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
-    price_rate = col_s3.slider("股價年化成長 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
+    price_rate = col_s3.slider("市場年化成長預期 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
     div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
 
     resolution = st.radio("圖表時間跨度", ["每年", "每月"], horizontal=True)
@@ -858,42 +869,79 @@ with tab3:
     monthly_price_rate = price_rate / 100 / 12
     monthly_total_rate = (price_rate + div_yield) / 100 / 12
     
-    accumulated_principal = current_0050_cost
-    val_no_drip = current_0050_value
-    val_drip = current_0050_value
+    # 初始化獨立計算容器
+    acc_cost_0050 = current_0050_cost
+    val_nodrip_0050 = current_0050_value
+    val_drip_0050 = current_0050_value
+    
+    acc_cost_tsmc = current_tsmc_cost
+    val_nodrip_tsmc = current_tsmc_value
+    val_drip_tsmc = current_tsmc_value
     
     curr_year = datetime.date.today().year
     curr_month = datetime.date.today().month
     
-    future_data = [{"時間": f"現在 ({curr_year}年{curr_month}月)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
+    # 寫入第 0 期狀態
+    future_data = [{
+        "時間": f"現在 ({curr_year}年{curr_month}月)", 
+        "總累積本金": current_0050_cost + current_tsmc_cost, 
+        "總無再投入": current_0050_value + current_tsmc_value, 
+        "總再投入": current_0050_value + current_tsmc_value,
+        "0050累積本金": current_0050_cost, "0050無再投入": current_0050_value, "0050再投入": current_0050_value,
+        "TSMC累積本金": current_tsmc_cost, "TSMC無再投入": current_tsmc_value, "TSMC再投入": current_tsmc_value
+    }]
     
     for m in range(1, months + 1):
-        accumulated_principal += monthly_invest
-        val_no_drip = (val_no_drip + monthly_invest) * (1 + monthly_price_rate)
-        val_drip = (val_drip + monthly_invest) * (1 + monthly_total_rate)
+        # 0050 享受每月扣款注入
+        acc_cost_0050 += monthly_invest
+        val_nodrip_0050 = (val_nodrip_0050 + monthly_invest) * (1 + monthly_price_rate)
+        val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_total_rate)
+        
+        # 台積電 單純倚靠市場複利自我成長 (無後續本金注入)
+        val_nodrip_tsmc = val_nodrip_tsmc * (1 + monthly_price_rate)
+        val_drip_tsmc = val_drip_tsmc * (1 + monthly_total_rate)
         
         future_total_months = curr_month + m - 1
         fy = curr_year + (future_total_months // 12)
         fm = (future_total_months % 12) + 1
         
-        if resolution == "每月":
-            future_data.append({"時間": f"{fy}年{fm}月", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
-        elif resolution == "每年" and m % 12 == 0:
-            future_data.append({"時間": f"{fy}年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
+        time_lbl = f"{fy}年{fm}月" if resolution == "每月" else f"{fy}年"
+        
+        if resolution == "每月" or (resolution == "每年" and m % 12 == 0):
+            future_data.append({
+                "時間": time_lbl, 
+                "總累積本金": acc_cost_0050 + acc_cost_tsmc, 
+                "總無再投入": val_nodrip_0050 + val_nodrip_tsmc, 
+                "總再投入": val_drip_0050 + val_drip_tsmc,
+                "0050累積本金": acc_cost_0050, "0050無再投入": val_nodrip_0050, "0050再投入": val_drip_0050,
+                "TSMC累積本金": acc_cost_tsmc, "TSMC無再投入": val_nodrip_tsmc, "TSMC再投入": val_drip_tsmc
+            })
             
     df_future = pd.DataFrame(future_data)
-    
     fig_future = go.Figure()
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='累積總本金', line=dict(color='#3498db', width=3)))
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['無再投入市值'], mode='lines', fill='tonexty', name='單純市值成長 (股息領出)', line=dict(color='#e67e22', width=2)))
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['股息再投入市值'], mode='lines', fill='tonexty', name='股息再投入滾存', line=dict(color='#f1c40f', width=3)))
-    
-    fig_future = style_fig(fig_future, f"資產增長動態投影 (從目前市值 NT$ {current_0050_value:,.0f} 滾動)")
+
+    # --- 1. [總合盤勢] (使用充滿視覺張力的實體面積圖) ---
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
+
+    # --- 2. [0050 專區] (使用藍色系漸變折線圖) ---
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
+
+    # --- 3. [台積電 專區] (使用紅色系漸變折線圖) ---
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC無再投入'], mode='lines', name='[台積電] 單純成長', legendgroup="TSMC", line=dict(color='#e74c3c', width=2, dash='dash')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 股息再投入', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
+
+    fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
     
     if resolution == "每年":
         fig_future.update_xaxes(type='category')
         
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
+    fig_future.update_layout(legend=dict(groupclick="toggleitem")) # 讓使用者可以個別開關線條
     st.plotly_chart(fig_future, use_container_width=True)
 
     st.divider()
