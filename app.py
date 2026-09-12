@@ -66,6 +66,41 @@ st.markdown("""
     }
     
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+
+    /* --- 科技感膠囊切換按鈕 CSS --- */
+    div[data-testid="stRadio"] div[role="radio"] div:first-child { 
+        display: none !important; /* 隱藏原生圓圈 */
+    }
+    div[data-testid="stRadio"] > div { 
+        gap: 10px; 
+        background: #13151a; 
+        padding: 6px 10px; 
+        border-radius: 30px; 
+        display: inline-flex; 
+        border: 1px solid rgba(255,255,255,0.1); 
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+    div[data-testid="stRadio"] div[role="radio"] { 
+        padding: 8px 24px; 
+        border-radius: 25px; 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        cursor: pointer;
+    }
+    div[data-testid="stRadio"] div[role="radio"]:hover {
+        background-color: rgba(255,255,255,0.05);
+    }
+    div[data-testid="stRadio"] div[role="radio"][aria-checked="true"] { 
+        background: linear-gradient(90deg, #00c6ff, #0072ff); 
+        box-shadow: 0 0 15px rgba(0,198,255,0.5); 
+    }
+    div[data-testid="stRadio"] div[role="radio"][aria-checked="true"] p { 
+        color: white !important; 
+        font-weight: 800; 
+    }
+    div[data-testid="stRadio"] div[role="radio"][aria-checked="false"] p { 
+        color: #7f8ca6 !important; 
+        font-weight: 600;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -171,12 +206,15 @@ C_PCT = "#00E676"
 
 def style_fig(fig, title):
     fig.update_layout(
+        # ★ 將高度拉長至 800，確保 Hover 時 9 條線不會被裁切
+        height=800,
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
         font=dict(size=16, color="#e0e0e0"), 
         template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
-        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=20, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)"),
+        # 確保 namelength=-1 讓名稱完整顯示
+        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=18, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
         margin=dict(l=20, r=20, t=85, b=80), 
         hovermode="x unified",
         xaxis=dict(
@@ -837,11 +875,9 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     full_html = (
         f'<style>'
-        # 改為 45 度角斜向掃描，動畫時間縮短至 3s 讓動態感更明顯
-        f'@keyframes sweep-45 {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 200% 200%; }} }}'
+        f'@keyframes sweep-horizontal {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
         f'</style>'
-        # 換成更淺、更通透的蒼穹科技藍
-        f'<div style="background: linear-gradient(45deg, #1f4068 0%, #325b84 25%, #4779a3 50%, #325b84 75%, #1f4068 100%); background-size: 200% 200%; animation: sweep-45 3s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(120deg, #16181d 25%, #34425a 50%, #16181d 75%); background-size: 200% auto; animation: sweep-horizontal 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(255,255,255,0.1); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
@@ -863,11 +899,12 @@ with tab3:
     price_rate = col_s3.slider("市場年化成長預期 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
     div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
 
-    resolution = st.radio("圖表時間跨度", ["每年", "每月"], horizontal=True)
+    st.markdown("##### ⚙️ 圖表時間跨度設定")
+    resolution = st.radio("切換解析度", ["每年", "每月"], horizontal=True, label_visibility="collapsed")
 
     months = years * 12
     monthly_price_rate = price_rate / 100 / 12
-    monthly_total_rate = (price_rate + div_yield) / 100 / 12
+    monthly_div_rate = div_yield / 100 / 12
     
     # 初始化獨立計算容器
     acc_cost_0050 = current_0050_cost
@@ -881,7 +918,6 @@ with tab3:
     curr_year = datetime.date.today().year
     curr_month = datetime.date.today().month
     
-    # 寫入第 0 期狀態
     future_data = [{
         "時間": f"現在 ({curr_year}年{curr_month}月)", 
         "總累積本金": current_0050_cost + current_tsmc_cost, 
@@ -892,14 +928,22 @@ with tab3:
     }]
     
     for m in range(1, months + 1):
-        # 0050 享受每月扣款注入
+        # 計算當月產生的股息 (以期初市值為準)
+        div_0050 = val_drip_0050 * monthly_div_rate
+        div_tsmc = val_drip_tsmc * monthly_div_rate
+
+        # --- 0050 成長邏輯 ---
+        # 1. 享受每月新資金扣款注入
         acc_cost_0050 += monthly_invest
         val_nodrip_0050 = (val_nodrip_0050 + monthly_invest) * (1 + monthly_price_rate)
-        val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_total_rate)
-        
-        # 台積電 單純倚靠市場複利自我成長 (無後續本金注入)
+        # 2. 再投入威力：原本的股息 +「台積電跨界產生的股息」通通買入 0050！
+        val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_price_rate) + div_0050 + div_tsmc
+
+        # --- 台積電 成長邏輯 ---
+        # 1. 無後續本金注入，單純依靠市場增幅
         val_nodrip_tsmc = val_nodrip_tsmc * (1 + monthly_price_rate)
-        val_drip_tsmc = val_drip_tsmc * (1 + monthly_total_rate)
+        # 2. 因為台積電的股息已經「跨界挹注」給 0050 了，所以它的價值等於純市值成長
+        val_drip_tsmc = val_drip_tsmc * (1 + monthly_price_rate)
         
         future_total_months = curr_month + m - 1
         fy = curr_year + (future_total_months // 12)
@@ -920,20 +964,19 @@ with tab3:
     df_future = pd.DataFrame(future_data)
     fig_future = go.Figure()
 
-    # --- 1. [總合盤勢] (使用充滿視覺張力的實體面積圖) ---
+    # --- 1. [總合盤勢] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
 
-    # --- 2. [0050 專區] (使用藍色系漸變折線圖) ---
+    # --- 2. [0050 專區] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
 
-    # --- 3. [台積電 專區] (使用紅色系漸變折線圖) ---
+    # --- 3. [台積電 專區] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC無再投入'], mode='lines', name='[台積電] 單純成長', legendgroup="TSMC", line=dict(color='#e74c3c', width=2, dash='dash')))
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 股息再投入', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
     fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
     
@@ -941,7 +984,7 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    fig_future.update_layout(legend=dict(groupclick="toggleitem")) # 讓使用者可以個別開關線條
+    fig_future.update_layout(legend=dict(groupclick="toggleitem")) 
     st.plotly_chart(fig_future, use_container_width=True)
 
     st.divider()
