@@ -439,7 +439,7 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-tab1, tab2 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)"])
+tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板", "🌌 終極數據戰情室", "🎯 定期定額與願景"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -731,3 +731,67 @@ with tab2:
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             st.plotly_chart(fig21, use_container_width=True)
+
+# ------------------------------------------
+# 分頁 3：🎯 定期定額與願景
+# ------------------------------------------
+with tab3:
+    st.markdown("### ⏳ 複利雪球時光機 (0050 模擬器)")
+    
+    col_s1, col_s2, col_s3 = st.columns(3)
+    monthly_invest = col_s1.number_input("每月定期定額 (NT$)", value=6000, step=1000)
+    years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
+    annual_rate = col_s3.slider("預期年化報酬率 (%)", min_value=1.0, max_value=15.0, value=7.0, step=0.5)
+
+    months = years * 12
+    monthly_rate = annual_rate / 100 / 12
+    
+    future_data = []
+    accumulated_principal = 0
+    total_value = 0
+    
+    for m in range(1, months + 1):
+        accumulated_principal += monthly_invest
+        total_value = (total_value + monthly_invest) * (1 + monthly_rate)
+        if m % 12 == 0:
+            future_data.append({"年度": f"第 {m//12} 年", "累積本金": accumulated_principal, "複利總值": total_value})
+            
+    df_future = pd.DataFrame(future_data)
+    
+    fig_future = go.Figure()
+    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='投入本金', line=dict(color='#3498db', width=3)))
+    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['複利總值'], mode='lines', fill='tonexty', name='複利滾存', line=dict(color='#f1c40f', width=3)))
+    fig_future = style_fig(fig_future, "資產增長投影 (本金 vs 市場複利)")
+    st.plotly_chart(fig_future, use_container_width=True)
+
+    st.divider()
+    
+    st.markdown("### 🗼 動態視覺里程碑：東京自由行購物基金")
+    
+    # 自動抓取目前 0050 的總市值
+    current_0050_value = 0
+    if df_h is not None:
+        stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
+        if not stock_0050.empty:
+            current_0050_value = stock_0050['market_value'].sum()
+            
+    goal_amount = 300000
+    progress_pct = min(current_0050_value / goal_amount * 100, 100)
+    
+    # 運用純軟體 CSS 設計帶有發光粒子的流暢進度條
+    st.markdown(f"""
+    <div style="background-color: rgba(255,255,255,0.05); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+            <span style="font-size: 20px; font-weight: bold; color: #a7f3d0;">目前累積: NT$ {current_0050_value:,.0f}</span>
+            <span style="font-size: 20px; font-weight: bold; color: #fef08a;">目標: NT$ {goal_amount:,.0f}</span>
+        </div>
+        <div style="width: 100%; background-color: #2d3436; border-radius: 50px; height: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #0984e3, #00cec9); box-shadow: 0 0 20px rgba(0, 206, 201, 0.8); transition: width 1.5s ease-in-out;"></div>
+        </div>
+        <p style="text-align: right; margin-top: 8px; color: #b2bec3; font-weight: bold; font-size: 16px;">達成率: {progress_pct:.1f}%</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if progress_pct >= 100:
+        st.balloons()
+        st.success("🎉 目標達成！現在可以開始規劃無預算限制的純購物行程了！")
