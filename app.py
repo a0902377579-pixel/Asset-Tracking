@@ -141,6 +141,26 @@ def load_bank_data():
         return b_val, txs
     except: return 58661.0, []
 
+# 新增：專門抓取股票明細，用來精準對接定期定額的實際股數
+@st.cache_data(ttl=600, show_spinner=False)
+def load_stock_transactions():
+    client = get_gspread_client()
+    if not client: return pd.DataFrame()
+    try:
+        sh = client.open(SPREADSHEET_NAME)
+        rows = sh.worksheet("db_stock_transactions").get_all_values()
+        if len(rows) > 1:
+            df = pd.DataFrame(rows[1:])
+            if df.shape[1] >= 3:
+                df = df[[0, 1, 2]].rename(columns={0: '日期', 1: '標的', 2: '股數'})
+                df['日期_dt'] = pd.to_datetime(df['日期'], errors='coerce')
+                df['股數'] = pd.to_numeric(df['股數'].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+                df['YYYY-MM'] = df['日期_dt'].dt.strftime('%Y-%m')
+                return df
+    except:
+        pass
+    return pd.DataFrame()
+
 # ==========================================
 # 3. 視覺化引擎與樣式函數
 # ==========================================
@@ -215,6 +235,7 @@ def style_portfolio_row(row):
 # ==========================================
 bank_balance, txs = load_bank_data()
 dashboard_data, hist_data = load_sheet_data()
+df_st = load_stock_transactions()
 
 df_h, df_hist, df_txs = None, None, None
 
@@ -308,6 +329,7 @@ with st.sidebar:
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
         load_sheet_data.clear()
         load_bank_data.clear()
+        load_stock_transactions.clear()
         st.rerun()
     
     st.divider()
@@ -348,6 +370,7 @@ with st.sidebar:
                         
                         load_bank_data.clear()
                         load_sheet_data.clear()
+                        load_stock_transactions.clear()
                         st.session_state.bank_confirm = False
                         st.success("紀錄成功寫入！")
                         st.rerun()
@@ -410,7 +433,6 @@ with st.sidebar:
                 st.session_state.stock_confirm = True
                 st.rerun()
 
-        # 股票二次確認畫面
         if st.session_state.stock_confirm:
             total_amt_check = (current_shares * current_price) + st.session_state.s_fee
             
@@ -426,6 +448,7 @@ with st.sidebar:
                         
                         load_sheet_data.clear()
                         load_bank_data.clear()
+                        load_stock_transactions.clear()
                         st.session_state.stock_confirm = False
                         st.success("股票紀錄成功寫入！")
                         st.rerun()
@@ -816,7 +839,17 @@ with tab3:
             rec = sip_records[i]
             amt = abs(rec['金額'])
             date_str = rec['日期_dt'].strftime('%m/%d')
-            shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
+            
+            shares = 0
+            # 優先從「股票交易紀錄」去抓同月份真實買入的 0050 股數 (精準還原 APP 的 52 股)
+            if df_st is not None and not df_st.empty:
+                match = df_st[(df_st['YYYY-MM'] == rec['YYYY-MM']) & (df_st['標的'].str.contains('0050', na=False)) & (df_st['股數'] > 0)]
+                if not match.empty:
+                    shares = int(match['股數'].sum())
+            
+            # 若無對應的股票紀錄，則以現價進行動態估算
+            if shares == 0:
+                shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
             
             html_blocks.append(
                 f'<div style="display: flex; flex-direction: column; align-items: center; width: 85px;">'
