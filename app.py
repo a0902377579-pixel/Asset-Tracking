@@ -747,35 +747,39 @@ with tab3:
 
     st.markdown("### ⏳ 複利雪球時光機 (基於真實持股)")
     
-    col_s1, col_s2, col_s3 = st.columns(3)
+    # 將報酬拆分為「股價成長」與「殖利率」，以凸顯再投入的威力
+    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
     monthly_invest = col_s1.number_input("每月定期定額 (NT$)", value=6000, step=1000)
     years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
-    annual_rate = col_s3.slider("預期年化報酬率 (%)", min_value=1.0, max_value=15.0, value=7.0, step=0.5)
+    price_rate = col_s3.slider("股價年化成長 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
+    div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
 
     months = years * 12
-    monthly_rate = annual_rate / 100 / 12
+    monthly_price_rate = price_rate / 100 / 12
+    monthly_total_rate = (price_rate + div_yield) / 100 / 12
     
     # 2. 初始值設定為「目前的實際本金」與「目前的實際市值」
     accumulated_principal = current_0050_cost
-    total_value = current_0050_value
+    val_no_drip = current_0050_value
+    val_drip = current_0050_value
     
-    # 加入第 0 年 (現在) 作為圖表起點
-    future_data = [{"年度": "現在 (第 0 年)", "累積本金": accumulated_principal, "複利總值": total_value}]
+    future_data = [{"年度": "現在 (第 0 年)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
     
     for m in range(1, months + 1):
         accumulated_principal += monthly_invest
-        total_value = (total_value + monthly_invest) * (1 + monthly_rate)
+        val_no_drip = (val_no_drip + monthly_invest) * (1 + monthly_price_rate)
+        val_drip = (val_drip + monthly_invest) * (1 + monthly_total_rate)
         if m % 12 == 0:
-            future_data.append({"年度": f"第 {m//12} 年", "累積本金": accumulated_principal, "複利總值": total_value})
+            future_data.append({"年度": f"第 {m//12} 年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
             
     df_future = pd.DataFrame(future_data)
     
     fig_future = go.Figure()
     fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='投入本金', line=dict(color='#3498db', width=3)))
-    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['複利總值'], mode='lines', fill='tonexty', name='複利滾存', line=dict(color='#f1c40f', width=3)))
+    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['無再投入市值'], mode='lines', fill='tonexty', name='單純市值成長 (股息領出)', line=dict(color='#e67e22', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['股息再投入市值'], mode='lines', fill='tonexty', name='股息再投入滾存', line=dict(color='#f1c40f', width=3)))
     
-    fig_future = style_fig(fig_future, "資產增長投影 (真實基底 vs 預估複利)")
-    # 新增圖表 Hover 格式，讓金額顯示加上千分位逗號
+    fig_future = style_fig(fig_future, "資產增長投影 (呈現股利再投入飛輪威力)")
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
     st.plotly_chart(fig_future, use_container_width=True)
 
@@ -787,8 +791,8 @@ with tab3:
     avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
     
-    # 預估殖利率設定為 3.5%
-    est_dividends = current_0050_cost * 0.035
+    # 預估配息直接套用上方拉桿的殖利率設定
+    est_dividends = current_0050_cost * (div_yield / 100)
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
     with c3_1:
