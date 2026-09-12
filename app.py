@@ -134,12 +134,12 @@ st.markdown("""
     /* =========================================
        魔法：強制把 Plotly 圖表包成動態光波大框框
        ========================================= */
-    div:has(> #future-chart-bg) + div {
+    div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
         background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%) !important;
         background-size: 200% auto !important;
         animation: sweep-light 4s linear infinite !important;
         border-radius: 12px !important;
-        padding: 20px 25px !important;
+        padding: 25px !important;
         box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5) !important;
         border: 1px solid rgba(255,255,255,0.05) !important;
         margin-top: 15px !important;
@@ -252,9 +252,12 @@ def style_fig(fig, title):
     fig.update_layout(
         height=800,
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
+        font=dict(size=16), # 解除寫死顏色，讓 Streamlit Theme 接管
+        template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
-        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=18, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
+        # 確保 Hover Label 無論深淺模式都呈現反白高對比
+        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=18, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
         margin=dict(l=20, r=20, t=85, b=80), 
         hovermode="x unified",
         xaxis=dict(
@@ -908,7 +911,7 @@ with tab3:
 
     blocks_str = ''.join(html_blocks)
     
-    # 完美套用卡片的 linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%)，且共用全域的 sweep-light 動畫
+    # 完美套用卡片的 #2b5876 色系，並且確保吃到全域的 sweep-light 動畫引擎
     full_html = (
         f'<div style="background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%); background-size: 200% auto; animation: sweep-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5); margin-bottom: 30px; width: 100%;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
@@ -939,7 +942,6 @@ with tab3:
     monthly_price_rate = price_rate / 100 / 12
     monthly_div_rate = div_yield / 100 / 12
     
-    # 初始化獨立計算容器
     acc_cost_0050 = current_0050_cost
     val_nodrip_0050 = current_0050_value
     val_drip_0050 = current_0050_value
@@ -989,35 +991,41 @@ with tab3:
             
     df_future = pd.DataFrame(future_data)
     
-    # 建立動態大圖表的 HTML 容器標記
+    # 建立動態大圖表的 HTML 容器標記 (供 CSS 選擇器綁定使用)
     st.markdown('<div id="future-chart-bg"></div>', unsafe_allow_html=True)
     
     fig_future = go.Figure()
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<b><span style='color:#ffffff; font-size:16px;'>全庫存總計</span></b>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
+    # 拔除 HTML color span，讓字體顏色完美適配圖表的主題設定 (黑底白字)
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<b>全庫存總計</b>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="<b><span style='color:#ffffff; font-size:16px;'>0050 (含定期定額)</span></b>", line=dict(color='#85c1e9', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="<b>0050 (含定期定額)</b>", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="<b><span style='color:#ffffff; font-size:16px;'>台積電 (單純放著長)</span></b>", line=dict(color='#f1948a', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="<b>台積電 (單純放著長)</b>", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
     fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
     
-    # 強制將圖表內的字體改為白色，確保在深色漸層背景下完美反白清晰
-    fig_future.update_layout(
-        font=dict(color="#ffffff", size=16),
-        legend=dict(groupclick="toggleitem")
-    )
-    
     if resolution == "每年":
         fig_future.update_xaxes(type='category')
         
+    # 因為外層包了動態藍色漸層，字體必須永遠強制為白色，才能清晰顯示！
+    fig_future.update_layout(
+        font=dict(color="#ffffff", size=16),
+        legend=dict(
+            groupclick="toggleitem",
+            font=dict(color="#ffffff"),
+            grouptitlefont=dict(color="#FFD700", size=18)
+        )
+    )
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    st.plotly_chart(fig_future, use_container_width=True)
+    
+    # ★ 強制關閉 Streamlit 原生主題，避免淺色模式下字體被自動染黑，導致在藍色動態背景中隱形！
+    st.plotly_chart(fig_future, use_container_width=True, theme=None)
 
     st.divider()
 
