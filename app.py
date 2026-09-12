@@ -765,33 +765,87 @@ with tab3:
     st.plotly_chart(fig_future, use_container_width=True)
 
     st.divider()
+
+    st.markdown("### 💸 紀律引擎：0050 定期定額透視")
+    c3_1, c3_2 = st.columns(2)
     
-    st.markdown("### 🗼 動態視覺里程碑：東京自由行購物基金")
-    
-    # 自動抓取目前 0050 的總市值
+    # 計算 0050 相關數據
     current_0050_value = 0
+    current_0050_shares = 0
+    current_0050_cost = 0
     if df_h is not None:
         stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
         if not stock_0050.empty:
             current_0050_value = stock_0050['market_value'].sum()
-            
+            current_0050_shares = stock_0050['shares'].sum()
+            current_0050_cost = stock_0050['total_cost'].sum()
+
+    avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
+    market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
+    
+    # 模擬歷年配息 (假設平均殖利率 3.5%)
+    est_dividends = current_0050_cost * 0.035
+    free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
+
+    with c3_1:
+        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "blue"), unsafe_allow_html=True)
+        diff_pct = ((market_price_0050 - avg_cost_0050) / avg_cost_0050 * 100) if avg_cost_0050 > 0 else 0
+        color = "#ff4b4b" if diff_pct > 0 else "#09ab3b"
+        st.markdown(f"<p style='text-align: center; color: {color}; font-weight: bold;'>現價落差: {diff_pct:+.2f}% (市場價 {market_price_0050:,.2f})</p>", unsafe_allow_html=True)
+
+    with c3_2:
+        st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
+
+    st.divider()
+    
+    st.markdown("### 🗼 動態視覺里程碑：東京自由行")
+    
     goal_amount = 300000
     progress_pct = min(current_0050_value / goal_amount * 100, 100)
     
-    # 運用純軟體 CSS 設計帶有發光粒子的流暢進度條
+    # 注入互動藝術流光特效 CSS
+    st.markdown("""
+    <style>
+    @keyframes gradient-flow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .art-bar {
+        background: linear-gradient(270deg, #3498db, #9b59b6, #e74c3c, #f1c40f);
+        background-size: 800% 800%;
+        animation: gradient-flow 6s ease infinite;
+        box-shadow: 0 0 20px rgba(155, 89, 182, 0.6);
+        border-radius: 50px;
+        transition: width 1.5s ease-in-out;
+    }
+    .tier-text { font-size: 14px; font-weight: bold; color: #b2bec3; }
+    .tier-active { color: #f1c40f; text-shadow: 0 0 8px rgba(241, 196, 15, 0.5); }
+    </style>
+    """, unsafe_allow_html=True)
+
+    t1_class = "tier-active" if progress_pct >= 20 else "tier-text"
+    t2_class = "tier-active" if progress_pct >= 50 else "tier-text"
+    t3_class = "tier-active" if progress_pct >= 100 else "tier-text"
+
     st.markdown(f"""
-    <div style="background-color: rgba(255,255,255,0.05); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-size: 20px; font-weight: bold; color: #a7f3d0;">目前累積: NT$ {current_0050_value:,.0f}</span>
-            <span style="font-size: 20px; font-weight: bold; color: #fef08a;">目標: NT$ {goal_amount:,.0f}</span>
+    <div style="background-color: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <span style="font-size: 22px; font-weight: 900; color: #a7f3d0;">目前累積: NT$ {current_0050_value:,.0f}</span>
+            <span style="font-size: 22px; font-weight: 900; color: #fef08a;">目標: NT$ {goal_amount:,.0f}</span>
         </div>
-        <div style="width: 100%; background-color: #2d3436; border-radius: 50px; height: 28px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="width: {progress_pct}%; height: 100%; background: linear-gradient(90deg, #0984e3, #00cec9); box-shadow: 0 0 20px rgba(0, 206, 201, 0.8); transition: width 1.5s ease-in-out;"></div>
+        <div style="width: 100%; background-color: #1e2128; border-radius: 50px; height: 32px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
+            <div class="art-bar" style="width: {progress_pct}%; height: 100%;"></div>
         </div>
-        <p style="text-align: right; margin-top: 8px; color: #b2bec3; font-weight: bold; font-size: 16px;">達成率: {progress_pct:.1f}%</p>
+        <div style="display: flex; justify-content: space-between; padding: 0 10px;">
+            <span class="{t1_class}">✈️ 20%: 機票與住宿</span>
+            <span class="{t2_class}">🍣 50%: 迪士尼 & 築地爆吃</span>
+            <span class="{t3_class}">🛍️ 100%: 略過神社，純購物行程</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
     if progress_pct >= 100:
         st.balloons()
-        st.success("🎉 目標達成！現在可以開始規劃無預算限制的純購物行程了！")
+        st.success("🎉 目標達成！立刻訂機票，開啟無預算上限的東京純購物之旅！")
