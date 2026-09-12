@@ -172,10 +172,13 @@ def add_zero_baseline(fig):
     return fig
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
+    # 根據屬性建立自帶流動感的漸層色系
     if is_profit and num_val is not None:
-        if num_val > 0: bg, text_c, glow_shadow = "linear-gradient(270deg, #ff4b4b, #c0392b, #8e44ad, #ff4b4b)", "#ffffff", "0 8px 20px rgba(255, 75, 75, 0.3)"
-        elif num_val < 0: bg, text_c, glow_shadow = "linear-gradient(270deg, #09ab3b, #27ae60, #16a085, #09ab3b)", "#ffffff", "0 8px 20px rgba(9, 171, 59, 0.3)"
-        else: bg, text_c, glow_shadow = "linear-gradient(270deg, #1e2128, #2c3e50, #1e2128, #1e2128)", "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
+        # 統一使用深色流動背景，將顏色變化專注在「數字字體」上
+        bg = "linear-gradient(270deg, #1e2128, #2c3e50, #1e2128, #1e2128)"
+        if num_val > 0: text_c, glow_shadow = "#ff4b4b", "0 8px 20px rgba(255, 75, 75, 0.3)"
+        elif num_val < 0: text_c, glow_shadow = "#09ab3b", "0 8px 20px rgba(9, 171, 59, 0.3)"
+        else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
     else:
         if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(270deg, #667eea, #764ba2, #9b59b6, #667eea)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
         elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(270deg, #2b5876, #4e4376, #3498db, #2b5876)", "0 8px 20px rgba(78, 67, 118, 0.5)", "#a7f3d0"
