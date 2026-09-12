@@ -24,7 +24,6 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
@@ -69,76 +68,70 @@ st.markdown("""
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 
     /* =========================================
-       科技感動態切換按鈕 (Radio 徹底覆寫)
+       科技感動態切換按鈕 (徹底消除原生 Radio 圓點)
        ========================================= */
-    /* 1. 隱藏原生圓點 */
-    div[data-testid="stRadio"] div[role="radiogroup"] div[role="radio"] {
+    /* 1. 隱藏外掛的原生圓圈 */
+    div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
     }
-    /* 2. 強制清除 Streamlit 預設的灰色背景框 */
-    div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
-        background-color: transparent !important;
-        padding: 0 !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
-        background-color: transparent !important;
+    div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
+        display: none !important;
     }
     
-    /* 3. 膠囊外框底座 */
-    div[data-testid="stRadio"] div[role="radiogroup"] {
-        display: inline-flex !important;
-        flex-direction: row !important;
-        background: #111318 !important;
-        padding: 6px !important;
-        border-radius: 50px !important;
-        border: 1px solid rgba(255,255,255,0.05) !important;
-        box-shadow: inset 0 2px 8px rgba(0,0,0,0.6) !important;
-        gap: 5px !important;
+    /* 2. 整個按鈕區塊的底座 */
+    div[data-testid="stRadio"] > div { 
+        gap: 10px; 
+        background: #111318 !important; 
+        padding: 6px 10px; 
+        border-radius: 50px; 
+        display: inline-flex; 
+        border: 1px solid rgba(255,255,255,0.05); 
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
     }
     
-    /* 4. 選項標籤本身 (未選中狀態) */
-    div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 32px !important;
-        border-radius: 50px !important;
-        margin: 0 !important;
+    /* 3. 選項標籤本身 (未選中狀態) */
+    div[data-testid="stRadio"] div[role="radiogroup"] label { 
+        padding: 8px 32px !important; 
+        border-radius: 50px !important; 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
         cursor: pointer !important;
-        background-color: transparent !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        background: transparent !important;
+        margin: 0 !important;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-        background-color: rgba(255,255,255,0.05) !important;
+        background: rgba(255,255,255,0.05) !important;
     }
     
-    /* 5. 動態流光特效 */
-    @keyframes btn-flow { 
-        0% { background-position: 0% 50%; } 
-        50% { background-position: 100% 50%; } 
-        100% { background-position: 0% 50%; } 
+    /* 4. 與下方資訊卡片完全相同的動態流光特效 */
+    @keyframes radio-sweep-light { 
+        0% { background-position: 200% 0; } 
+        100% { background-position: -200% 0; } 
     }
     
-    /* 6. 被選中時的標籤樣式 (使用動態漸層背景) */
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[role="radio"][aria-checked="true"]) {
-        background: linear-gradient(90deg, #1abc9c, #0072ff, #3498db, #1abc9c) !important;
-        background-size: 300% 300% !important;
-        animation: btn-flow 3s ease infinite !important;
-        box-shadow: 0 0 15px rgba(0, 114, 255, 0.4) !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
+    /* 5. 被選中時的標籤樣式 (完美套用「平均持倉成本」卡片的動態背景) */
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
+        background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%) !important; 
+        background-size: 200% auto !important;
+        animation: radio-sweep-light 4s linear infinite !important;
+        box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5) !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }
     
-    /* 7. 文字顏色控制 */
-    div[data-testid="stRadio"] div[role="radiogroup"] label p {
-        color: #7f8ca6 !important;
+    /* 6. 文字顏色控制 */
+    div[data-testid="stRadio"] div[role="radiogroup"] label p { 
+        color: #7f8ca6 !important; 
         font-weight: 600 !important;
-        margin: 0 !important;
         font-size: 16px !important;
-        transition: color 0.3s ease !important;
+        margin: 0 !important;
     }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[role="radio"][aria-checked="true"]) p {
-        color: #ffffff !important;
-        font-weight: 900 !important;
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) p { 
+        color: #ffffff !important; 
+        font-weight: 900 !important; 
         text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
 </style>
@@ -246,7 +239,6 @@ C_PCT = "#00E676"
 
 def style_fig(fig, title):
     fig.update_layout(
-        # 高度設為 800，確保 Hover Detail 不會被切斷
         height=800,
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
         font=dict(size=16, color="#e0e0e0"), 
@@ -855,7 +847,7 @@ with tab3:
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
 
     # ==========================================
-    # 🎯 區塊一：10 年 120 期紀律矩陣
+    # 🎯 區塊一：10 年 120 期紀律矩陣 (移至頂部)
     # ==========================================
     st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
     
@@ -914,9 +906,9 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     full_html = (
         f'<style>'
-        f'@keyframes sweep-horizontal {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
+        f'@keyframes sweep-45 {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 200% 200%; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(120deg, #16181d 25%, #34425a 50%, #16181d 75%); background-size: 200% auto; animation: sweep-horizontal 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(255,255,255,0.1); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(45deg, #1f4068 0%, #325b84 25%, #4779a3 50%, #325b84 75%, #1f4068 100%); background-size: 200% 200%; animation: sweep-45 3s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
