@@ -12,7 +12,7 @@ import datetime
 # 1. 頁面基本配置與頂級美化 CSS
 # ==========================================
 st.set_page_config(
-    page_title="個人旗艦資產工作站", 
+    page_title="個人旗艦資Asset工作站", 
     layout="wide", 
     page_icon="💎", 
     initial_sidebar_state="expanded"
@@ -779,13 +779,11 @@ with tab3:
     if df_txs is not None and not df_txs.empty:
         df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
         if not df_sip.empty:
-            # ✨ 精準算出歷史上的「真實平均扣款金額」，用來當作未來的智能預測基準！
             real_sip_avg = int(df_sip['金額'].abs().mean())
             
             df_sip = df_sip.sort_values('日期_dt')
             df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
             df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
-            # 保證不管一個月按幾次，只會結算最後一次，只佔據一個框框！
             df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
             sip_records = df_sip.to_dict('records')
 
@@ -821,8 +819,8 @@ with tab3:
         else:
             html_blocks.append(
                 f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
-                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.7); margin-top: 6px;">#{i+1}</div>'
+                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px;">#{i+1}</div>'
                 f'<div style="font-size: 10px; color: rgba(255,255,255,0.5);">待扣款</div>'
                 f'</div>'
             )
@@ -830,9 +828,9 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     full_html = (
         f'<style>'
-        f'@keyframes cyber-flow {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}'
+        f'@keyframes sweep-bg {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(-45deg, #1f3b5c, #2980b9, #00c6ff, #1f3b5c); background-size: 400% 400%; animation: cyber-flow 12s ease infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(41, 128, 185, 0.4); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(90deg, #0d1117 0%, #1f2f4c 50%, #0d1117 100%); background-size: 200% 100%; animation: sweep-bg 8s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 25px rgba(0,0,0,0.5); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
@@ -846,16 +844,14 @@ with tab3:
     # ==========================================
     # 🎯 區塊二：複利雪球時光機
     # ==========================================
-    st.markdown("### ⏳ 複利雪球時光機 (基於真實持股自動推演)")
+    st.markdown("### ⏳ 複利雪球時光機 (真實日曆推演)")
     
     col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-    # ✨ 預設值直接帶入您歷史扣款算出來的真實平均值
     monthly_invest = col_s1.number_input("預測每月扣款 (依歷史均值自動帶入)", value=real_sip_avg, step=100)
     years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
     price_rate = col_s3.slider("股價年化成長 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
     div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
 
-    # ✨ 新增按鈕讓使用者隨時切換要看「逐月變化」還是「逐年變化」
     resolution = st.radio("圖表時間跨度", ["每年", "每月"], horizontal=True)
 
     months = years * 12
@@ -866,18 +862,24 @@ with tab3:
     val_no_drip = current_0050_value
     val_drip = current_0050_value
     
-    future_data = [{"時間": "現在 (起點)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
+    curr_year = datetime.date.today().year
+    curr_month = datetime.date.today().month
+    
+    future_data = [{"時間": f"現在 ({curr_year}年{curr_month}月)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
     
     for m in range(1, months + 1):
         accumulated_principal += monthly_invest
         val_no_drip = (val_no_drip + monthly_invest) * (1 + monthly_price_rate)
         val_drip = (val_drip + monthly_invest) * (1 + monthly_total_rate)
         
-        # 根據您的選擇決定儲存的資料粒度
+        future_total_months = curr_month + m - 1
+        fy = curr_year + (future_total_months // 12)
+        fm = (future_total_months % 12) + 1
+        
         if resolution == "每月":
-            future_data.append({"時間": f"第 {m} 個月", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
+            future_data.append({"時間": f"{fy}年{fm}月", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
         elif resolution == "每年" and m % 12 == 0:
-            future_data.append({"時間": f"第 {m//12} 年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
+            future_data.append({"時間": f"{fy}年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
             
     df_future = pd.DataFrame(future_data)
     
@@ -886,9 +888,8 @@ with tab3:
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['無再投入市值'], mode='lines', fill='tonexty', name='單純市值成長 (股息領出)', line=dict(color='#e67e22', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['股息再投入市值'], mode='lines', fill='tonexty', name='股息再投入滾存', line=dict(color='#f1c40f', width=3)))
     
-    fig_future = style_fig(fig_future, f"資產增長動態投影 (從目前市值 NT$ {current_0050_value:,.0f} 起算)")
+    fig_future = style_fig(fig_future, f"資產增長動態投影 (從目前市值 NT$ {current_0050_value:,.0f} 滾動)")
     
-    # 確保如果是看年度的，X軸可以更乾淨對齊
     if resolution == "每年":
         fig_future.update_xaxes(type='category')
         
