@@ -24,6 +24,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
+    /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
@@ -70,7 +71,6 @@ st.markdown("""
     /* =========================================
        科技感動態切換按鈕 (徹底消除原生 Radio 圓點)
        ========================================= */
-    /* 1. 隱藏外掛的原生圓圈 */
     div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
     }
@@ -78,7 +78,6 @@ st.markdown("""
         display: none !important;
     }
     
-    /* 2. 整個按鈕區塊的底座 */
     div[data-testid="stRadio"] > div { 
         gap: 10px; 
         background: #111318 !important; 
@@ -89,7 +88,6 @@ st.markdown("""
         box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
     }
     
-    /* 3. 選項標籤本身 (未選中狀態) */
     div[data-testid="stRadio"] div[role="radiogroup"] label { 
         padding: 8px 32px !important; 
         border-radius: 50px !important; 
@@ -105,13 +103,11 @@ st.markdown("""
         background: rgba(255,255,255,0.05) !important;
     }
     
-    /* 4. 與下方資訊卡片完全相同的動態流光特效 */
     @keyframes radio-sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
     }
     
-    /* 5. 被選中時的標籤樣式 (完美套用「平均持倉成本」卡片的動態背景) */
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
         background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%) !important; 
@@ -121,7 +117,6 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.1) !important;
     }
     
-    /* 6. 文字顏色控制 */
     div[data-testid="stRadio"] div[role="radiogroup"] label p { 
         color: #7f8ca6 !important; 
         font-weight: 600 !important;
@@ -847,12 +842,12 @@ with tab3:
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
 
     # ==========================================
-    # 🎯 區塊一：10 年 120 期紀律矩陣 (移至頂部)
+    # 🎯 區塊一：10 年 120 期紀律矩陣
     # ==========================================
     st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
     
     sip_records = []
-    real_sip_avg = 6000  # 預設為 6000
+    real_sip_avg = 6000  
     
     if df_txs is not None and not df_txs.empty:
         df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
@@ -870,7 +865,8 @@ with tab3:
         if i < len(sip_records):
             rec = sip_records[i]
             amt = abs(rec['金額'])
-            date_str = rec['日期_dt'].strftime('%m/%d')
+            # 改為 YYYY/MM/DD 格式
+            date_str = rec['日期_dt'].strftime('%Y/%m/%d')
             
             shares = 0
             if df_st is not None and not df_st.empty:
@@ -888,29 +884,31 @@ with tab3:
                 shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
             
             html_blocks.append(
-                f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
-                f'<div style="width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px;">{date_str}</div>'
-                f'<div style="font-size: 10px; color: #d1d5db;">{shares}股</div>'
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">'
+                f'<div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px; white-space: nowrap;">{date_str}</div>'
+                f'<div style="font-size: 11px; color: #d1d5db; white-space: nowrap;">{shares} 股</div>'
                 f'</div>'
             )
         else:
             html_blocks.append(
-                f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
-                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px;">#{i+1}</div>'
-                f'<div style="font-size: 10px; color: rgba(255,255,255,0.5);">待扣款</div>'
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">'
+                f'<div style="width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px; white-space: nowrap;">#{i+1}</div>'
+                f'<div style="font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap;">待扣款</div>'
                 f'</div>'
             )
 
     blocks_str = ''.join(html_blocks)
+    
+    # 導入 CSS Grid，強制每 10 個一列，並在中央排版
     full_html = (
         f'<style>'
         f'@keyframes sweep-45 {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 200% 200%; }} }}'
         f'</style>'
         f'<div style="background: linear-gradient(45deg, #1f4068 0%, #325b84 25%, #4779a3 50%, #325b84 75%, #1f4068 100%); background-size: 200% 200%; animation: sweep-45 3s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
-        f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
+        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; max-width: 900px; margin: 0 auto; justify-items: center;">'
         f'{blocks_str}'
         f'</div>'
         f'</div>'
@@ -959,21 +957,14 @@ with tab3:
     }]
     
     for m in range(1, months + 1):
-        # 計算當月產生的股息 (以期初市值為準)
         div_0050 = val_drip_0050 * monthly_div_rate
         div_tsmc = val_drip_tsmc * monthly_div_rate
 
-        # --- 0050 成長邏輯 ---
-        # 1. 享受每月新資金扣款注入
         acc_cost_0050 += monthly_invest
         val_nodrip_0050 = (val_nodrip_0050 + monthly_invest) * (1 + monthly_price_rate)
-        # 2. 再投入威力：原本的股息 +「台積電跨界產生的股息」通通買入 0050！
         val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_price_rate) + div_0050 + div_tsmc
 
-        # --- 台積電 成長邏輯 ---
-        # 1. 無後續本金注入，單純依靠市場增幅
         val_nodrip_tsmc = val_nodrip_tsmc * (1 + monthly_price_rate)
-        # 2. 因為台積電的股息已經「跨界挹注」給 0050 了，所以它的價值等於純市值成長
         val_drip_tsmc = val_drip_tsmc * (1 + monthly_price_rate)
         
         future_total_months = curr_month + m - 1
@@ -995,17 +986,14 @@ with tab3:
     df_future = pd.DataFrame(future_data)
     fig_future = go.Figure()
 
-    # --- 1. [總合盤勢] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
 
-    # --- 2. [0050 專區] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
 
-    # --- 3. [台積電 專區] ---
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
