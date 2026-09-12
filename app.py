@@ -24,12 +24,6 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 將動態光波特效提升到全域，確保所有區塊都能正常呼叫 */
-    @keyframes sweep-light { 
-        0% { background-position: 200% 0; } 
-        100% { background-position: -200% 0; } 
-    }
-
     /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
@@ -75,7 +69,7 @@ st.markdown("""
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 
     /* =========================================
-       科技感動態切換按鈕 (Radio 覆寫)
+       科技感動態切換按鈕 (徹底消除原生 Radio 圓點)
        ========================================= */
     div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
@@ -86,11 +80,12 @@ st.markdown("""
     
     div[data-testid="stRadio"] > div { 
         gap: 10px; 
-        background: rgba(128, 128, 128, 0.1) !important; 
+        background: #111318 !important; 
         padding: 6px 10px; 
         border-radius: 50px; 
         display: inline-flex; 
-        border: 1px solid rgba(128,128,128,0.2); 
+        border: 1px solid rgba(255,255,255,0.05); 
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label { 
@@ -104,20 +99,26 @@ st.markdown("""
         background: transparent !important;
         margin: 0 !important;
     }
-    
     div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-        background: rgba(128,128,128,0.1) !important;
+        background: rgba(255,255,255,0.05) !important;
+    }
+    
+    @keyframes radio-sweep-light { 
+        0% { background-position: 200% 0; } 
+        100% { background-position: -200% 0; } 
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
         background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%) !important; 
         background-size: 200% auto !important;
-        animation: sweep-light 4s linear infinite !important;
-        box-shadow: 0 4px 10px rgba(78, 67, 118, 0.5) !important; 
+        animation: radio-sweep-light 4s linear infinite !important;
+        box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5) !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label p { 
+        color: #7f8ca6 !important; 
         font-weight: 600 !important;
         font-size: 16px !important;
         margin: 0 !important;
@@ -126,6 +127,7 @@ st.markdown("""
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) p { 
         color: #ffffff !important; 
         font-weight: 900 !important; 
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -234,7 +236,8 @@ def style_fig(fig, title):
     fig.update_layout(
         height=800,
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
-        # 移除了強制寫死的 font 顏色與 plotly_dark template，讓圖表完美適配您的淺色/深色主題！
+        font=dict(size=16, color="#e0e0e0"), 
+        template="plotly_dark", 
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=18, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
@@ -265,9 +268,14 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 25%, #FFC837 50%, #FF8008 75%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 25%, #3a4a5a 50%, #1e2128 75%)", "none", "#ffffff"
             
-    # 卡片的 animation: sweep-light 依然保留，且會吃到全域的 @keyframes
     return f"""
-    <div style="background: {bg}; background-size: 200% auto; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <style>
+        @keyframes sweep-light-card {{ 
+            0% {{ background-position: 200% 0; }} 
+            100% {{ background-position: -200% 0; }} 
+        }}
+    </style>
+    <div style="background: {bg}; background-size: 200% auto; animation: sweep-light-card 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
@@ -885,16 +893,20 @@ with tab3:
             html_blocks.append(
                 f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">'
                 f'<div style="width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px; white-space: nowrap;">#{i+1}</div>'
-                f'<div style="font-size: 11px; color: rgba(255,255,255,0.5); white-space: nowrap;">待扣款</div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.8); margin-top: 6px; white-space: nowrap;">#{i+1}</div>'
+                f'<div style="font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap;">待扣款</div>'
                 f'</div>'
             )
 
     blocks_str = ''.join(html_blocks)
     
-    # 完全複製平均持倉藍色卡片的動態參數，並使用 Grid 滿版均分置中排版
+    # 1. 真 45 度角動畫 (X 和 Y 同時從 0 到 100)
+    # 2. 換成深邃星空黑/紫 `#0b0914 -> #351f5c`，確保這區塊和藍色卡片完全區隔
     full_html = (
-        f'<div style="background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%); background-size: 200% auto; animation: sweep-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5); margin-bottom: 30px; width: 100%;">'
+        f'<style>'
+        f'@keyframes sweep-45-deg {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 100% 100%; }} }}'
+        f'</style>'
+        f'<div style="background: linear-gradient(45deg, #0b0914 0%, #161224 25%, #351f5c 50%, #161224 75%, #0b0914 100%); background-size: 300% 300%; animation: sweep-45-deg 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 25px rgba(0,0,0,0.5); margin-bottom: 30px; width: 100%;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
@@ -974,7 +986,6 @@ with tab3:
     df_future = pd.DataFrame(future_data)
     fig_future = go.Figure()
 
-    # 拔除硬編碼的白色字體，確保亮色背景下文字能自動反黑清晰顯示
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<b>全庫存總計</b>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
