@@ -807,52 +807,52 @@ with tab3:
 
         st.divider()
 
-    st.markdown("### 🏆 紀律印記：定期定額年度軌跡")
+        st.markdown("### 🏆 紀律印記：定期定額年度軌跡")
     
-    # 抓取並過濾銀行紀錄中的「定期定額」
-    sip_records = []
-    if df_txs is not None and not df_txs.empty:
-        df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
-        if not df_sip.empty:
-            df_sip = df_sip.sort_values('日期_dt')
-            # 建立 YYYY-MM 欄位，確保同一個月就算有多筆也只取最後一筆顯示
-            df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
-            df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
-            sip_records = df_sip.to_dict('records')
-
-    # 生成 12 個月份的視覺圓框 HTML
-    html_blocks = []
-    for i in range(12):
-        if i < len(sip_records):
-            rec = sip_records[i]
-            amt = abs(rec['金額'])
-            date_str = rec['日期_dt'].strftime('%m/%d')
-            # 自動換算預估買入股數 (扣款金額 / 0050 現價，無條件捨去)
-            shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
-            
-            html_blocks.append(f"""
-            <div style="display: flex; flex-direction: column; align-items: center; width: 85px;">
-                <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 0 15px rgba(9, 171, 59, 0.5);">✓</div>
-                <div style="font-size: 14px; font-weight: bold; color: #a7f3d0; margin-top: 12px;">{date_str}</div>
-                <div style="font-size: 13px; color: #d1d5db;">約 {shares} 股</div>
+        # 抓取並過濾銀行紀錄中的「定期定額」
+        sip_records = []
+        if df_txs is not None and not df_txs.empty:
+            df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
+            if not df_sip.empty:
+                df_sip = df_sip.sort_values('日期_dt')
+                # 建立 YYYY-MM 欄位，確保同一個月就算有多筆也只取最後一筆顯示
+                df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
+                df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
+                sip_records = df_sip.to_dict('records')
+    
+        # 生成 12 個月份的視覺圓框 HTML
+        html_blocks = []
+        for i in range(12):
+            if i < len(sip_records):
+                rec = sip_records[i]
+                amt = abs(rec['金額'])
+                date_str = rec['日期_dt'].strftime('%m/%d')
+                # 自動換算預估買入股數 (扣款金額 / 0050 現價，無條件捨去)
+                shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
+                
+                html_blocks.append(f"""
+                <div style="display: flex; flex-direction: column; align-items: center; width: 85px;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 0 15px rgba(9, 171, 59, 0.5);">✓</div>
+                    <div style="font-size: 14px; font-weight: bold; color: #a7f3d0; margin-top: 12px;">{date_str}</div>
+                    <div style="font-size: 13px; color: #d1d5db;">約 {shares} 股</div>
+                </div>
+                """)
+            else:
+                html_blocks.append(f"""
+                <div style="display: flex; flex-direction: column; align-items: center; width: 85px;">
+                    <div style="width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #4b6584; display: flex; align-items: center; justify-content: center;"></div>
+                    <div style="font-size: 14px; font-weight: bold; color: #7f8ca6; margin-top: 12px;">第 {i+1} 期</div>
+                    <div style="font-size: 13px; color: #7f8ca6;">待扣款</div>
+                </div>
+                """)
+    
+        # 組合外框，使用 flex-wrap 確保在不同螢幕寬度下都能完美排版
+        full_html = f"""
+        <div style="background: linear-gradient(135deg, #1e2128 0%, #13151a 100%); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
+            <p style="font-size: 1.1rem; color: #d1d5db; font-weight: bold; margin-bottom: 25px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 年度 12 期解鎖進度 (自動讀取銀行流水)</p>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
+                {''.join(html_blocks)}
             </div>
-            """)
-        else:
-            html_blocks.append(f"""
-            <div style="display: flex; flex-direction: column; align-items: center; width: 85px;">
-                <div style="width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #4b6584; display: flex; align-items: center; justify-content: center;"></div>
-                <div style="font-size: 14px; font-weight: bold; color: #7f8ca6; margin-top: 12px;">第 {i+1} 期</div>
-                <div style="font-size: 13px; color: #7f8ca6;">待扣款</div>
-            </div>
-            """)
-
-    # 組合外框，使用 flex-wrap 確保在不同螢幕寬度下都能完美排版
-    full_html = f"""
-    <div style="background: linear-gradient(135deg, #1e2128 0%, #13151a 100%); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(0,0,0,0.2);">
-        <p style="font-size: 1.1rem; color: #d1d5db; font-weight: bold; margin-bottom: 25px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 年度 12 期解鎖進度 (自動讀取銀行流水)</p>
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">
-            {''.join(html_blocks)}
         </div>
-    </div>
-    """
-    st.markdown(full_html, unsafe_allow_html=True)
+        """
+        st.markdown(full_html, unsafe_allow_html=True)
