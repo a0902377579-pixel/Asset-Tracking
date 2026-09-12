@@ -774,18 +774,22 @@ with tab3:
     st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
     
     sip_records = []
+    real_sip_avg = 6000  # 預設為 6000
+    
     if df_txs is not None and not df_txs.empty:
         df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
         if not df_sip.empty:
+            # ✨ 精準算出歷史上的「真實平均扣款金額」，用來當作未來的智能預測基準！
+            real_sip_avg = int(df_sip['金額'].abs().mean())
+            
             df_sip = df_sip.sort_values('日期_dt')
             df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
             df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
-            # 確保同月份不管有幾筆，都只留最後一筆，只佔一格
+            # 保證不管一個月按幾次，只會結算最後一次，只佔據一個框框！
             df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
             sip_records = df_sip.to_dict('records')
 
     html_blocks = []
-    # 擴增至 120 期 (10年)，並調整寬度比例以形成緻密的打卡網格
     for i in range(120):
         if i < len(sip_records):
             rec = sip_records[i]
@@ -817,8 +821,8 @@ with tab3:
         else:
             html_blocks.append(
                 f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
-                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px;">#{i+1}</div>'
+                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.7); margin-top: 6px;">#{i+1}</div>'
                 f'<div style="font-size: 10px; color: rgba(255,255,255,0.5);">待扣款</div>'
                 f'</div>'
             )
@@ -826,10 +830,10 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     full_html = (
         f'<style>'
-        f'@keyframes sweep-bg {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
+        f'@keyframes cyber-flow {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(120deg, #1f3b5c 25%, #4278a6 50%, #1f3b5c 75%); background-size: 200% auto; animation: sweep-bg 6s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(66, 120, 166, 0.4); margin-bottom: 30px;">'
-        f'<p style="font-size: 1.1rem; color: #f8fafc; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
+        f'<div style="background: linear-gradient(-45deg, #1f3b5c, #2980b9, #00c6ff, #1f3b5c); background-size: 400% 400%; animation: cyber-flow 12s ease infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(41, 128, 185, 0.4); margin-bottom: 30px;">'
+        f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
         f'</div>'
@@ -842,13 +846,17 @@ with tab3:
     # ==========================================
     # 🎯 區塊二：複利雪球時光機
     # ==========================================
-    st.markdown("### ⏳ 複利雪球時光機 (基於真實持股)")
+    st.markdown("### ⏳ 複利雪球時光機 (基於真實持股自動推演)")
     
     col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-    monthly_invest = col_s1.number_input("每月定期定額 (NT$)", value=6000, step=1000)
+    # ✨ 預設值直接帶入您歷史扣款算出來的真實平均值
+    monthly_invest = col_s1.number_input("預測每月扣款 (依歷史均值自動帶入)", value=real_sip_avg, step=100)
     years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
     price_rate = col_s3.slider("股價年化成長 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
     div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
+
+    # ✨ 新增按鈕讓使用者隨時切換要看「逐月變化」還是「逐年變化」
+    resolution = st.radio("圖表時間跨度", ["每年", "每月"], horizontal=True)
 
     months = years * 12
     monthly_price_rate = price_rate / 100 / 12
@@ -858,23 +866,32 @@ with tab3:
     val_no_drip = current_0050_value
     val_drip = current_0050_value
     
-    future_data = [{"年度": "現在 (第 0 年)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
+    future_data = [{"時間": "現在 (起點)", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip}]
     
     for m in range(1, months + 1):
         accumulated_principal += monthly_invest
         val_no_drip = (val_no_drip + monthly_invest) * (1 + monthly_price_rate)
         val_drip = (val_drip + monthly_invest) * (1 + monthly_total_rate)
-        if m % 12 == 0:
-            future_data.append({"年度": f"第 {m//12} 年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
+        
+        # 根據您的選擇決定儲存的資料粒度
+        if resolution == "每月":
+            future_data.append({"時間": f"第 {m} 個月", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
+        elif resolution == "每年" and m % 12 == 0:
+            future_data.append({"時間": f"第 {m//12} 年", "累積本金": accumulated_principal, "無再投入市值": val_no_drip, "股息再投入市值": val_drip})
             
     df_future = pd.DataFrame(future_data)
     
     fig_future = go.Figure()
-    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='投入本金', line=dict(color='#3498db', width=3)))
-    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['無再投入市值'], mode='lines', fill='tonexty', name='單純市值成長 (股息領出)', line=dict(color='#e67e22', width=2)))
-    fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['股息再投入市值'], mode='lines', fill='tonexty', name='股息再投入滾存', line=dict(color='#f1c40f', width=3)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='累積總本金', line=dict(color='#3498db', width=3)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['無再投入市值'], mode='lines', fill='tonexty', name='單純市值成長 (股息領出)', line=dict(color='#e67e22', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['股息再投入市值'], mode='lines', fill='tonexty', name='股息再投入滾存', line=dict(color='#f1c40f', width=3)))
     
-    fig_future = style_fig(fig_future, "資產增長投影 (呈現股利再投入飛輪威力)")
+    fig_future = style_fig(fig_future, f"資產增長動態投影 (從目前市值 NT$ {current_0050_value:,.0f} 起算)")
+    
+    # 確保如果是看年度的，X軸可以更乾淨對齊
+    if resolution == "每年":
+        fig_future.update_xaxes(type='category')
+        
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
     st.plotly_chart(fig_future, use_container_width=True)
 
