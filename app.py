@@ -865,7 +865,6 @@ with tab3:
         if i < len(sip_records):
             rec = sip_records[i]
             amt = abs(rec['金額'])
-            # 改為 YYYY/MM/DD 格式
             date_str = rec['日期_dt'].strftime('%Y/%m/%d')
             
             shares = 0
@@ -901,14 +900,14 @@ with tab3:
 
     blocks_str = ''.join(html_blocks)
     
-    # 導入 CSS Grid，強制每 10 個一列，並在中央排版
+    # 完全套用 "平均持倉成本 vs 現價" (theme="blue") 的背景參數與 10欄置中 Grid 佈局
     full_html = (
         f'<style>'
-        f'@keyframes sweep-45 {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 200% 200%; }} }}'
+        f'@keyframes sweep-grid-light {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(45deg, #1f4068 0%, #325b84 25%, #4779a3 50%, #325b84 75%, #1f4068 100%); background-size: 200% 200%; animation: sweep-45 3s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(0,0,0,0.4); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%); background-size: 200% auto; animation: sweep-grid-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5); margin-bottom: 30px;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
-        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; max-width: 900px; margin: 0 auto; justify-items: center;">'
+        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 10px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
         f'</div>'
         f'</div>'
