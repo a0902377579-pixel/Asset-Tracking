@@ -780,6 +780,7 @@ with tab3:
             df_sip = df_sip.sort_values('日期_dt')
             df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
             df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
+            # 確保同月份不管有幾筆，都只留最後一筆，只佔一格
             df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
             sip_records = df_sip.to_dict('records')
 
@@ -816,9 +817,9 @@ with tab3:
         else:
             html_blocks.append(
                 f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
-                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed #4b6584; display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 11px; font-weight: bold; color: #7f8ca6; margin-top: 6px;">#{i+1}</div>'
-                f'<div style="font-size: 10px; color: #7f8ca6;">待扣款</div>'
+                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.6); margin-top: 6px;">#{i+1}</div>'
+                f'<div style="font-size: 10px; color: rgba(255,255,255,0.5);">待扣款</div>'
                 f'</div>'
             )
 
@@ -827,8 +828,8 @@ with tab3:
         f'<style>'
         f'@keyframes sweep-bg {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
         f'</style>'
-        f'<div style="background: linear-gradient(120deg, #101423 25%, #2a3b5c 50%, #101423 75%); background-size: 200% auto; animation: sweep-bg 5s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.4); margin-bottom: 30px;">'
-        f'<p style="font-size: 1.1rem; color: #d1d5db; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
+        f'<div style="background: linear-gradient(120deg, #1f3b5c 25%, #4278a6 50%, #1f3b5c 75%); background-size: 200% auto; animation: sweep-bg 6s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 25px rgba(66, 120, 166, 0.4); margin-bottom: 30px;">'
+        f'<p style="font-size: 1.1rem; color: #f8fafc; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
         f'{blocks_str}'
         f'</div>'
