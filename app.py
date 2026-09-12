@@ -734,7 +734,18 @@ with tab2:
 # 分頁 3：🎯 定期定額與願景
 # ------------------------------------------
 with tab3:
-    st.markdown("### ⏳ 複利雪球時光機 (0050 模擬器)")
+    # 1. 先計算目前 0050 的實際狀態，作為模擬器的真實基底
+    current_0050_value = 0
+    current_0050_shares = 0
+    current_0050_cost = 0
+    if df_h is not None:
+        stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
+        if not stock_0050.empty:
+            current_0050_value = stock_0050['market_value'].sum()
+            current_0050_shares = stock_0050['shares'].sum()
+            current_0050_cost = stock_0050['total_cost'].sum()
+
+    st.markdown("### ⏳ 複利雪球時光機 (基於真實持股)")
     
     col_s1, col_s2, col_s3 = st.columns(3)
     monthly_invest = col_s1.number_input("每月定期定額 (NT$)", value=6000, step=1000)
@@ -744,9 +755,12 @@ with tab3:
     months = years * 12
     monthly_rate = annual_rate / 100 / 12
     
-    future_data = []
-    accumulated_principal = 0
-    total_value = 0
+    # 2. 初始值設定為「目前的實際本金」與「目前的實際市值」
+    accumulated_principal = current_0050_cost
+    total_value = current_0050_value
+    
+    # 加入第 0 年 (現在) 作為圖表起點
+    future_data = [{"年度": "現在 (第 0 年)", "累積本金": accumulated_principal, "複利總值": total_value}]
     
     for m in range(1, months + 1):
         accumulated_principal += monthly_invest
@@ -759,7 +773,10 @@ with tab3:
     fig_future = go.Figure()
     fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['累積本金'], mode='lines', fill='tozeroy', name='投入本金', line=dict(color='#3498db', width=3)))
     fig_future.add_trace(go.Scatter(x=df_future['年度'], y=df_future['複利總值'], mode='lines', fill='tonexty', name='複利滾存', line=dict(color='#f1c40f', width=3)))
-    fig_future = style_fig(fig_future, "資產增長投影 (本金 vs 市場複利)")
+    
+    fig_future = style_fig(fig_future, "資產增長投影 (真實基底 vs 預估複利)")
+    # 新增圖表 Hover 格式，讓金額顯示加上千分位逗號
+    fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
     st.plotly_chart(fig_future, use_container_width=True)
 
     st.divider()
@@ -767,16 +784,6 @@ with tab3:
     st.markdown("### 💸 紀律引擎：0050 定期定額透視")
     c3_1, c3_2 = st.columns(2)
     
-    current_0050_value = 0
-    current_0050_shares = 0
-    current_0050_cost = 0
-    if df_h is not None:
-        stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
-        if not stock_0050.empty:
-            current_0050_value = stock_0050['market_value'].sum()
-            current_0050_shares = stock_0050['shares'].sum()
-            current_0050_cost = stock_0050['total_cost'].sum()
-
     avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
     
