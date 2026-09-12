@@ -151,7 +151,6 @@ def load_stock_transactions():
         if len(rows) > 1:
             df = pd.DataFrame(rows[1:])
             if df.shape[1] >= 6:
-                # 抓取 日期(0), 標的(1), 股數(2), 單筆總價(5) 來做後續定期定額比對
                 df = df[[0, 1, 2, 5]].rename(columns={0: '日期', 1: '標的', 2: '股數', 5: '單筆總價'})
                 df['日期_dt'] = pd.to_datetime(df['日期'], errors='coerce')
                 df['股數'] = pd.to_numeric(df['股數'].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
@@ -436,7 +435,6 @@ with st.sidebar:
                 st.rerun()
 
         if st.session_state.stock_confirm:
-            # 加入 round() 自動四捨五入確保如 5612.6 會正確進位為 5613
             total_amt_check = round((current_shares * current_price) + st.session_state.s_fee)
             
             stock_action_container.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
@@ -756,6 +754,7 @@ with tab2:
 # 分頁 3：🎯 定期定額與願景
 # ------------------------------------------
 with tab3:
+    # 1. 預先計算 0050 的基底狀態
     current_0050_value = 0
     current_0050_shares = 0
     current_0050_cost = 0
@@ -765,7 +764,83 @@ with tab3:
             current_0050_value = stock_0050['market_value'].sum()
             current_0050_shares = stock_0050['shares'].sum()
             current_0050_cost = stock_0050['total_cost'].sum()
+            
+    avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
+    market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
 
+    # ==========================================
+    # 🎯 區塊一：10 年 120 期紀律矩陣 (移至頂部)
+    # ==========================================
+    st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
+    
+    sip_records = []
+    if df_txs is not None and not df_txs.empty:
+        df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
+        if not df_sip.empty:
+            df_sip = df_sip.sort_values('日期_dt')
+            df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
+            df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
+            df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
+            sip_records = df_sip.to_dict('records')
+
+    html_blocks = []
+    # 擴增至 120 期 (10年)，並調整寬度比例以形成緻密的打卡網格
+    for i in range(120):
+        if i < len(sip_records):
+            rec = sip_records[i]
+            amt = abs(rec['金額'])
+            date_str = rec['日期_dt'].strftime('%m/%d')
+            
+            shares = 0
+            if df_st is not None and not df_st.empty:
+                match = df_st[(df_st['YYYY-MM-DD'] == rec['YYYY-MM-DD']) & (df_st['標的'].str.contains('0050', na=False)) & (df_st['股數'] > 0)]
+                if not match.empty:
+                    if len(match) == 1:
+                        shares = int(match['股數'].iloc[0])
+                    else:
+                        match = match.copy()
+                        match['diff'] = (match['單筆總價'] - amt).abs()
+                        best_match = match.sort_values('diff').iloc[0]
+                        shares = int(best_match['股數'])
+            
+            if shares == 0:
+                shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
+            
+            html_blocks.append(
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
+                f'<div style="width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px;">{date_str}</div>'
+                f'<div style="font-size: 10px; color: #d1d5db;">{shares}股</div>'
+                f'</div>'
+            )
+        else:
+            html_blocks.append(
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 50px;">'
+                f'<div style="width: 35px; height: 35px; border-radius: 50%; border: 2px dashed #4b6584; display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: #7f8ca6; margin-top: 6px;">#{i+1}</div>'
+                f'<div style="font-size: 10px; color: #7f8ca6;">待扣款</div>'
+                f'</div>'
+            )
+
+    blocks_str = ''.join(html_blocks)
+    full_html = (
+        f'<style>'
+        f'@keyframes sweep-bg {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
+        f'</style>'
+        f'<div style="background: linear-gradient(120deg, #101423 25%, #2a3b5c 50%, #101423 75%); background-size: 200% auto; animation: sweep-bg 5s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 8px 20px rgba(0,0,0,0.4); margin-bottom: 30px;">'
+        f'<p style="font-size: 1.1rem; color: #d1d5db; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
+        f'<div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-start;">'
+        f'{blocks_str}'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(full_html, unsafe_allow_html=True)
+    
+    st.divider()
+
+    # ==========================================
+    # 🎯 區塊二：複利雪球時光機
+    # ==========================================
     st.markdown("### ⏳ 複利雪球時光機 (基於真實持股)")
     
     col_s1, col_s2, col_s3, col_s4 = st.columns(4)
@@ -804,11 +879,11 @@ with tab3:
 
     st.divider()
 
+    # ==========================================
+    # 🎯 區塊三：紀律引擎透視
+    # ==========================================
     st.markdown("### 💸 紀律引擎：0050 定期定額透視")
     c3_1, c3_2 = st.columns(2)
-    
-    avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
-    market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
     
     est_dividends = current_0050_cost * (div_yield / 100)
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
@@ -822,68 +897,3 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
-
-    st.divider()
-
-    st.markdown("### 🏆 紀律印記：定期定額年度軌跡")
-    
-    sip_records = []
-    if df_txs is not None and not df_txs.empty:
-        df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
-        if not df_sip.empty:
-            df_sip = df_sip.sort_values('日期_dt')
-            df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
-            df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
-            df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
-            sip_records = df_sip.to_dict('records')
-
-    html_blocks = []
-    for i in range(12):
-        if i < len(sip_records):
-            rec = sip_records[i]
-            amt = abs(rec['金額'])
-            date_str = rec['日期_dt'].strftime('%m/%d')
-            
-            shares = 0
-            # 優先從「股票交易紀錄」尋找同日買入的 0050 真實股數 (精準還原您的 52 股)
-            if df_st is not None and not df_st.empty:
-                match = df_st[(df_st['YYYY-MM-DD'] == rec['YYYY-MM-DD']) & (df_st['標的'].str.contains('0050', na=False)) & (df_st['股數'] > 0)]
-                if not match.empty:
-                    if len(match) == 1:
-                        shares = int(match['股數'].iloc[0])
-                    else:
-                        # 若同一天有多筆 0050 買入，自動比對「單筆總價」最接近銀行扣款的一筆
-                        match = match.copy()
-                        match['diff'] = (match['單筆總價'] - amt).abs()
-                        best_match = match.sort_values('diff').iloc[0]
-                        shares = int(best_match['股數'])
-            
-            if shares == 0:
-                shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
-            
-            html_blocks.append(
-                f'<div style="display: flex; flex-direction: column; align-items: center; width: 85px;">'
-                f'<div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 0 15px rgba(9, 171, 59, 0.5);">✓</div>'
-                f'<div style="font-size: 14px; font-weight: bold; color: #a7f3d0; margin-top: 12px;">{date_str}</div>'
-                f'<div style="font-size: 13px; color: #d1d5db;">約 {shares} 股</div>'
-                f'</div>'
-            )
-        else:
-            html_blocks.append(
-                f'<div style="display: flex; flex-direction: column; align-items: center; width: 85px;">'
-                f'<div style="width: 60px; height: 60px; border-radius: 50%; border: 3px dashed #4b6584; display: flex; align-items: center; justify-content: center;"></div>'
-                f'<div style="font-size: 14px; font-weight: bold; color: #7f8ca6; margin-top: 12px;">第 {i+1} 期</div>'
-                f'<div style="font-size: 13px; color: #7f8ca6;">待扣款</div>'
-                f'</div>'
-            )
-
-    blocks_str = ''.join(html_blocks)
-    full_html = (
-        f'<div style="background: linear-gradient(135deg, #1e2128 0%, #13151a 100%); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(0,0,0,0.2);">'
-        f'<p style="font-size: 1.1rem; color: #d1d5db; font-weight: bold; margin-bottom: 25px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🎯 年度 12 期解鎖進度 (自動讀取銀行流水)</p>'
-        f'<div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: flex-start;">'
-        f'{blocks_str}'
-        f'</div>'
-        f'</div>'
-    )
-    st.markdown(full_html, unsafe_allow_html=True)
