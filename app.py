@@ -24,6 +24,12 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
+    /* 將動態光波特效提升到全域，確保所有區塊都能正常呼叫 */
+    @keyframes sweep-light { 
+        0% { background-position: 200% 0; } 
+        100% { background-position: -200% 0; } 
+    }
+
     /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
@@ -69,7 +75,7 @@ st.markdown("""
     div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
 
     /* =========================================
-       科技感動態切換按鈕 (徹底消除原生 Radio 圓點)
+       科技感動態切換按鈕 (Radio 覆寫)
        ========================================= */
     div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
@@ -80,12 +86,11 @@ st.markdown("""
     
     div[data-testid="stRadio"] > div { 
         gap: 10px; 
-        background: #111318 !important; 
+        background: rgba(128, 128, 128, 0.1) !important; 
         padding: 6px 10px; 
         border-radius: 50px; 
         display: inline-flex; 
-        border: 1px solid rgba(255,255,255,0.05); 
-        box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+        border: 1px solid rgba(128,128,128,0.2); 
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label { 
@@ -99,26 +104,20 @@ st.markdown("""
         background: transparent !important;
         margin: 0 !important;
     }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.05) !important;
-    }
     
-    @keyframes radio-sweep-light { 
-        0% { background-position: 200% 0; } 
-        100% { background-position: -200% 0; } 
+    div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        background: rgba(128,128,128,0.1) !important;
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
         background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%) !important; 
         background-size: 200% auto !important;
-        animation: radio-sweep-light 4s linear infinite !important;
-        box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5) !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important;
+        animation: sweep-light 4s linear infinite !important;
+        box-shadow: 0 4px 10px rgba(78, 67, 118, 0.5) !important; 
     }
     
     div[data-testid="stRadio"] div[role="radiogroup"] label p { 
-        color: #7f8ca6 !important; 
         font-weight: 600 !important;
         font-size: 16px !important;
         margin: 0 !important;
@@ -127,7 +126,6 @@ st.markdown("""
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) p { 
         color: #ffffff !important; 
         font-weight: 900 !important; 
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -236,8 +234,7 @@ def style_fig(fig, title):
     fig.update_layout(
         height=800,
         title=dict(text=f"<b>{title}</b>", font=dict(size=24, color="#FFD700"), x=0.01, y=0.95),
-        font=dict(size=16, color="#e0e0e0"), 
-        template="plotly_dark", 
+        # 移除了強制寫死的 font 顏色與 plotly_dark template，讓圖表完美適配您的淺色/深色主題！
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font_size=18, font_family="Arial, sans-serif", bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
@@ -248,7 +245,7 @@ def style_fig(fig, title):
             showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
             tickangle=-45 
         ), 
-        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title="")
+        yaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.1)", zeroline=True, zerolinecolor="rgba(128,128,128,0.2)", title="")
     )
     return fig
 
@@ -268,13 +265,8 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 25%, #FFC837 50%, #FF8008 75%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 25%, #3a4a5a 50%, #1e2128 75%)", "none", "#ffffff"
             
+    # 卡片的 animation: sweep-light 依然保留，且會吃到全域的 @keyframes
     return f"""
-    <style>
-        @keyframes sweep-light {{ 
-            0% {{ background-position: 200% 0; }} 
-            100% {{ background-position: -200% 0; }} 
-        }}
-    </style>
     <div style="background: {bg}; background-size: 200% auto; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
@@ -900,13 +892,11 @@ with tab3:
 
     blocks_str = ''.join(html_blocks)
     
+    # 完全複製平均持倉藍色卡片的動態參數，並使用 Grid 滿版均分置中排版
     full_html = (
-        f'<style>'
-        f'@keyframes sweep-matrix-dark {{ 0% {{ background-position: 200% 0; }} 100% {{ background-position: -200% 0; }} }}'
-        f'</style>'
-        f'<div style="background: linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%); background-size: 200% auto; animation: sweep-matrix-dark 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(36, 59, 85, 0.4); margin-bottom: 30px;">'
+        f'<div style="background: linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%); background-size: 200% auto; animation: sweep-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(78, 67, 118, 0.5); margin-bottom: 30px; width: 100%;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
-        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 10px; width: 100%; justify-items: center;">'
+        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
         f'</div>'
         f'</div>'
@@ -984,15 +974,16 @@ with tab3:
     df_future = pd.DataFrame(future_data)
     fig_future = go.Figure()
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>全庫存總計</span>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
+    # 拔除硬編碼的白色字體，確保亮色背景下文字能自動反黑清晰顯示
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="<b>全庫存總計</b>", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>0050 (含定期定額)</span>", line=dict(color='#85c1e9', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="<b>0050 (含定期定額)</b>", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
 
-    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="<span style='color:#ffffff; font-size:16px; font-weight:bold;'>台積電 (單純放著長)</span>", line=dict(color='#f1948a', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="<b>台積電 (單純放著長)</b>", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
     fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
