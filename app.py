@@ -174,8 +174,8 @@ def add_zero_baseline(fig):
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     # 根據屬性建立自帶流動感的漸層色系
     if is_profit and num_val is not None:
-        # 使用深邃流動漸層背景，確保動態流光的同時，紅綠數字依然極度清晰
-        bg = "linear-gradient(270deg, #1a1a2e, #16213e, #0f3460, #1a1a2e)"
+        # 使用高對比的深邃藍色調，讓流動感肉眼清晰可見，同時不影響紅綠數字
+        bg = "linear-gradient(270deg, #0b0f19, #223458, #0b0f19, #1a2235, #0b0f19)"
         if num_val > 0: text_c, glow_shadow = "#ff4b4b", "0 8px 20px rgba(255, 75, 75, 0.4)"
         elif num_val < 0: text_c, glow_shadow = "#09ab3b", "0 8px 20px rgba(9, 171, 59, 0.4)"
         else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
@@ -189,7 +189,7 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
     <style>
         @keyframes flow-card {{ 0% {{ background-position: 0% 50%; }} 50% {{ background-position: 100% 50%; }} 100% {{ background-position: 0% 50%; }} }}
     </style>
-    <div style="background: {bg}; background-size: 400% 400%; animation: flow-card 6s ease infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <div style="background: {bg}; background-size: 400% 400%; animation: flow-card 3.5s ease-in-out infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
