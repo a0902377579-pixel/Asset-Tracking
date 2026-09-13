@@ -47,6 +47,31 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
+    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用科技藍旋轉光束 */
+    section[data-testid="stSidebar"] div[data-testid="stTabs"] {
+        position: relative !important;
+        border-radius: 14px !important;
+        padding: 10px !important;
+        box-shadow: 0 0 20px rgba(0, 198, 255, 0.45) !important;
+        margin-top: 5px !important;
+        margin-bottom: 20px !important;
+        background: transparent !important;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stTabs"]::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 14px;
+        padding: 4px; 
+        background: conic-gradient(from var(--border-angle), #00c6ff, #0072ff, #00c6ff);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: spin-border 3.5s linear infinite;
+        pointer-events: none;
+        z-index: 10;
+    }
+
     /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
@@ -310,38 +335,6 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
     ''', unsafe_allow_html=True)
     render_func()
 
-# 🎯 專屬提供給表單區塊 (Sidebar / Tabs) 套用無縫光束外框的組件
-def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="10px", bg_color="transparent"):
-    bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
-    st.markdown(f'''
-    <div id="{element_id}"></div>
-    <style>
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{
-            position: relative !important;
-            border-radius: 14px !important;
-            padding: {padding} !important;
-            box-shadow: 0 0 20px {glow_color} !important;
-            margin-top: 5px !important;
-            margin-bottom: 20px !important;
-            {bg_style}
-        }}
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
-            content: "";
-            position: absolute;
-            inset: 0;
-            border-radius: 14px;
-            padding: 4px; 
-            background: conic-gradient(from var(--border-angle), {conic_colors});
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            animation: spin-border 3.5s linear infinite;
-            pointer-events: none;
-            z-index: 10;
-        }}
-    </style>
-    ''', unsafe_allow_html=True)
-
 # 🔥 21 種獨一無二的炫彩旋轉邊框配方！
 neon_styles = [
     ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), # 1. 經典七彩
@@ -504,16 +497,6 @@ with st.sidebar:
     
     st.divider()
     
-    # 🚀 幫側邊欄 Tabs 整體套用「科技藍」動態旋轉邊框 (非七彩)
-    # 高度會根據 Tab 內容自動伸縮
-    apply_neon_to_next_container(
-        "sidebar_tabs_neon", 
-        "#00c6ff, #0072ff, #00c6ff", 
-        "rgba(0, 198, 255, 0.45)", 
-        padding="8px", 
-        bg_color="transparent"
-    )
-    
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
     with tab_bank:
@@ -671,7 +654,6 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
-            # 🌈 第一頁大表：全部換上七彩霓虹旋轉光束，背景設定透明
             render_neon_container(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
@@ -692,7 +674,6 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
-            # 🌈 左下小表：同樣七彩旋轉光束，背景透明
             render_neon_container(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
                 "df_history", 
@@ -708,7 +689,6 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            # 🌈 右下小表：同樣七彩旋轉光束，背景透明
             render_neon_container(
                 lambda: st.dataframe(
                     styled_bank, 
@@ -1117,7 +1097,7 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_layout(
-        font=dict(size=16, color="#ffffff"), # 👑 確保大圖也是強迫白色
+        font=dict(size=16, color="#ffffff"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60),
@@ -1129,7 +1109,6 @@ with tab3:
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
     
-    # 🌈 幫願景大圖表也加上七彩旋轉光束邊框！
     render_neon_container(
         lambda: st.plotly_chart(fig_future, use_container_width=True, theme=None),
         "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px", bg_color="#0f1117"
