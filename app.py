@@ -24,7 +24,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 核心動態光波引擎 (全域水平掃描) */
+    /* 核心動態光波引擎 (確保流暢的水平光束掃過感) */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
@@ -248,53 +248,51 @@ C_LBL = "#FFD700"
 C_VAL = "#00E5FF"  
 C_PCT = "#00E676"  
 
+# 補回重要基準線函式
 def add_zero_baseline(fig):
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
 
-def style_fig(fig, title):
+# ★ 核心修正：加入 height 參數，且 margin 依靠 automargin 完美置中！
+def style_fig(fig, title, height=450):
     fig.update_layout(
+        height=height,
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        # ★ 透過 automargin=True 自動適應邊界，解決切字與偏心問題 ★
-        margin=dict(l=40, r=40, t=85, b=60),  
+        # 對稱邊界留白，徹底依靠 automargin 進行動態佈局
+        margin=dict(l=20, r=20, t=80, b=20),  
         hovermode="x unified",
         xaxis=dict(
-            automargin=True, # 自動擴展底部邊界防止截斷
+            automargin=True, # 確保 X 軸文字不再被切
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
             showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
             tickangle=-45 
         ), 
         yaxis=dict(
-            automargin=True, # 自動擴展左側邊界防止百萬數字被切掉
+            automargin=True, # 確保 Y 軸百萬、千分位數字不再被切
             showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title=""
         )
     )
     return fig
 
-# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器
+# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器 (純粹水平掃描光束，完美置中)
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=40, t=70, b=60) # 左右對稱，依靠 automargin 完美置中
+        plot_bgcolor="rgba(0,0,0,0)"
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
-        @keyframes sweep-horizontal-{chart_id} {{
-            0% {{ background-position: 200% 0; }}
-            100% {{ background-position: -200% 0; }}
-        }}
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
             background-size: 200% auto !important; 
-            animation: sweep-horizontal-{chart_id} 5s linear infinite !important; /* 確保圖表呈現水平流動 */
+            animation: sweep-light 5s linear infinite !important; /* 共用純粹水平光束動畫 */
             border-radius: 12px !important;
-            padding: 20px !important;
+            padding: 15px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
@@ -303,7 +301,8 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種高階漸層背景，全面切換為流動水平掃描配方
+# 🔥 21 種獨一無二的高階深色漸層背景
+# (三段式顏色配方 A->B->A 保證光束掃描的連貫性與動態感)
 chart_gradients = [
     "linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%)", # 1 深海藍
     "linear-gradient(120deg, #0f2027 25%, #2c5364 50%, #0f2027 75%)", # 2 幽黑綠
@@ -336,7 +335,7 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
     else:
         if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(120deg, #667eea 25%, #9b59b6 50%, #667eea 75%)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
-        # ★ 修正 Blue Theme 對比度，恢復高亮流動光束感
+        # ★ 修正 Blue Theme 對比度，徹底恢復高亮流動光束感！
         elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%)", "0 8px 20px rgba(78, 67, 118, 0.5)", "#a7f3d0"
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 25%, #FFC837 50%, #FF8008 75%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 25%, #3a4a5a 50%, #1e2128 75%)", "none", "#ffffff"
@@ -1045,7 +1044,8 @@ with tab3:
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
-    fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)")
+    # 高度調整到 850，確保圖例不會出現滾動條
+    fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)", height=850)
     
     if resolution == "每年":
         fig_future.update_xaxes(type='category')
@@ -1054,7 +1054,7 @@ with tab3:
         font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=130, r=30, t=70, b=120),
+        margin=dict(l=40, r=40, t=70, b=60), # 完美置中，不切字
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
