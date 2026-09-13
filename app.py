@@ -266,7 +266,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
-        font=dict(color="#ffffff"),  # 鎖定全域圖表字體為白色
+        font=dict(color="#ffffff"),  # 確保強制使用白色字體
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -311,7 +311,8 @@ def render_styled_chart(fig, chart_id, bg_gradient):
         }}
     </style>
     ''', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True)
+    # 加入 theme=None 阻擋 Streamlit 介入字體顏色
+    st.plotly_chart(fig, use_container_width=True, theme=None)
 
 # 🔥 21 種高階漸層，完美 135deg
 chart_gradients = [
@@ -1072,7 +1073,8 @@ with tab3:
     )
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    st.plotly_chart(fig_future, use_container_width=True)
+    # 加入 theme=None 阻擋 Streamlit 介入字體顏色
+    st.plotly_chart(fig_future, use_container_width=True, theme=None)
 
     st.divider()
 
