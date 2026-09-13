@@ -24,10 +24,10 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🔥 終極無縫流光引擎：保證從右上至左下單向無限滑動，絕不卡頓、絕不折返！ */
+    /* 🔥 終極無縫流光引擎：從 100% 100% 退回 0% 0%，創造完美的「左上 ↘ 右下」單向無限掃描！ */
     @keyframes sweep-light { 
-        0% { background-position: 0% 50%; } 
-        100% { background-position: 100% 50%; } 
+        0% { background-position: 100% 100%; } 
+        100% { background-position: 0% 0%; } 
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -111,8 +111,9 @@ st.markdown("""
     
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
-        background: linear-gradient(120deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; 
-        background-size: 400% 100% !important;
+        background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; 
+        background-size: 300% 300% !important;
+        background-repeat: no-repeat !important;
         animation: sweep-light 4s linear infinite !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; 
         border: 1px solid rgba(255,255,255,0.1) !important;
@@ -135,8 +136,9 @@ st.markdown("""
        魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
        ========================================= */
     div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
-        background: linear-gradient(120deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important;
-        background-size: 400% 100% !important;
+        background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important;
+        background-size: 300% 300% !important;
+        background-repeat: no-repeat !important;
         animation: sweep-light 5s linear infinite !important;
         border-radius: 12px !important;
         padding: 25px !important;
@@ -254,7 +256,6 @@ def add_zero_baseline(fig):
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
 
-# ★ 調整高度為 500，確保圓餅圖與其他圖表顯示空間充足
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
@@ -277,7 +278,6 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
-# 🔥 專為 21 張圖表設計的渲染器 (全面套用 400% 寬度無縫光波)
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
@@ -290,8 +290,9 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     <style>
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
-            background-size: 400% 100% !important; /* 橫向 400% 拉長，徹底消滅接縫 */
-            animation: sweep-light 5s linear infinite !important; /* 共用全域的流光引擎 */
+            background-size: 300% 300% !important; 
+            background-repeat: no-repeat !important; /* 確保不出現拼貼縫隙 */
+            animation: sweep-light 5s linear infinite !important; /* 共用左上到右下引擎 */
             border-radius: 12px !important;
             padding: 20px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
@@ -304,46 +305,45 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種高階漸層，完美 0% 40% 50% 60% 100% 無死角配方，保證光束從右上滑到左下
+# 🔥 21 種高階漸層，完美 135deg (左上至右下) 與 0% 40% 50% 60% 100% 配方
 chart_gradients = [
-    "linear-gradient(120deg, #141e30 0%, #141e30 40%, #243b55 50%, #141e30 60%, #141e30 100%)", # 1
-    "linear-gradient(120deg, #0f2027 0%, #0f2027 40%, #2c5364 50%, #0f2027 60%, #0f2027 100%)", # 2
-    "linear-gradient(120deg, #0f0c29 0%, #0f0c29 40%, #24243e 50%, #0f0c29 60%, #0f0c29 100%)", # 3
-    "linear-gradient(120deg, #2b5876 0%, #2b5876 40%, #4e4376 50%, #2b5876 60%, #2b5876 100%)", # 4
-    "linear-gradient(120deg, #16222A 0%, #16222A 40%, #3A6073 50%, #16222A 60%, #16222A 100%)", # 5
-    "linear-gradient(120deg, #232526 0%, #232526 40%, #414345 50%, #232526 60%, #232526 100%)", # 6
-    "linear-gradient(120deg, #1A2980 0%, #1A2980 40%, #135A59 50%, #1A2980 60%, #1A2980 100%)", # 7
-    "linear-gradient(120deg, #4B1248 0%, #4B1248 40%, #8E4C33 50%, #4B1248 60%, #4B1248 100%)", # 8
-    "linear-gradient(120deg, #114357 0%, #114357 40%, #844c66 50%, #114357 60%, #114357 100%)", # 9
-    "linear-gradient(120deg, #1d1f20 0%, #1d1f20 40%, #2c3e50 50%, #1d1f20 60%, #1d1f20 100%)", # 10
-    "linear-gradient(120deg, #13151a 0%, #13151a 40%, #2c3e50 50%, #13151a 60%, #13151a 100%)", # 11
-    "linear-gradient(120deg, #00467F 0%, #00467F 40%, #426B3D 50%, #00467F 60%, #00467F 100%)", # 12
-    "linear-gradient(120deg, #1D2B64 0%, #1D2B64 40%, #734657 50%, #1D2B64 60%, #1D2B64 100%)", # 13
-    "linear-gradient(120deg, #191654 0%, #191654 40%, #217361 50%, #191654 60%, #191654 100%)", # 14
-    "linear-gradient(120deg, #314755 0%, #314755 40%, #195878 50%, #314755 60%, #314755 100%)", # 15
-    "linear-gradient(120deg, #3A5573 0%, #3A5573 40%, #3B6A69 50%, #3A5573 60%, #3A5573 100%)", # 16
-    "linear-gradient(120deg, #4B0000 0%, #4B0000 40%, #42271D 50%, #4B0000 60%, #4B0000 100%)", # 17
-    "linear-gradient(120deg, #0A5E4E 0%, #0A5E4E 40%, #826E21 50%, #0A5E4E 60%, #0A5E4E 100%)", # 18
-    "linear-gradient(120deg, #1A471C 0%, #1A471C 40%, #42461A 50%, #1A471C 60%, #1A471C 100%)", # 19
-    "linear-gradient(120deg, #26555C 0%, #26555C 40%, #3F4B4D 50%, #26555C 60%, #26555C 100%)", # 20
-    "linear-gradient(120deg, #4A0213 0%, #4A0213 40%, #4A3029 50%, #4A0213 60%, #4A0213 100%)"  # 21
+    "linear-gradient(135deg, #141e30 0%, #141e30 40%, #243b55 50%, #141e30 60%, #141e30 100%)", # 1 深海藍
+    "linear-gradient(135deg, #0f2027 0%, #0f2027 40%, #2c5364 50%, #0f2027 60%, #0f2027 100%)", # 2 幽黑綠
+    "linear-gradient(135deg, #0f0c29 0%, #0f0c29 40%, #24243e 50%, #0f0c29 60%, #0f0c29 100%)", # 3 賽博紫
+    "linear-gradient(135deg, #2b5876 0%, #2b5876 40%, #4e4376 50%, #2b5876 60%, #2b5876 100%)", # 4 星雲藍
+    "linear-gradient(135deg, #16222A 0%, #16222A 40%, #3A6073 50%, #16222A 60%, #16222A 100%)", # 5 迷霧灰
+    "linear-gradient(135deg, #232526 0%, #232526 40%, #414345 50%, #232526 60%, #232526 100%)", # 6 碳纖黑
+    "linear-gradient(135deg, #1A2980 0%, #1A2980 40%, #135A59 50%, #1A2980 60%, #1A2980 100%)", # 7 皇室青
+    "linear-gradient(135deg, #4B1248 0%, #4B1248 40%, #8E4C33 50%, #4B1248 60%, #4B1248 100%)", # 8 暗夜銅
+    "linear-gradient(135deg, #114357 0%, #114357 40%, #844c66 50%, #114357 60%, #114357 100%)", # 9 晚霞紫
+    "linear-gradient(135deg, #1d1f20 0%, #1d1f20 40%, #2c3e50 50%, #1d1f20 60%, #1d1f20 100%)", # 10 曜石板
+    "linear-gradient(135deg, #13151a 0%, #13151a 40%, #2c3e50 50%, #13151a 60%, #13151a 100%)", # 11 午夜黑
+    "linear-gradient(135deg, #00467F 0%, #00467F 40%, #426B3D 50%, #00467F 60%, #00467F 100%)", # 12 森林藍
+    "linear-gradient(135deg, #1D2B64 0%, #1D2B64 40%, #734657 50%, #1D2B64 60%, #1D2B64 100%)", # 13 絳紫靛
+    "linear-gradient(135deg, #191654 0%, #191654 40%, #217361 50%, #191654 60%, #191654 100%)", # 14 翡翠黑
+    "linear-gradient(135deg, #314755 0%, #314755 40%, #195878 50%, #314755 60%, #314755 100%)", # 15 沉靜洋
+    "linear-gradient(135deg, #3A5573 0%, #3A5573 40%, #3B6A69 50%, #3A5573 60%, #3A5573 100%)", # 16 海藻丹
+    "linear-gradient(135deg, #4B0000 0%, #4B0000 40%, #42271D 50%, #4B0000 60%, #4B0000 100%)", # 17 鐵鏽紅
+    "linear-gradient(135deg, #0A5E4E 0%, #0A5E4E 40%, #826E21 50%, #0A5E4E 60%, #0A5E4E 100%)", # 18 琥珀綠
+    "linear-gradient(135deg, #1A471C 0%, #1A471C 40%, #42461A 50%, #1A471C 60%, #1A471C 100%)", # 19 墨光苔
+    "linear-gradient(135deg, #26555C 0%, #26555C 40%, #3F4B4D 50%, #26555C 60%, #26555C 100%)", # 20 鐵鈦灰
+    "linear-gradient(135deg, #4A0213 0%, #4A0213 40%, #4A3029 50%, #4A0213 60%, #4A0213 100%)"  # 21 酒桶木
 ]
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
-        bg = "linear-gradient(120deg, #16181d 0%, #16181d 40%, #34425a 50%, #16181d 60%, #16181d 100%)"
+        bg = "linear-gradient(135deg, #16181d 0%, #16181d 40%, #34425a 50%, #16181d 60%, #16181d 100%)"
         if num_val > 0: text_c, glow_shadow = "#ff4b4b", "0 8px 20px rgba(255, 75, 75, 0.4)"
         elif num_val < 0: text_c, glow_shadow = "#09ab3b", "0 8px 20px rgba(9, 171, 59, 0.4)"
         else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
     else:
-        # ★ 完美光束配方，確保所有的卡片也是流暢的 0%~100% 單向滑動
-        if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(120deg, #667eea 0%, #667eea 40%, #9b59b6 50%, #667eea 60%, #667eea 100%)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
-        elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(120deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", "0 8px 20px rgba(28, 82, 118, 0.5)", "#a7f3d0"
-        elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 0%, #FF8008 40%, #FFC837 50%, #FF8008 60%, #FF8008 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
-        else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 0%, #1e2128 40%, #3a4a5a 50%, #1e2128 60%, #1e2128 100%)", "none", "#ffffff"
+        if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(135deg, #667eea 0%, #667eea 40%, #9b59b6 50%, #667eea 60%, #667eea 100%)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
+        elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", "0 8px 20px rgba(28, 82, 118, 0.5)", "#a7f3d0"
+        elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(135deg, #FF8008 0%, #FF8008 40%, #FFC837 50%, #FF8008 60%, #FF8008 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
+        else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #1e2128 40%, #3a4a5a 50%, #1e2128 60%, #1e2128 100%)", "none", "#ffffff"
             
     return f"""
-    <div style="background: {bg}; background-size: 400% 100%; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <div style="background: {bg}; background-size: 300% 300%; background-repeat: no-repeat; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
@@ -1078,7 +1078,7 @@ with tab3:
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
     with c3_1:
-        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "blue"), unsafe_allow_html=True)
+        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "purple"), unsafe_allow_html=True)
         diff_pct = ((market_price_0050 - avg_cost_0050) / avg_cost_0050 * 100) if avg_cost_0050 > 0 else 0
         color = "#ff4b4b" if diff_pct > 0 else "#09ab3b"
         st.markdown(f"<p style='text-align: center; color: {color}; font-weight: bold;'>現價落差: {diff_pct:+.2f}% (市場價 {market_price_0050:,.2f})</p>", unsafe_allow_html=True)
