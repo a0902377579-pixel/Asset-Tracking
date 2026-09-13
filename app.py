@@ -258,7 +258,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
-        font=dict(color="#ffffff"), # 👑 關鍵修復：圖表背景固定為深色，所以字體強制鎖定白色
+        font=dict(color="#ffffff"), # 👑 圖表背景固定為深色，所以字體強制鎖定白色
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -278,8 +278,9 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
-# 🌈 核心黑科技：純遮罩技術邊框流光 (徹底消除黑色背景層，不影響表格原生底色)
-def render_neon_container(render_func, element_id, conic_colors, glow_color, padding="15px"):
+# 🌈 核心黑科技：純遮罩技術邊框流光 (背景控制參數：圖表使用深色，表格使用透明色)
+def render_neon_container(render_func, element_id, conic_colors, glow_color, padding="15px", bg_color="#0f1117"):
+    bg_style = f"background: {bg_color} !important;" if bg_color else ""
     st.markdown(f'''
     <div id="{element_id}"></div>
     <style>
@@ -290,7 +291,7 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
             box-shadow: 0 0 20px {glow_color} !important;
             margin-top: 10px !important;
             margin-bottom: 30px !important;
-            background: #0f1117 !important; /* 確保底層是深色以搭配白色字體 */
+            {bg_style}
         }}
         div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
             content: "";
@@ -629,10 +630,11 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
+            # 🌈 第一頁大表：背景設定為透明 (transparent)，完美融合淺色/深色模式
             render_neon_container(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
-                neon_styles[0][0], neon_styles[0][1], padding="8px"
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent"
             )
 
     st.divider()
@@ -649,10 +651,11 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
+            # 🌈 左下小表：背景同樣透明
             render_neon_container(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
                 "df_history", 
-                neon_styles[7][0], neon_styles[7][1], padding="8px" # 套用科技藍
+                neon_styles[7][0], neon_styles[7][1], padding="6px", bg_color="transparent" 
             )
         else:
             st.info("目前暫無歷史紀錄。")
@@ -664,6 +667,7 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
+            # 🌈 右下小表：背景同樣透明
             render_neon_container(
                 lambda: st.dataframe(
                     styled_bank, 
@@ -672,7 +676,7 @@ with tab1:
                     column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
                 ),
                 "df_bank", 
-                neon_styles[2][0], neon_styles[2][1], padding="8px" # 套用琥珀金
+                neon_styles[2][0], neon_styles[2][1], padding="6px", bg_color="transparent" 
             )
         else:
             st.info("尚無銀行紀錄。")
