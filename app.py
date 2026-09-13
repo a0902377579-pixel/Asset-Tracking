@@ -286,8 +286,8 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
-# 🔥 讓 DataFrame 也擁有與圖表一樣的動態光束背景！
-def render_styled_dataframe(df_render_func, df_id, bg_gradient):
+# 🔥 加入參數 box_shadow，讓 DataFrame 表格框線完全升級成「卡片級」的耀眼光暈
+def render_styled_dataframe(df_render_func, df_id, bg_gradient, box_shadow="0 8px 20px rgba(0,0,0,0.4)"):
     st.markdown(f'''
     <div id="{df_id}"></div>
     <style>
@@ -295,11 +295,11 @@ def render_styled_dataframe(df_render_func, df_id, bg_gradient):
             background: {bg_gradient} !important;
             background-size: 400% 400% !important; 
             background-repeat: no-repeat !important;
-            animation: sweep-light 6s ease-in-out infinite !important; 
+            animation: sweep-light 4s ease-in-out infinite !important; /* 速度調快對齊卡片的 4s */
             border-radius: 12px !important;
-            padding: 20px !important;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
-            border: 1px solid rgba(255,255,255,0.08) !important;
+            padding: 12px !important;
+            box-shadow: {box_shadow} !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
             margin-bottom: 25px !important;
             box-sizing: border-box !important;
             overflow: hidden !important; 
@@ -335,7 +335,7 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 5 種高對比度動態光束漸層 (完全比照第 1 頁卡片的強烈光束效果，循環供應給所有圖表和表格)
+# 🔥 5 種高對比度動態光束漸層 (完全比照第 1 頁卡片的強烈光束效果，循環供應給所有圖表)
 chart_gradients = [
     "linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", # 科技藍光束
     "linear-gradient(135deg, #1a1025 0%, #1a1025 40%, #4a2b75 50%, #1a1025 60%, #1a1025 100%)", # 賽博紫光束
@@ -638,9 +638,12 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
+            # 🚀 套用同款高亮度賽博紫光束
             render_styled_dataframe(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
-                "df_portfolio", chart_gradients[0]
+                "df_portfolio", 
+                "linear-gradient(135deg, #667eea 0%, #667eea 40%, #9b59b6 50%, #667eea 60%, #667eea 100%)",
+                "0 8px 20px rgba(118, 75, 162, 0.5)"
             )
 
     st.divider()
@@ -657,9 +660,12 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
+            # 🚀 套用同款高亮度科技藍光束
             render_styled_dataframe(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
-                "df_history", chart_gradients[1]
+                "df_history", 
+                "linear-gradient(135deg, #3498db 0%, #3498db 40%, #2980b9 50%, #3498db 60%, #3498db 100%)",
+                "0 8px 20px rgba(52, 152, 219, 0.5)"
             )
         else:
             st.info("目前暫無歷史紀錄。")
@@ -671,6 +677,7 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
+            # 🚀 套用同款高亮度琥珀金光束
             render_styled_dataframe(
                 lambda: st.dataframe(
                     styled_bank, 
@@ -678,7 +685,9 @@ with tab1:
                     hide_index=True,
                     column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
                 ),
-                "df_bank", chart_gradients[2]
+                "df_bank", 
+                "linear-gradient(135deg, #FF8008 0%, #FF8008 40%, #FFC837 50%, #FF8008 60%, #FF8008 100%)",
+                "0 8px 20px rgba(200, 128, 8, 0.4)"
             )
         else:
             st.info("尚無銀行紀錄。")
