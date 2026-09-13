@@ -23,13 +23,6 @@ st_autorefresh(interval=1200000, key="realtime_data_refresher")
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-    
-    /* 🔥 終極無縫流光引擎：將軌跡限制在 15%~85% 之間 */
-    @keyframes sweep-light { 
-        0% { background-position: 15% 50%; } 
-        50% { background-position: 85% 50%; } 
-        100% { background-position: 15% 50%; } 
-    }
 
     /* 🌈 360° 邊框跑馬燈旋轉引擎 */
     @property --border-angle {
@@ -38,9 +31,14 @@ st.markdown("""
         initial-value: 0deg;
     }
     @keyframes spin-border {
-        to {
-            --border-angle: 360deg;
-        }
+        to { --border-angle: 360deg; }
+    }
+    
+    /* 🔥 保留給頂部卡片的無縫流光引擎 */
+    @keyframes sweep-light { 
+        0% { background-position: 15% 50%; } 
+        50% { background-position: 85% 50%; } 
+        100% { background-position: 15% 50%; } 
     }
 
     /* 🌟 全螢幕黑屏保護：只對「Plotly 圖表」生效 */
@@ -149,24 +147,6 @@ st.markdown("""
         color: #ffffff !important; 
         font-weight: 900 !important; 
         text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
-    }
-
-    /* =========================================
-       魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
-       ========================================= */
-    div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
-        background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important;
-        background-size: 400% 400% !important;
-        background-repeat: no-repeat !important;
-        animation: sweep-light 5s ease-in-out infinite !important;
-        border-radius: 12px !important;
-        padding: 25px !important;
-        box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
-        border: 1px solid rgba(255,255,255,0.05) !important;
-        margin-top: 15px !important;
-        margin-bottom: 30px !important;
-        box-sizing: border-box !important;
-        overflow: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -278,7 +258,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
-        font=dict(color="#ffffff"),
+        # 移除強制白色字體，交由 Streamlit Theme 引擎自動黑白切換 (適配淺/深色模式)
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -293,70 +273,67 @@ def style_fig(fig, title, height=500):
         ), 
         yaxis=dict(
             automargin=True,
-            showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.1)", title=""
+            showgrid=True, gridcolor="rgba(128,128,128,0.2)", zeroline=True, zerolinecolor="rgba(128,128,128,0.3)", title=""
         )
     )
     return fig
 
-# 🌈 360° 邊框跑馬燈流光組件（真正像霓虹燈條一樣繞著邊緣跑！）
-def render_neon_border_dataframe(df_render_func, df_id, conic_colors, glow_color="rgba(0, 229, 255, 0.4)"):
+# 🌈 核心黑科技：純遮罩技術邊框流光 (徹底消除黑色背景層，不影響表格原生底色)
+def render_neon_container(render_func, element_id, conic_colors, glow_color, padding="15px"):
     st.markdown(f'''
-    <div id="{df_id}"></div>
+    <div id="{element_id}"></div>
     <style>
-        div[data-testid="stElementContainer"]:has(#{df_id}) + div[data-testid="stElementContainer"] {{
-            background: conic-gradient(from var(--border-angle), {conic_colors}) !important;
-            animation: spin-border 3.5s linear infinite !important;
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{
+            position: relative !important;
             border-radius: 14px !important;
-            padding: 4px !important; /* 精確 4px 光束邊框線寬 */
-            box-shadow: 0 0 25px {glow_color} !important;
-            margin-bottom: 25px !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important; 
+            padding: {padding} !important;
+            box-shadow: 0 0 20px {glow_color} !important;
+            margin-top: 10px !important;
+            margin-bottom: 30px !important;
+            /* 這裡不設定任何背景顏色，保留原生透明度與主題對接 */
         }}
-        div[data-testid="stElementContainer"]:has(#{df_id}) + div[data-testid="stElementContainer"] > div {{
-            background: #0f1117 !important; /* 表格底板背景色，讓光束只在邊緣發光 */
-            border-radius: 10px !important;
-            overflow: hidden !important;
-        }}
-    </style>
-    ''', unsafe_allow_html=True)
-    df_render_func()
-
-def render_styled_chart(fig, chart_id, bg_gradient):
-    fig.update_layout(
-        font=dict(color="#ffffff", size=14),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=40, t=70, b=60) 
-    )
-    st.markdown(f'''
-    <div id="{chart_id}"></div>
-    <style>
-        div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
-            background: {bg_gradient} !important;
-            background-size: 400% 400% !important; 
-            background-repeat: no-repeat !important;
-            animation: sweep-light 6s ease-in-out infinite !important; 
-            border-radius: 12px !important;
-            padding: 20px !important;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
-            border: 1px solid rgba(255,255,255,0.08) !important;
-            margin-bottom: 25px !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important; 
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 4px; /* 發光邊框厚度 */
+            background: conic-gradient(from var(--border-angle), {conic_colors});
+            /* 使用 CSS Mask 把內部挖空，只保留外圍 4px 的光束邊緣！ */
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: spin-border 3.5s linear infinite;
+            pointer-events: none; /* 確保滑鼠可以點擊裡面的圖表與表格 */
         }}
     </style>
     ''', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True, theme=None)
+    render_func()
 
-# 🔥 5 種高對比度動態光束漸層 (循環供應給所有圖表)
-chart_gradients = [
-    "linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", # 科技藍光束
-    "linear-gradient(135deg, #1a1025 0%, #1a1025 40%, #4a2b75 50%, #1a1025 60%, #1a1025 100%)", # 賽博紫光束
-    "linear-gradient(135deg, #071a14 0%, #071a14 40%, #165c47 50%, #071a14 60%, #071a14 100%)", # 翡翠綠光束
-    "linear-gradient(135deg, #261505 0%, #261505 40%, #75480f 50%, #261505 60%, #261505 100%)", # 琥珀金光束
-    "linear-gradient(135deg, #1f0a0d 0%, #1f0a0d 40%, #6e1b27 50%, #1f0a0d 60%, #1f0a0d 100%)"  # 緋紅血光束
-] * 6 
+# 🔥 21 種獨一無二的炫彩旋轉邊框配方！
+neon_styles = [
+    ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), # 1. 經典七彩
+    ("#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.45)"), # 2. 冰流藍
+    ("#ff8008, #ffc837, #ff8008", "rgba(255, 128, 8, 0.45)"), # 3. 琥珀金
+    ("#11998e, #38ef7d, #11998e", "rgba(56, 239, 125, 0.45)"), # 4. 翡翠綠
+    ("#FC466B, #3F5EFB, #FC466B", "rgba(252, 70, 107, 0.45)"), # 5. 賽博紫紅
+    ("#FDBB2D, #22C1C3, #FDBB2D", "rgba(34, 193, 195, 0.45)"), # 6. 陽光海灘
+    ("#8E2DE2, #4A00E0, #8E2DE2", "rgba(142, 45, 226, 0.45)"), # 7. 幻影紫
+    ("#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)"), # 8. 科技藍
+    ("#f12711, #f5af19, #f12711", "rgba(241, 39, 17, 0.45)"), # 9. 烈焰紅
+    ("#654ea3, #eaafc8, #654ea3", "rgba(101, 78, 163, 0.45)"), # 10. 櫻花紫
+    ("#FF416C, #FF4B2B, #FF416C", "rgba(255, 65, 108, 0.45)"), # 11. 霓虹桃
+    ("#00B4DB, #0083B0, #00B4DB", "rgba(0, 180, 219, 0.45)"), # 12. 深海藍
+    ("#b92b27, #1565C0, #b92b27", "rgba(185, 43, 39, 0.45)"), # 13. 冰火交織
+    ("#ee0979, #ff6a00, #ee0979", "rgba(238, 9, 121, 0.45)"), # 14. 盛夏橙
+    ("#00c3ff, #ffff1c, #00c3ff", "rgba(0, 195, 255, 0.45)"), # 15. 螢光青黃
+    ("#f85032, #e73827, #f85032", "rgba(248, 80, 50, 0.45)"), # 16. 血月紅
+    ("#5614B0, #DBD65C, #5614B0", "rgba(86, 20, 176, 0.45)"), # 17. 皇家紫金
+    ("#F09819, #EDDE5D, #F09819", "rgba(240, 152, 25, 0.45)"), # 18. 晨光黃
+    ("#8A2387, #E94057, #F27121, #8A2387", "rgba(233, 64, 87, 0.45)"), # 19. 晚霞漸層
+    ("#1D976C, #93F9B9, #1D976C", "rgba(29, 151, 108, 0.45)"), # 20. 極光綠
+    ("#3E5151, #DECBA4, #3E5151", "rgba(62, 81, 81, 0.45)")  # 21. 香檳灰
+]
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
@@ -652,12 +629,11 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
-            # 🌈 頂部明細：七彩霓虹邊框流光
-            render_neon_border_dataframe(
+            # 🌈 第一頁大表：全部換上七彩霓虹旋轉光束
+            render_neon_container(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
-                "#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f",
-                "rgba(0, 223, 216, 0.45)"
+                neon_styles[0][0], neon_styles[0][1], padding="8px"
             )
 
     st.divider()
@@ -674,12 +650,11 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
-            # ⚡ 左下報表：科技極光藍邊框流光
-            render_neon_border_dataframe(
+            # 🌈 左下小表：同樣七彩旋轉光束
+            render_neon_container(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
                 "df_history", 
-                "#00f2fe, #4facfe, #000b18, #00f2fe",
-                "rgba(79, 172, 254, 0.45)"
+                neon_styles[0][0], neon_styles[0][1], padding="8px"
             )
         else:
             st.info("目前暫無歷史紀錄。")
@@ -691,8 +666,8 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            # 🔥 右下流水：烈焰琥珀金邊框流光
-            render_neon_border_dataframe(
+            # 🌈 右下小表：同樣七彩旋轉光束
+            render_neon_container(
                 lambda: st.dataframe(
                     styled_bank, 
                     use_container_width=True, 
@@ -700,8 +675,7 @@ with tab1:
                     column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
                 ),
                 "df_bank", 
-                "#ff8008, #ffc837, #1f0800, #ff8008",
-                "rgba(255, 128, 8, 0.45)"
+                neon_styles[0][0], neon_styles[0][1], padding="8px"
             )
         else:
             st.info("尚無銀行紀錄。")
@@ -716,24 +690,24 @@ with tab2:
         with c2_1:
             fig1 = px.pie(names=['股票總市值', '銀行帳戶餘額'], values=[dashboard_data["total_assets"], bank_balance], hole=0.5, color_discrete_sequence=['#3498db', '#f1c40f'])
             fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
-            render_styled_chart(style_fig(fig1, "1. 總資產水庫配置"), "chart_1", chart_gradients[0])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig1, "1. 總資產水庫配置"), use_container_width=True), "chart_1", neon_styles[0][0], neon_styles[0][1])
             
         with c2_2:
             fig2 = px.pie(df_h, names='stock_name', values='market_value', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
             fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
-            render_styled_chart(style_fig(fig2, "2. 個股市值佔比"), "chart_2", chart_gradients[1])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig2, "2. 個股市值佔比"), use_container_width=True), "chart_2", neon_styles[1][0], neon_styles[1][1])
 
         with c2_3:
             fig3 = px.pie(df_h, names='stock_name', values='total_cost', hole=0.5, color_discrete_sequence=px.colors.qualitative.Set2)
             fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
-            render_styled_chart(style_fig(fig3, "3. 投入本金佈局佔比"), "chart_3", chart_gradients[2])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig3, "3. 投入本金佈局佔比"), use_container_width=True), "chart_3", neon_styles[2][0], neon_styles[2][1])
 
         c2_4, c2_5, c2_6 = st.columns(3)
         with c2_4:
             fig4 = px.treemap(df_h, path=['stock_name'], values='market_value', color='各股損益(%)', color_continuous_scale=['#09ab3b', '#222222', '#ff4b4b'], color_continuous_midpoint=0, custom_data=['各股損益_str'])
             fig4.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>帳面損益: %{{customdata[0]}}%</b></span><extra></extra>", textfont=dict(size=18, color="white"))
             fig4.update_layout(coloraxis_colorbar=dict(tickformat=".2f"))  
-            render_styled_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), "chart_4", chart_gradients[3])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True), "chart_4", neon_styles[3][0], neon_styles[3][1])
 
         with c2_5:
             fig5 = go.Figure(go.Waterfall(
@@ -742,7 +716,7 @@ with tab2:
                 decreasing={"marker":{"color":"#09ab3b"}}, increasing={"marker":{"color":"#ff4b4b"}}, totals={"marker":{"color":"#3498db"}}
             ))
             fig5.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>損益金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>", texttemplate="%{y:+,.0s}", textposition="outside")
-            render_styled_chart(style_fig(fig5, "5. 各股獲利貢獻瀑布圖"), "chart_5", chart_gradients[4])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig5, "5. 各股獲利貢獻瀑布圖"), use_container_width=True), "chart_5", neon_styles[4][0], neon_styles[4][1])
 
         with c2_6:
             fig6 = go.Figure(data=[
@@ -751,7 +725,7 @@ with tab2:
             ])
             fig6.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             fig6.update_layout(barmode='group')
-            render_styled_chart(style_fig(fig6, "6. 個股成本 vs 現值對比"), "chart_6", chart_gradients[5])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig6, "6. 個股成本 vs 現值對比"), use_container_width=True), "chart_6", neon_styles[5][0], neon_styles[5][1])
 
     st.divider()
     st.markdown("### 📈 展區二：時間維度與趨勢擴張")
@@ -788,7 +762,7 @@ with tab2:
             fig7.update_xaxes(type='category')
             fig7 = add_zero_baseline(fig7) 
             fig7.update_layout(showlegend=False)
-            render_styled_chart(style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)"), "chart_7", chart_gradients[6])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)"), use_container_width=True), "chart_7", neon_styles[6][0], neon_styles[6][1])
             
         with c2_8:
             fig8 = go.Figure()
@@ -796,7 +770,7 @@ with tab2:
             fig8.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
             fig8.update_xaxes(type='category')
             fig8.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-            render_styled_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), "chart_8", chart_gradients[7])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), use_container_width=True), "chart_8", neon_styles[7][0], neon_styles[7][1])
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
@@ -809,7 +783,7 @@ with tab2:
             fig9 = add_zero_baseline(fig9) 
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata}}%</b></span><extra></extra>")
             fig9.update_yaxes(tickformat=".2f")  
-            render_styled_chart(style_fig(fig9, "9. 總損益 (%) 走勢"), "chart_9", chart_gradients[8])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig9, "9. 總損益 (%) 走勢"), use_container_width=True), "chart_9", neon_styles[8][0], neon_styles[8][1])
 
         with c2_10:
             fig10 = go.Figure()
@@ -818,7 +792,7 @@ with tab2:
             fig10.update_xaxes(type='category')
             fig10.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>部位損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig10.update_layout(barmode='relative')
-            render_styled_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), "chart_10", chart_gradients[9])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), use_container_width=True), "chart_10", neon_styles[9][0], neon_styles[9][1])
             
         c2_11, c2_12 = st.columns(2)
         with c2_11:
@@ -827,14 +801,14 @@ with tab2:
             fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電累計'], mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
             fig11.update_xaxes(type='category')
             fig11.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>累計貢獻: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            render_styled_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), "chart_11", chart_gradients[10])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True), "chart_11", neon_styles[10][0], neon_styles[10][1])
 
         with c2_12:
             fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
-            render_styled_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), "chart_12", chart_gradients[11])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True), "chart_12", neon_styles[11][0], neon_styles[11][1])
 
         st.divider()
         st.markdown("### ⚠️ 展區三：風險回撤與規律矩陣")
@@ -845,20 +819,20 @@ with tab2:
             fig13.update_xaxes(type='category')
             fig13 = add_zero_baseline(fig13) 
             fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            render_styled_chart(style_fig(fig13, "13. 單日總損益震盪圖"), "chart_13", chart_gradients[12])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig13, "13. 單日總損益震盪圖"), use_container_width=True), "chart_13", neon_styles[12][0], neon_styles[12][1])
             
         with c2_14:
             fig14 = px.histogram(df_hist_plot, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
             fig14.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>損益區間: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>發生次數: %{{y}} 次</b></span><extra></extra>")
             fig14.update_layout(hovermode="closest")
-            render_styled_chart(style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)"), "chart_14", chart_gradients[13])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)"), use_container_width=True), "chart_14", neon_styles[13][0], neon_styles[13][1])
             
         with c2_15:
             fig15 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
             fig15.update_xaxes(type='category')
             fig15 = add_zero_baseline(fig15) 
             fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-            render_styled_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), "chart_15", chart_gradients[14])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), use_container_width=True), "chart_15", neon_styles[14][0], neon_styles[14][1])
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
@@ -871,20 +845,20 @@ with tab2:
             fig16 = add_zero_baseline(fig16) 
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{customdata}}%</b></span><extra></extra>")
             fig16.update_yaxes(tickformat=".2f")  
-            render_styled_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), "chart_16", chart_gradients[15])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), use_container_width=True), "chart_16", neon_styles[15][0], neon_styles[15][1])
 
         with c2_17:
             win_days, lose_days = len(df_hist_plot[df_hist_plot['單日損益變化'] > 0]), len(df_hist_plot[df_hist_plot['單日損益變化'] < 0])
             fig17 = px.pie(names=['上漲天數', '下跌天數'], values=[win_days, lose_days], hole=0.6, color_discrete_sequence=['#ff4b4b', '#09ab3b'])
             fig17.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>天數: %{{value}} 天</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', textfont=dict(color='#ffffff', size=16, weight='bold'))
-            render_styled_chart(style_fig(fig17, "17. 歷史操作日勝率"), "chart_17", chart_gradients[16])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True), "chart_17", neon_styles[16][0], neon_styles[16][1])
 
         with c2_18:
             dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().round(0).reindex(['一', '二', '三', '四', '五']).reset_index()
             fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
             fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig18.update_layout(hovermode="closest")
-            render_styled_chart(style_fig(fig18, "18. 星期別平均波動分析"), "chart_18", chart_gradients[17])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig18, "18. 星期別平均波動分析"), use_container_width=True), "chart_18", neon_styles[17][0], neon_styles[17][1])
 
     st.divider()
     st.markdown("### 🏦 展區四：現金流動脈分析")
@@ -896,21 +870,21 @@ with tab2:
         with c2_19:
             fig19 = px.sunburst(df_txs_plot, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
             fig19.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>累積金額: NT$ %{{value:,.0f}}</b></span><extra></extra>", textfont=dict(color='#ffffff', size=14, weight='bold'))
-            render_styled_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), "chart_19", chart_gradients[18])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), use_container_width=True), "chart_19", neon_styles[18][0], neon_styles[18][1])
             
         with c2_20:
             fig20 = px.bar(df_txs_plot, x="繪圖日期", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
             fig20.update_xaxes(type='category')
             fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             fig20.update_layout(showlegend=False, hovermode="closest")
-            render_styled_chart(style_fig(fig20, "20. 單筆資金進出分布"), "chart_20", chart_gradients[19])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig20, "20. 單筆資金進出分布"), use_container_width=True), "chart_20", neon_styles[19][0], neon_styles[19][1])
             
         with c2_21:
             fig21 = go.Figure(go.Scatter(x=df_txs_plot['繪圖日期'], y=df_txs_plot['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
             fig21.update_xaxes(type='category')
             fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
-            render_styled_chart(style_fig(fig21, "21. 累計淨現金流走勢"), "chart_21", chart_gradients[20])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig21, "21. 累計淨現金流走勢"), use_container_width=True), "chart_21", neon_styles[20][0], neon_styles[20][1])
 
 # ------------------------------------------
 # 分頁 3：🎯 定期定額與願景
@@ -1077,8 +1051,6 @@ with tab3:
             
     df_future = pd.DataFrame(future_data)
     
-    st.markdown('<div id="future-chart-bg"></div>', unsafe_allow_html=True)
-    
     fig_future = go.Figure()
 
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
@@ -1098,19 +1070,23 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_layout(
-        font=dict(color="#ffffff", size=16),
+        font=dict(size=16), # 取消字體顏色綁定
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60),
         legend=dict(
             groupclick="toggleitem",
-            font=dict(color="#ffffff"),
-            grouptitlefont=dict(color="#ffffff", size=18)
+            grouptitlefont=dict(size=18)
         )
     )
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    st.plotly_chart(fig_future, use_container_width=True, theme=None)
+    
+    # 🌈 幫願景大圖表也加上七彩旋轉光束邊框！
+    render_neon_container(
+        lambda: st.plotly_chart(fig_future, use_container_width=True),
+        "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px"
+    )
 
     st.divider()
 
