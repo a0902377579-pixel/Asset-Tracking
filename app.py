@@ -24,7 +24,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 核心動態光束引擎 (全域共用，創造斜向掃過的光束流動感) */
+    /* 核心動態光波引擎 (純粹水平掃描) */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
@@ -130,21 +130,6 @@ st.markdown("""
         font-weight: 900 !important; 
         text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
     }
-
-    /* =========================================
-       魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
-       ========================================= */
-    div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
-        background: linear-gradient(120deg, #0a1128 25%, #1c5276 50%, #0a1128 75%) !important;
-        background-size: 200% auto !important;
-        animation: sweep-light 4s linear infinite !important;
-        border-radius: 12px !important;
-        padding: 25px !important;
-        box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
-        border: 1px solid rgba(255,255,255,0.05) !important;
-        margin-top: 15px !important;
-        margin-bottom: 30px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -248,6 +233,7 @@ C_LBL = "#FFD700"
 C_VAL = "#00E5FF"  
 C_PCT = "#00E676"  
 
+# 補回重要基準線函式
 def add_zero_baseline(fig):
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
@@ -258,8 +244,8 @@ def style_fig(fig, title):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        # ★ 左側邊距放大到 110，保證最左側的文字不會被切掉
-        margin=dict(l=110, r=20, t=85, b=90),  
+        # ★★★ 左側與底部邊距史詩級放大，保證數字、旋轉日期絕對不會被切斷 ★★★
+        margin=dict(l=130, r=30, t=85, b=120),  
         hovermode="x unified",
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
@@ -270,23 +256,28 @@ def style_fig(fig, title):
     )
     return fig
 
-# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器 (已修復遮擋並全面套用 sweep-light 流動引擎)
+# 🔥 專為第 2 頁 21 張圖表設計的「獨立高階動態框」渲染器 (注入純正水平流動引擎)
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=110, r=20, t=70, b=90) # 左側邊距與底部邊距同步放大
+        margin=dict(l=130, r=30, t=70, b=120) 
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
+        /* 獨立賦予每張圖表各自的水平動畫，確保絕對流動 */
+        @keyframes sweep-horizontal-{chart_id} {{
+            0% {{ background-position: 200% 0; }}
+            100% {{ background-position: -200% 0; }}
+        }}
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
-            background-size: 200% auto !important; /* 啟動 sweep-light 動態光束的必要參數 */
-            animation: sweep-light 5s linear infinite !important; /* 與卡片共用同一個流動感，時間稍慢顯得優雅 */
+            background-size: 200% 100% !important; /* 確保動態光束有寬廣的軌道平移 */
+            animation: sweep-horizontal-{chart_id} 5s linear infinite !important; /* 強制水平光束掃過 */
             border-radius: 12px !important;
-            padding: 20px 20px 20px 20px !important;
+            padding: 20px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
@@ -296,7 +287,7 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
 # 🔥 21 種獨一無二的高階深色漸層背景
-# 已全部改寫為 120deg 與 25% 50% 75% 的三段式結構，保證每一張圖表都能產生流暢的光束掃描效果！
+# 已全部設定為 120deg 且三段色 (A -> B -> A)，這是達成完美水平光束掃描的核心配方
 chart_gradients = [
     "linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%)", # 1 深海藍
     "linear-gradient(120deg, #0f2027 25%, #2c5364 50%, #0f2027 75%)", # 2 幽黑綠
@@ -1046,7 +1037,7 @@ with tab3:
         font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=110, r=20, t=70, b=90),
+        margin=dict(l=130, r=30, t=70, b=120),
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
