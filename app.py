@@ -24,17 +24,10 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 全域核心動態光波引擎 */
+    /* 核心動態光波引擎 (全域共用，確保所有卡片與大框框特效完美一致，具備流動感) */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
-    }
-    
-    /* 專為 21 張圖表設計的平滑流動引擎 */
-    @keyframes chart-sweep {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -261,7 +254,7 @@ def style_fig(fig, title):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        margin=dict(l=20, r=20, t=85, b=80),  # 修正了底部留白避免截斷
+        margin=dict(l=60, r=20, t=85, b=90),  # 左側邊距與底部邊距放大，防止文字被切斷
         hovermode="x unified",
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
@@ -272,24 +265,23 @@ def style_fig(fig, title):
     )
     return fig
 
-# 🔥 專為第 2 頁設計的「獨立高階質感框」渲染器 (已修復遮擋並套用動態引擎)
+# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器 (套用 sweep-light 引擎產生真實流動感)
 def render_styled_chart(fig, chart_id, bg_gradient):
-    # 強制所有圖表內的文字皆為高亮度純白，並把底部邊距拉高到 90，確保 X 軸斜向文字不會被切掉
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=10, r=10, t=70, b=90) 
+        margin=dict(l=60, r=20, t=70, b=90) # 左側邊距與底部邊距同步放大
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
-            background-size: 400% 400% !important; /* 確保動態流動所需空間 */
-            animation: chart-sweep 6s ease infinite !important; /* 啟動平滑的動態流動感 */
+            background-size: 200% auto !important; /* 啟動 sweep-light 動態光波的必要參數 */
+            animation: sweep-light 4s linear infinite !important; /* 與總市值卡片共用相同的流動感 */
             border-radius: 12px !important;
-            padding: 20px 20px 20px 20px !important; /* 增加底部 Padding，保護圖表內容 */
+            padding: 20px 20px 20px 20px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
@@ -298,34 +290,30 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種獨一無二的高階深色漸層背景 (已全數改為 3 段式循環，確保動畫順暢流動)
+# 🔥 21 種獨一無二的高階深色漸層背景 (已加入 25%, 50%, 75% 斷點，確保光波完美流動)
 chart_gradients = [
-    "linear-gradient(135deg, #141e30 0%, #243b55 50%, #141e30 100%)", # 1 深海藍
-    "linear-gradient(135deg, #0f2027 0%, #2c5364 50%, #0f2027 100%)", # 2 幽黑綠
-    "linear-gradient(135deg, #0f0c29 0%, #24243e 50%, #0f0c29 100%)", # 3 賽博紫
-    "linear-gradient(135deg, #2b5876 0%, #4e4376 50%, #2b5876 100%)", # 4 星雲藍
-    "linear-gradient(135deg, #16222A 0%, #3A6073 50%, #16222A 100%)", # 5 迷霧灰
-    "linear-gradient(135deg, #232526 0%, #414345 50%, #232526 100%)", # 6 碳纖黑
-    "linear-gradient(135deg, #1A2980 0%, #135A59 50%, #1A2980 100%)", # 7 皇室青
-    "linear-gradient(135deg, #4B1248 0%, #8E4C33 50%, #4B1248 100%)", # 8 暗夜銅
-    "linear-gradient(135deg, #114357 0%, #844c66 50%, #114357 100%)", # 9 晚霞紫
-    "linear-gradient(135deg, #1d1f20 0%, #2c3e50 50%, #1d1f20 100%)", # 10 曜石板
-    "linear-gradient(135deg, #13151a 0%, #2c3e50 50%, #13151a 100%)", # 11 午夜黑
-    "linear-gradient(135deg, #00467F 0%, #426B3D 50%, #00467F 100%)", # 12 森林藍
-    "linear-gradient(135deg, #1D2B64 0%, #734657 50%, #1D2B64 100%)", # 13 絳紫靛
-    "linear-gradient(135deg, #191654 0%, #217361 50%, #191654 100%)", # 14 翡翠黑
-    "linear-gradient(135deg, #314755 0%, #195878 50%, #314755 100%)", # 15 沉靜洋
-    "linear-gradient(135deg, #3A5573 0%, #3B6A69 50%, #3A5573 100%)", # 16 海藻丹
-    "linear-gradient(135deg, #4B0000 0%, #42271D 50%, #4B0000 100%)", # 17 鐵鏽紅
-    "linear-gradient(135deg, #0A5E4E 0%, #826E21 50%, #0A5E4E 100%)", # 18 琥珀綠
-    "linear-gradient(135deg, #1A471C 0%, #42461A 50%, #1A471C 100%)", # 19 墨光苔
-    "linear-gradient(135deg, #26555C 0%, #3F4B4D 50%, #26555C 100%)", # 20 鐵鈦灰
-    "linear-gradient(135deg, #4A0213 0%, #4A3029 50%, #4A0213 100%)"  # 21 酒桶木
+    "linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%)", # 1 深海藍
+    "linear-gradient(120deg, #0f2027 25%, #2c5364 50%, #0f2027 75%)", # 2 幽黑綠
+    "linear-gradient(120deg, #0f0c29 25%, #24243e 50%, #0f0c29 75%)", # 3 賽博紫
+    "linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%)", # 4 星雲藍
+    "linear-gradient(120deg, #16222A 25%, #3A6073 50%, #16222A 75%)", # 5 迷霧灰
+    "linear-gradient(120deg, #232526 25%, #414345 50%, #232526 75%)", # 6 碳纖黑
+    "linear-gradient(120deg, #1A2980 25%, #135A59 50%, #1A2980 75%)", # 7 皇室青
+    "linear-gradient(120deg, #4B1248 25%, #8E4C33 50%, #4B1248 75%)", # 8 暗夜銅
+    "linear-gradient(120deg, #114357 25%, #844c66 50%, #114357 75%)", # 9 晚霞紫
+    "linear-gradient(120deg, #1d1f20 25%, #2c3e50 50%, #1d1f20 75%)", # 10 曜石板
+    "linear-gradient(120deg, #13151a 25%, #2c3e50 50%, #13151a 75%)", # 11 午夜黑
+    "linear-gradient(120deg, #00467F 25%, #426B3D 50%, #00467F 75%)", # 12 森林藍
+    "linear-gradient(120deg, #1D2B64 25%, #734657 50%, #1D2B64 75%)", # 13 絳紫靛
+    "linear-gradient(120deg, #191654 25%, #217361 50%, #191654 75%)", # 14 翡翠黑
+    "linear-gradient(120deg, #314755 25%, #195878 50%, #314755 75%)", # 15 沉靜洋
+    "linear-gradient(120deg, #3A5573 25%, #3B6A69 50%, #3A5573 75%)", # 16 海藻丹
+    "linear-gradient(120deg, #4B0000 25%, #42271D 50%, #4B0000 75%)", # 17 鐵鏽紅
+    "linear-gradient(120deg, #0A5E4E 25%, #826E21 50%, #0A5E4E 75%)", # 18 琥珀綠
+    "linear-gradient(120deg, #1A471C 25%, #42461A 50%, #1A471C 75%)", # 19 墨光苔
+    "linear-gradient(120deg, #26555C 25%, #3F4B4D 50%, #26555C 75%)", # 20 鐵鈦灰
+    "linear-gradient(120deg, #4A0213 25%, #4A3029 50%, #4A0213 75%)"  # 21 酒桶木
 ]
-
-def add_zero_baseline(fig):
-    fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
-    return fig
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
@@ -979,7 +967,6 @@ with tab3:
     monthly_price_rate = price_rate / 100 / 12
     monthly_div_rate = div_yield / 100 / 12
     
-    # 初始化獨立計算容器
     acc_cost_0050 = current_0050_cost
     val_nodrip_0050 = current_0050_value
     val_drip_0050 = current_0050_value
@@ -1049,12 +1036,11 @@ with tab3:
     if resolution == "每年":
         fig_future.update_xaxes(type='category')
         
-    # 強制所有文字呈現白色高對比
     fig_future.update_layout(
         font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=10, r=10, t=70, b=90),
+        margin=dict(l=60, r=20, t=70, b=90),
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
