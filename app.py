@@ -31,8 +31,8 @@ st.markdown("""
         100% { background-position: 15% 50%; } 
     }
 
-    /* 🌟 全螢幕黑屏保護：解決淺色模式下，圖表放大全螢幕時白色字體看不見的問題 */
-    div[data-testid="stFullScreenFrame"] {
+    /* 🌟 全螢幕黑屏保護：加上 :has 條件，嚴格限制只對「Plotly 圖表」生效，還原 DataFrame 的乾淨外觀！ */
+    div[data-testid="stFullScreenFrame"]:has(div[data-testid="stPlotlyChart"]) {
         background-color: #0a1128 !important; 
         border-radius: 12px !important;
     }
