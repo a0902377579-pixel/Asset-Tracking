@@ -304,7 +304,6 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
-# 🌈 核心黑科技：純遮罩技術邊框流光 (背景控制參數：圖表使用深色，表格使用透明色)
 def render_neon_container(render_func, element_id, conic_colors, glow_color, padding="15px", bg_color="#0f1117"):
     bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
     st.markdown(f'''
@@ -336,7 +335,6 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
     ''', unsafe_allow_html=True)
     render_func()
 
-# 🎯 專屬提供給表單區塊 (Sidebar / Tabs) 套用無縫光束外框的組件
 def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="10px", bg_color="transparent"):
     bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
     st.markdown(f'''
@@ -368,29 +366,28 @@ def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="
     </style>
     ''', unsafe_allow_html=True)
 
-# 🔥 21 種獨一無二的炫彩旋轉邊框配方！
 neon_styles = [
-    ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), # 1. 經典七彩
-    ("#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.45)"), # 2. 冰流藍
-    ("#ff8008, #ffc837, #ff8008", "rgba(255, 128, 8, 0.45)"), # 3. 琥珀金
-    ("#11998e, #38ef7d, #11998e", "rgba(56, 239, 125, 0.45)"), # 4. 翡翠綠
-    ("#FC466B, #3F5EFB, #FC466B", "rgba(252, 70, 107, 0.45)"), # 5. 賽博紫紅
-    ("#FDBB2D, #22C1C3, #FDBB2D", "rgba(34, 193, 195, 0.45)"), # 6. 陽光海灘
-    ("#8E2DE2, #4A00E0, #8E2DE2", "rgba(142, 45, 226, 0.45)"), # 7. 幻影紫
-    ("#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)"), # 8. 科技藍
-    ("#f12711, #f5af19, #f12711", "rgba(241, 39, 17, 0.45)"), # 9. 烈焰紅
-    ("#654ea3, #eaafc8, #654ea3", "rgba(101, 78, 163, 0.45)"), # 10. 櫻花紫
-    ("#FF416C, #FF4B2B, #FF416C", "rgba(255, 65, 108, 0.45)"), # 11. 霓虹桃
-    ("#00B4DB, #0083B0, #00B4DB", "rgba(0, 180, 219, 0.45)"), # 12. 深海藍
-    ("#b92b27, #1565C0, #b92b27", "rgba(185, 43, 39, 0.45)"), # 13. 冰火交織
-    ("#ee0979, #ff6a00, #ee0979", "rgba(238, 9, 121, 0.45)"), # 14. 盛夏橙
-    ("#00c3ff, #ffff1c, #00c3ff", "rgba(0, 195, 255, 0.45)"), # 15. 螢光青黃
-    ("#f85032, #e73827, #f85032", "rgba(248, 80, 50, 0.45)"), # 16. 血月紅
-    ("#5614B0, #DBD65C, #5614B0", "rgba(86, 20, 176, 0.45)"), # 17. 皇家紫金
-    ("#F09819, #EDDE5D, #F09819", "rgba(240, 152, 25, 0.45)"), # 18. 晨光黃
-    ("#8A2387, #E94057, #F27121, #8A2387", "rgba(233, 64, 87, 0.45)"), # 19. 晚霞漸層
-    ("#1D976C, #93F9B9, #1D976C", "rgba(29, 151, 108, 0.45)"), # 20. 極光綠
-    ("#3E5151, #DECBA4, #3E5151", "rgba(62, 81, 81, 0.45)")  # 21. 香檳灰
+    ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), 
+    ("#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.45)"), 
+    ("#ff8008, #ffc837, #ff8008", "rgba(255, 128, 8, 0.45)"), 
+    ("#11998e, #38ef7d, #11998e", "rgba(56, 239, 125, 0.45)"), 
+    ("#FC466B, #3F5EFB, #FC466B", "rgba(252, 70, 107, 0.45)"), 
+    ("#FDBB2D, #22C1C3, #FDBB2D", "rgba(34, 193, 195, 0.45)"), 
+    ("#8E2DE2, #4A00E0, #8E2DE2", "rgba(142, 45, 226, 0.45)"), 
+    ("#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)"), 
+    ("#f12711, #f5af19, #f12711", "rgba(241, 39, 17, 0.45)"), 
+    ("#654ea3, #eaafc8, #654ea3", "rgba(101, 78, 163, 0.45)"), 
+    ("#FF416C, #FF4B2B, #FF416C", "rgba(255, 65, 108, 0.45)"), 
+    ("#00B4DB, #0083B0, #00B4DB", "rgba(0, 180, 219, 0.45)"), 
+    ("#b92b27, #1565C0, #b92b27", "rgba(185, 43, 39, 0.45)"), 
+    ("#ee0979, #ff6a00, #ee0979", "rgba(238, 9, 121, 0.45)"), 
+    ("#00c3ff, #ffff1c, #00c3ff", "rgba(0, 195, 255, 0.45)"), 
+    ("#f85032, #e73827, #f85032", "rgba(248, 80, 50, 0.45)"), 
+    ("#5614B0, #DBD65C, #5614B0", "rgba(86, 20, 176, 0.45)"), 
+    ("#F09819, #EDDE5D, #F09819", "rgba(240, 152, 25, 0.45)"), 
+    ("#8A2387, #E94057, #F27121, #8A2387", "rgba(233, 64, 87, 0.45)"), 
+    ("#1D976C, #93F9B9, #1D976C", "rgba(29, 151, 108, 0.45)"), 
+    ("#3E5151, #DECBA4, #3E5151", "rgba(62, 81, 81, 0.45)")  
 ]
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -888,7 +885,8 @@ with tab2:
             render_neon_container(lambda: st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True, theme=None), "chart_11", neon_styles[10][0], neon_styles[10][1])
 
         with c2_12:
-            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, customdata=['總損益_str', '繪圖日期'])
+            # ✅ 這裡已將 customdata 改為 custom_data (Plotly Express 語法)
+            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
