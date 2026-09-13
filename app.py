@@ -47,12 +47,12 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用科技藍旋轉光束 */
+    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用落日餘暉旋轉光束 */
     section[data-testid="stSidebar"] div[data-testid="stTabs"] {
         position: relative !important;
         border-radius: 14px !important;
         padding: 10px !important;
-        box-shadow: 0 0 20px rgba(0, 198, 255, 0.45) !important;
+        box-shadow: 0 0 20px rgba(241, 39, 17, 0.45) !important;
         margin-top: 5px !important;
         margin-bottom: 20px !important;
         background: transparent !important;
@@ -63,7 +63,8 @@ st.markdown("""
         inset: 0;
         border-radius: 14px;
         padding: 4px; 
-        background: conic-gradient(from var(--border-angle), #00c6ff, #0072ff, #00c6ff);
+        /* 落日餘暉 (Sunset Glow) */
+        background: conic-gradient(from var(--border-angle), #f12711, #FC466B, #ff8008, #f12711);
         -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
         -webkit-mask-composite: xor;
         mask-composite: exclude;
@@ -520,12 +521,24 @@ def calc_fee():
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
     
-    # 🟢 淺綠色流光邊框 for 提示訊息
-    apply_neon_to_next_container("sidebar_info_neon", "#55efc4, #00b894, #55efc4", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
+    # 1. 🩷 賽博龐克 (Cyberpunk) for 提示訊息
+    apply_neon_to_next_container(
+        "sidebar_info_neon", 
+        "#ff007f, #00f2fe, #8E2DE2, #ff007f", 
+        "rgba(255, 0, 127, 0.45)", 
+        padding="4px", 
+        bg_color="transparent"
+    )
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     
-    # 🟢 淺綠色流光邊框 for 更新按鈕
-    apply_neon_to_next_container("sidebar_btn_neon", "#55efc4, #00b894, #55efc4", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
+    # 2. 💚 極光森林 (Aurora Forest) for 更新按鈕
+    apply_neon_to_next_container(
+        "sidebar_btn_neon", 
+        "#00b894, #00c6ff, #11998e, #00b894", 
+        "rgba(0, 184, 148, 0.45)", 
+        padding="4px", 
+        bg_color="transparent"
+    )
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
         load_sheet_data.clear()
         load_bank_data.clear()
@@ -534,11 +547,11 @@ with st.sidebar:
     
     st.divider()
     
-    # 🚀 幫側邊欄 Tabs 整體套用「科技藍」動態旋轉邊框
+    # 3. ❤️ 落日餘暉 (Sunset Glow) for Tabs 整體套用
     apply_neon_to_next_container(
         "sidebar_tabs_neon", 
-        "#00c6ff, #0072ff, #00c6ff", 
-        "rgba(0, 198, 255, 0.45)", 
+        "#f12711, #FC466B, #ff8008, #f12711", 
+        "rgba(241, 39, 17, 0.45)", 
         padding="8px", 
         bg_color="transparent"
     )
@@ -875,7 +888,7 @@ with tab2:
             render_neon_container(lambda: st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True, theme=None), "chart_11", neon_styles[10][0], neon_styles[10][1])
 
         with c2_12:
-            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
+            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, customdata=['總損益_str', '繪圖日期'])
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
