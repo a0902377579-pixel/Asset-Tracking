@@ -24,11 +24,10 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🌟 全新升級：呼吸式流光引擎 (消除所有靜止死角，保證永遠在滑順流動) */
+    /* 🔥 全域核心動態光波引擎 (恢復純粹單向水平掃描，絕不折返) */
     @keyframes sweep-light { 
-        0% { background-position: 0% 50%; } 
-        50% { background-position: 100% 50%; } 
-        100% { background-position: 0% 50%; } 
+        0% { background-position: 200% 0; } 
+        100% { background-position: -200% 0; } 
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -112,10 +111,9 @@ st.markdown("""
     
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
-        /* 調整為 0% -> 50% -> 100% 確保光束沒有死角 */
         background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%) !important; 
-        background-size: 200% 200% !important;
-        animation: sweep-light 4s ease infinite !important;
+        background-size: 200% auto !important;
+        animation: sweep-light 4s linear infinite !important; /* linear 保證單向不折返 */
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; 
         border: 1px solid rgba(255,255,255,0.1) !important;
     }
@@ -137,10 +135,9 @@ st.markdown("""
        魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
        ========================================= */
     div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
-        /* 同樣調整為 0% -> 50% -> 100% 確保完美流動 */
         background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%) !important;
-        background-size: 200% 200% !important;
-        animation: sweep-light 5s ease infinite !important;
+        background-size: 200% auto !important;
+        animation: sweep-light 5s linear infinite !important; /* linear 保證單向不折返 */
         border-radius: 12px !important;
         padding: 25px !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
@@ -287,16 +284,15 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
-        /* 每個圖表獨立注入 0% -> 50% -> 100% 動畫，徹底確保永遠在滑順流動 */
+        /* 🔥 確保圖表也是單向水平掃描，絕不折返 */
         @keyframes sweep-horizontal-{chart_id} {{
-            0% {{ background-position: 0% 50%; }}
-            50% {{ background-position: 100% 50%; }}
-            100% {{ background-position: 0% 50%; }}
+            0% {{ background-position: 200% 0; }}
+            100% {{ background-position: -200% 0; }}
         }}
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
-            background-size: 200% 200% !important; 
-            animation: sweep-horizontal-{chart_id} 6s ease infinite !important; 
+            background-size: 200% auto !important; 
+            animation: sweep-horizontal-{chart_id} 6s linear infinite !important; /* linear 保證單向不折返 */
             border-radius: 12px !important;
             padding: 20px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
@@ -307,7 +303,7 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種高階漸層，全部統一改寫為 `0% 50% 100%` 三段色，消滅所有無光影死角！
+# 🔥 21 種高階漸層，完美三段色 (消除靜止死角)，配合 linear 單向水平動畫
 chart_gradients = [
     "linear-gradient(120deg, #141e30 0%, #243b55 50%, #141e30 100%)", # 1 深海藍
     "linear-gradient(120deg, #0f2027 0%, #2c5364 50%, #0f2027 100%)", # 2 幽黑綠
@@ -339,14 +335,14 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif num_val < 0: text_c, glow_shadow = "#09ab3b", "0 8px 20px rgba(9, 171, 59, 0.4)"
         else: text_c, glow_shadow = "#ffffff", "0 8px 20px rgba(255, 255, 255, 0.1)"
     else:
-        # 所有的 Theme 都改寫為完美的 0% -> 50% -> 100% 確保全區段動態
         if theme == "purple": bg, glow_shadow, text_c = "linear-gradient(120deg, #667eea 0%, #9b59b6 50%, #667eea 100%)", "0 8px 20px rgba(118, 75, 162, 0.5)", "#fef08a"
         elif theme == "blue": bg, glow_shadow, text_c = "linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%)", "0 8px 20px rgba(28, 82, 118, 0.5)", "#a7f3d0"
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 0%, #FFC837 50%, #FF8008 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 0%, #3a4a5a 50%, #1e2128 100%)", "none", "#ffffff"
             
+    # linear infinite 保證單向無縫滑動，不再折返
     return f"""
-    <div style="background: {bg}; background-size: 200% 200%; animation: sweep-light 4s ease infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <div style="background: {bg}; background-size: 200% auto; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
@@ -610,12 +606,9 @@ with tab1:
     if dashboard_data:
         d = dashboard_data
         c1, c2, c3, c4, c5 = st.columns(5)
-        
-        # ★ 左側為紫色動態光束
         c1.markdown(create_colorful_card("總市值", f"NT$ {d['total_assets']:,.0f}", "💎", "purple"), unsafe_allow_html=True)
-        # ★ 右側現在也完全套用紫色動態光束，解決「不動」的問題
+        # ★ 總投入成本 改套用 purple，使其與總市值擁有相同的流動光波特效
         c2.markdown(create_colorful_card("總投入成本", f"NT$ {d['total_cost']:,.0f}", "📥", "purple"), unsafe_allow_html=True)
-        
         c3.markdown(create_colorful_card("銀行活存餘額", f"NT$ {bank_balance:,.0f}", "🏦", "gold"), unsafe_allow_html=True)
         c4.markdown(create_colorful_card("帳面總損益", f"{d['total_profit']:+,.0f}", "🔥", is_profit=True, num_val=d['total_profit']), unsafe_allow_html=True)
         c5.markdown(create_colorful_card("總損益 (%)", f"{d['profit_rate']:+.2f}%", "📈", is_profit=True, num_val=d['profit_rate']), unsafe_allow_html=True)
@@ -960,7 +953,7 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     
     full_html = (
-        f'<div style="background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%); background-size: 200% 200%; animation: sweep-light 4s ease infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%;">'
+        f'<div style="background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%); background-size: 200% auto; animation: sweep-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
@@ -1085,8 +1078,8 @@ with tab3:
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
     with c3_1:
-        # ★ 將左側卡片換成 purple，與右側預估配息擁有一致的流動光束感
-        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "purple"), unsafe_allow_html=True)
+        # ★ 左側卡片換回 blue，使其擁有紫色系背景與水平流動光束
+        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "blue"), unsafe_allow_html=True)
         diff_pct = ((market_price_0050 - avg_cost_0050) / avg_cost_0050 * 100) if avg_cost_0050 > 0 else 0
         color = "#ff4b4b" if diff_pct > 0 else "#09ab3b"
         st.markdown(f"<p style='text-align: center; color: {color}; font-weight: bold;'>現價落差: {diff_pct:+.2f}% (市場價 {market_price_0050:,.2f})</p>", unsafe_allow_html=True)
