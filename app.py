@@ -21,6 +21,12 @@ st.set_page_config(
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
 st.markdown("""
+<div id="shooting-stars-container">
+    <div class="shooting-star star1"></div>
+    <div class="shooting-star star2"></div>
+    <div class="shooting-star star3"></div>
+</div>
+
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
 
@@ -41,35 +47,66 @@ st.markdown("""
         100% { background-position: 15% 50%; } 
     }
 
+    /* 🌌 深色模式專屬：浩瀚星空與流星特效 (淺色模式會自動隱藏) */
+    @media (prefers-color-scheme: dark) {
+        .stApp {
+            background-color: #0b0f19 !important;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #eeeeee, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, #dddddd, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 130px 80px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 160px 120px, #dddddd, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: stars-twinkle 4s infinite alternate;
+        }
+        @keyframes stars-twinkle {
+            0% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        #shooting-stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+            display: block;
+        }
+        .shooting-star {
+            position: absolute;
+            top: -50px;
+            left: -50px;
+            width: 150px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(255,255,255,0), #ffffff, rgba(255,255,255,0));
+            transform: rotate(45deg);
+            opacity: 0;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+        }
+        .star1 { animation: shooting 6s linear infinite 1s; top: 5%; left: 10%; }
+        .star2 { animation: shooting 8s linear infinite 4s; top: 25%; left: 40%; }
+        .star3 { animation: shooting 7s linear infinite 7s; top: 15%; left: 70%; }
+        
+        @keyframes shooting {
+            0% { transform: translate(0, 0) rotate(45deg); opacity: 1; }
+            15% { transform: translate(800px, 800px) rotate(45deg); opacity: 0; }
+            100% { transform: translate(800px, 800px) rotate(45deg); opacity: 0; }
+        }
+    }
+    @media (prefers-color-scheme: light) {
+        #shooting-stars-container { display: none !important; }
+    }
+
     /* 🌟 全螢幕黑屏保護：只對「Plotly 圖表」生效 */
     div[data-testid="stFullScreenFrame"]:has(div[data-testid="stPlotlyChart"]) {
         background-color: #0a1128 !important; 
         border-radius: 12px !important;
-    }
-
-    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用科技藍旋轉光束 */
-    section[data-testid="stSidebar"] div[data-testid="stTabs"] {
-        position: relative !important;
-        border-radius: 14px !important;
-        padding: 10px !important;
-        box-shadow: 0 0 20px rgba(0, 198, 255, 0.45) !important;
-        margin-top: 5px !important;
-        margin-bottom: 20px !important;
-        background: transparent !important;
-    }
-    section[data-testid="stSidebar"] div[data-testid="stTabs"]::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 14px;
-        padding: 4px; 
-        background: conic-gradient(from var(--border-angle), #00c6ff, #0072ff, #00c6ff);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        animation: spin-border 3.5s linear infinite;
-        pointer-events: none;
-        z-index: 10;
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -336,7 +373,7 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
     render_func()
 
 # 🎯 專屬提供給表單區塊 (Sidebar / Tabs) 套用無縫光束外框的組件
-def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="10px", bg_color="transparent"):
+def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="8px", bg_color="transparent"):
     bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
     st.markdown(f'''
     <div id="{element_id}"></div>
@@ -345,9 +382,9 @@ def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="
             position: relative !important;
             border-radius: 14px !important;
             padding: {padding} !important;
-            box-shadow: 0 0 20px {glow_color} !important;
+            box-shadow: 0 0 15px {glow_color} !important;
             margin-top: 5px !important;
-            margin-bottom: 20px !important;
+            margin-bottom: 15px !important;
             {bg_style}
         }}
         div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
@@ -355,12 +392,12 @@ def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="
             position: absolute;
             inset: 0;
             border-radius: 14px;
-            padding: 4px; 
+            padding: 3px; 
             background: conic-gradient(from var(--border-angle), {conic_colors});
             -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
-            animation: spin-border 3.5s linear infinite;
+            animation: spin-border 3s linear infinite;
             pointer-events: none;
             z-index: 10;
         }}
@@ -520,12 +557,12 @@ def calc_fee():
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
     
-    # 🟢 淺綠色流光邊框 for 提示訊息
-    apply_neon_to_next_container("sidebar_info_neon", "#55efc4, #00b894, #55efc4", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
+    # 🚀 側邊欄：提示訊息套用科技藍 (取消七彩)
+    apply_neon_to_next_container("sidebar_info_neon", "#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     
-    # 🟢 淺綠色流光邊框 for 更新按鈕
-    apply_neon_to_next_container("sidebar_btn_neon", "#55efc4, #00b894, #55efc4", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
+    # 🚀 側邊欄：按鈕套用科技藍 (取消七彩)
+    apply_neon_to_next_container("sidebar_btn_neon", "#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)")
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
         load_sheet_data.clear()
         load_bank_data.clear()
@@ -534,13 +571,11 @@ with st.sidebar:
     
     st.divider()
     
-    # 🚀 幫側邊欄 Tabs 整體套用「科技藍」動態旋轉邊框
+    # 🚀 側邊欄：整體 Tab 結構動態伸縮套用科技藍 (取消七彩)
     apply_neon_to_next_container(
         "sidebar_tabs_neon", 
         "#00c6ff, #0072ff, #00c6ff", 
-        "rgba(0, 198, 255, 0.45)", 
-        padding="8px", 
-        bg_color="transparent"
+        "rgba(0, 198, 255, 0.45)"
     )
     
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
@@ -700,7 +735,7 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
-            # 🌈 第一頁大表：全部換上七彩霓虹旋轉光束，背景設定透明
+            # 🌈 第一頁大表：全部換上經典七彩，背景設定透明
             render_neon_container(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
