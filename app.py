@@ -31,6 +31,12 @@ st.markdown("""
         100% { background-position: 15% 50%; } 
     }
 
+    /* 🌟 全螢幕黑屏保護：解決淺色模式下，圖表放大全螢幕時白色字體看不見的問題 */
+    div[data-testid="stFullScreenFrame"] {
+        background-color: #0a1128 !important; 
+        border-radius: 12px !important;
+    }
+
     /* --- 頂部 Tab 樣式 --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
@@ -260,6 +266,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
+        font=dict(color="#ffffff"),  # 鎖定全域圖表字體為白色
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -281,6 +288,7 @@ def style_fig(fig, title, height=500):
 
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
+        font=dict(color="#ffffff", size=14), # 確保卡片內字體絕對白色
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60) 
@@ -1052,12 +1060,14 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_layout(
+        font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60),
         legend=dict(
             groupclick="toggleitem",
-            grouptitlefont=dict(size=18)
+            font=dict(color="#ffffff"),
+            grouptitlefont=dict(color="#ffffff", size=18)
         )
     )
     
