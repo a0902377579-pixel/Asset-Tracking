@@ -24,10 +24,17 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 全域核心動態光波引擎 (全新 極光幽藍 色系) */
+    /* 全域核心動態光波引擎 */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
+    }
+    
+    /* 專為 21 張圖表設計的平滑流動引擎 */
+    @keyframes chart-sweep {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -109,7 +116,6 @@ st.markdown("""
         background: rgba(255,255,255,0.05) !important;
     }
     
-    /* 配合新色系，按鈕也改為極光幽藍 */
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
         background: linear-gradient(120deg, #0a1128 25%, #1c5276 50%, #0a1128 75%) !important; 
@@ -255,7 +261,7 @@ def style_fig(fig, title):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        margin=dict(l=20, r=20, t=85, b=40), 
+        margin=dict(l=20, r=20, t=85, b=80),  # 修正了底部留白避免截斷
         hovermode="x unified",
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
@@ -266,22 +272,24 @@ def style_fig(fig, title):
     )
     return fig
 
-# 🔥 專為第 2 頁設計的「獨立高階質感框」渲染器
+# 🔥 專為第 2 頁設計的「獨立高階質感框」渲染器 (已修復遮擋並套用動態引擎)
 def render_styled_chart(fig, chart_id, bg_gradient):
-    # 強制所有圖表內的文字皆為高亮度純白
+    # 強制所有圖表內的文字皆為高亮度純白，並把底部邊距拉高到 90，確保 X 軸斜向文字不會被切掉
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=10, r=10, t=70, b=30)
+        margin=dict(l=10, r=10, t=70, b=90) 
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
+            background-size: 400% 400% !important; /* 確保動態流動所需空間 */
+            animation: chart-sweep 6s ease infinite !important; /* 啟動平滑的動態流動感 */
             border-radius: 12px !important;
-            padding: 20px 20px 5px 20px !important;
+            padding: 20px 20px 20px 20px !important; /* 增加底部 Padding，保護圖表內容 */
             box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
@@ -290,29 +298,29 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種獨一無二的高階深色漸層背景 (保證不重複、具備科技感)
+# 🔥 21 種獨一無二的高階深色漸層背景 (已全數改為 3 段式循環，確保動畫順暢流動)
 chart_gradients = [
-    "linear-gradient(135deg, #141e30, #243b55)", # 1 深海藍
-    "linear-gradient(135deg, #0f2027, #2c5364)", # 2 幽黑綠
-    "linear-gradient(135deg, #0f0c29, #24243e)", # 3 賽博紫
-    "linear-gradient(135deg, #2b5876, #4e4376)", # 4 星雲藍
-    "linear-gradient(135deg, #16222A, #3A6073)", # 5 迷霧灰
-    "linear-gradient(135deg, #232526, #414345)", # 6 碳纖黑
-    "linear-gradient(135deg, #1A2980, #135A59)", # 7 皇室青
-    "linear-gradient(135deg, #4B1248, #8E4C33)", # 8 暗夜銅
-    "linear-gradient(135deg, #114357, #844c66)", # 9 晚霞紫
-    "linear-gradient(135deg, #1d1f20, #2c3e50)", # 10 曜石板
-    "linear-gradient(135deg, #2C3E50, #000000)", # 11 午夜黑
-    "linear-gradient(135deg, #00467F, #426B3D)", # 12 森林藍
-    "linear-gradient(135deg, #1D2B64, #734657)", # 13 絳紫靛
-    "linear-gradient(135deg, #191654, #217361)", # 14 翡翠黑
-    "linear-gradient(135deg, #314755, #195878)", # 15 沉靜洋
-    "linear-gradient(135deg, #3A5573, #3B6A69)", # 16 海藻丹
-    "linear-gradient(135deg, #4B0000, #42271D)", # 17 鐵鏽紅
-    "linear-gradient(135deg, #0A5E4E, #826E21)", # 18 琥珀綠
-    "linear-gradient(135deg, #42461A, #1A471C)", # 19 墨光苔
-    "linear-gradient(135deg, #26555C, #3F4B4D)", # 20 鐵鈦灰
-    "linear-gradient(135deg, #4A0213, #4A3029)"  # 21 酒桶木
+    "linear-gradient(135deg, #141e30 0%, #243b55 50%, #141e30 100%)", # 1 深海藍
+    "linear-gradient(135deg, #0f2027 0%, #2c5364 50%, #0f2027 100%)", # 2 幽黑綠
+    "linear-gradient(135deg, #0f0c29 0%, #24243e 50%, #0f0c29 100%)", # 3 賽博紫
+    "linear-gradient(135deg, #2b5876 0%, #4e4376 50%, #2b5876 100%)", # 4 星雲藍
+    "linear-gradient(135deg, #16222A 0%, #3A6073 50%, #16222A 100%)", # 5 迷霧灰
+    "linear-gradient(135deg, #232526 0%, #414345 50%, #232526 100%)", # 6 碳纖黑
+    "linear-gradient(135deg, #1A2980 0%, #135A59 50%, #1A2980 100%)", # 7 皇室青
+    "linear-gradient(135deg, #4B1248 0%, #8E4C33 50%, #4B1248 100%)", # 8 暗夜銅
+    "linear-gradient(135deg, #114357 0%, #844c66 50%, #114357 100%)", # 9 晚霞紫
+    "linear-gradient(135deg, #1d1f20 0%, #2c3e50 50%, #1d1f20 100%)", # 10 曜石板
+    "linear-gradient(135deg, #13151a 0%, #2c3e50 50%, #13151a 100%)", # 11 午夜黑
+    "linear-gradient(135deg, #00467F 0%, #426B3D 50%, #00467F 100%)", # 12 森林藍
+    "linear-gradient(135deg, #1D2B64 0%, #734657 50%, #1D2B64 100%)", # 13 絳紫靛
+    "linear-gradient(135deg, #191654 0%, #217361 50%, #191654 100%)", # 14 翡翠黑
+    "linear-gradient(135deg, #314755 0%, #195878 50%, #314755 100%)", # 15 沉靜洋
+    "linear-gradient(135deg, #3A5573 0%, #3B6A69 50%, #3A5573 100%)", # 16 海藻丹
+    "linear-gradient(135deg, #4B0000 0%, #42271D 50%, #4B0000 100%)", # 17 鐵鏽紅
+    "linear-gradient(135deg, #0A5E4E 0%, #826E21 50%, #0A5E4E 100%)", # 18 琥珀綠
+    "linear-gradient(135deg, #1A471C 0%, #42461A 50%, #1A471C 100%)", # 19 墨光苔
+    "linear-gradient(135deg, #26555C 0%, #3F4B4D 50%, #26555C 100%)", # 20 鐵鈦灰
+    "linear-gradient(135deg, #4A0213 0%, #4A3029 50%, #4A0213 100%)"  # 21 酒桶木
 ]
 
 def add_zero_baseline(fig):
@@ -650,7 +658,7 @@ with tab1:
             st.info("尚無銀行紀錄。")
 
 # ------------------------------------------
-# 分頁 2：🌌 終極數據戰情室 (21 張圖表，皆有獨家高階漸層背景)
+# 分頁 2：🌌 終極數據戰情室 (21 張圖表)
 # ------------------------------------------
 with tab2:
     if df_h is not None:
@@ -1021,12 +1029,10 @@ with tab3:
             
     df_future = pd.DataFrame(future_data)
     
-    # 建立動態大圖表的 HTML 容器標記
     st.markdown('<div id="future-chart-bg"></div>', unsafe_allow_html=True)
     
     fig_future = go.Figure()
 
-    # 清除 HTML span，完全依賴 plotly_chart(theme=None) 與 update_layout 的字體顏色控制
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
@@ -1046,6 +1052,9 @@ with tab3:
     # 強制所有文字呈現白色高對比
     fig_future.update_layout(
         font=dict(color="#ffffff", size=16),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=10, t=70, b=90),
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
