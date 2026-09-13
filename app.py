@@ -24,14 +24,26 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🔥 終極無縫流光引擎：將軌跡限制在 15%~85% 之間，讓邊界永遠落在容器外，徹底消除左右邊緣斷層！ */
+    /* 🔥 終極無縫流光引擎：將軌跡限制在 15%~85% 之間 */
     @keyframes sweep-light { 
         0% { background-position: 15% 50%; } 
         50% { background-position: 85% 50%; } 
         100% { background-position: 15% 50%; } 
     }
 
-    /* 🌟 全螢幕黑屏保護：加上 :has 條件，嚴格限制只對「Plotly 圖表」生效，還原 DataFrame 的乾淨外觀！ */
+    /* 🌈 360° 邊框跑馬燈旋轉引擎 */
+    @property --border-angle {
+        syntax: '<angle>';
+        inherits: false;
+        initial-value: 0deg;
+    }
+    @keyframes spin-border {
+        to {
+            --border-angle: 360deg;
+        }
+    }
+
+    /* 🌟 全螢幕黑屏保護：只對「Plotly 圖表」生效 */
     div[data-testid="stFullScreenFrame"]:has(div[data-testid="stPlotlyChart"]) {
         background-color: #0a1128 !important; 
         border-radius: 12px !important;
@@ -79,7 +91,7 @@ st.markdown("""
         font-weight: bold !important; 
     }
     
-    div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; }
+    div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
 
     /* =========================================
        科技感動態切換按鈕
@@ -266,7 +278,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
-        font=dict(color="#ffffff"),  # 確保強制使用白色字體
+        font=dict(color="#ffffff"),
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -286,23 +298,25 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
-# 🔥 加入參數 box_shadow，讓 DataFrame 表格框線完全升級成「卡片級」的耀眼光暈
-def render_styled_dataframe(df_render_func, df_id, bg_gradient, box_shadow="0 8px 20px rgba(0,0,0,0.4)"):
+# 🌈 360° 邊框跑馬燈流光組件（真正像霓虹燈條一樣繞著邊緣跑！）
+def render_neon_border_dataframe(df_render_func, df_id, conic_colors, glow_color="rgba(0, 229, 255, 0.4)"):
     st.markdown(f'''
     <div id="{df_id}"></div>
     <style>
         div[data-testid="stElementContainer"]:has(#{df_id}) + div[data-testid="stElementContainer"] {{
-            background: {bg_gradient} !important;
-            background-size: 400% 400% !important; 
-            background-repeat: no-repeat !important;
-            animation: sweep-light 4s ease-in-out infinite !important; /* 速度調快對齊卡片的 4s */
-            border-radius: 12px !important;
-            padding: 12px !important;
-            box-shadow: {box_shadow} !important;
-            border: 1px solid rgba(255,255,255,0.2) !important;
+            background: conic-gradient(from var(--border-angle), {conic_colors}) !important;
+            animation: spin-border 3.5s linear infinite !important;
+            border-radius: 14px !important;
+            padding: 4px !important; /* 精確 4px 光束邊框線寬 */
+            box-shadow: 0 0 25px {glow_color} !important;
             margin-bottom: 25px !important;
             box-sizing: border-box !important;
             overflow: hidden !important; 
+        }}
+        div[data-testid="stElementContainer"]:has(#{df_id}) + div[data-testid="stElementContainer"] > div {{
+            background: #0f1117 !important; /* 表格底板背景色，讓光束只在邊緣發光 */
+            border-radius: 10px !important;
+            overflow: hidden !important;
         }}
     </style>
     ''', unsafe_allow_html=True)
@@ -310,7 +324,7 @@ def render_styled_dataframe(df_render_func, df_id, bg_gradient, box_shadow="0 8p
 
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
-        font=dict(color="#ffffff", size=14), # 確保卡片內字體絕對白色
+        font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60) 
@@ -335,14 +349,14 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 5 種高對比度動態光束漸層 (完全比照第 1 頁卡片的強烈光束效果，循環供應給所有圖表)
+# 🔥 5 種高對比度動態光束漸層 (循環供應給所有圖表)
 chart_gradients = [
     "linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", # 科技藍光束
     "linear-gradient(135deg, #1a1025 0%, #1a1025 40%, #4a2b75 50%, #1a1025 60%, #1a1025 100%)", # 賽博紫光束
     "linear-gradient(135deg, #071a14 0%, #071a14 40%, #165c47 50%, #071a14 60%, #071a14 100%)", # 翡翠綠光束
     "linear-gradient(135deg, #261505 0%, #261505 40%, #75480f 50%, #261505 60%, #261505 100%)", # 琥珀金光束
     "linear-gradient(135deg, #1f0a0d 0%, #1f0a0d 40%, #6e1b27 50%, #1f0a0d 60%, #1f0a0d 100%)"  # 緋紅血光束
-] * 6 # 陣列擴充至 30 種，絕對足夠所有表格與圖表使用
+] * 6 
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
@@ -638,12 +652,12 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
-            # 🚀 套用同款高亮度賽博紫光束
-            render_styled_dataframe(
+            # 🌈 頂部明細：七彩霓虹邊框流光
+            render_neon_border_dataframe(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
-                "linear-gradient(135deg, #667eea 0%, #667eea 40%, #9b59b6 50%, #667eea 60%, #667eea 100%)",
-                "0 8px 20px rgba(118, 75, 162, 0.5)"
+                "#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f",
+                "rgba(0, 223, 216, 0.45)"
             )
 
     st.divider()
@@ -660,12 +674,12 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
-            # 🚀 套用同款高亮度科技藍光束
-            render_styled_dataframe(
+            # ⚡ 左下報表：科技極光藍邊框流光
+            render_neon_border_dataframe(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
                 "df_history", 
-                "linear-gradient(135deg, #3498db 0%, #3498db 40%, #2980b9 50%, #3498db 60%, #3498db 100%)",
-                "0 8px 20px rgba(52, 152, 219, 0.5)"
+                "#00f2fe, #4facfe, #000b18, #00f2fe",
+                "rgba(79, 172, 254, 0.45)"
             )
         else:
             st.info("目前暫無歷史紀錄。")
@@ -677,8 +691,8 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            # 🚀 套用同款高亮度琥珀金光束
-            render_styled_dataframe(
+            # 🔥 右下流水：烈焰琥珀金邊框流光
+            render_neon_border_dataframe(
                 lambda: st.dataframe(
                     styled_bank, 
                     use_container_width=True, 
@@ -686,8 +700,8 @@ with tab1:
                     column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
                 ),
                 "df_bank", 
-                "linear-gradient(135deg, #FF8008 0%, #FF8008 40%, #FFC837 50%, #FF8008 60%, #FF8008 100%)",
-                "0 8px 20px rgba(200, 128, 8, 0.4)"
+                "#ff8008, #ffc837, #1f0800, #ff8008",
+                "rgba(255, 128, 8, 0.45)"
             )
         else:
             st.info("尚無銀行紀錄。")
@@ -1096,7 +1110,6 @@ with tab3:
     )
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    # 加入 theme=None 阻擋 Streamlit 介入字體顏色
     st.plotly_chart(fig_future, use_container_width=True, theme=None)
 
     st.divider()
