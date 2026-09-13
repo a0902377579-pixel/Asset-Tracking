@@ -24,11 +24,11 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🔥 終極無縫流光引擎：改為水平平移並避開死角，利用 135deg 漸層特性創造斜向掃描，徹底消除邊界斷層！ */
+    /* 🔥 終極無縫流光引擎：將軌跡限制在 15%~85% 之間，讓邊界永遠落在容器外，徹底消除左右邊緣斷層！ */
     @keyframes sweep-light { 
-        0% { background-position: 0% 50%; } 
-        50% { background-position: 100% 50%; } 
-        100% { background-position: 0% 50%; } 
+        0% { background-position: 15% 50%; } 
+        50% { background-position: 85% 50%; } 
+        100% { background-position: 15% 50%; } 
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -478,7 +478,7 @@ with st.sidebar:
         is_locked = st.session_state.bank_confirm
 
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        rec_type = st.selectbox("異智類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         
         is_zero = (amount == 0)
