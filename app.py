@@ -24,16 +24,10 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 核心動態光波引擎 (水平掃描) */
+    /* 核心動態光束引擎 (全域共用，創造斜向掃過的光束流動感) */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
-    }
-    
-    /* 🔥 全新：真・45度角對角線斜向掃描引擎 (專門給圖表使用) */
-    @keyframes sweep-45-chart {
-        0% { background-position: 0% 0%; }
-        100% { background-position: 200% 200%; }
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -141,9 +135,9 @@ st.markdown("""
        魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
        ========================================= */
     div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
-        background: linear-gradient(45deg, #0a1128 0%, #1c5276 50%, #0a1128 100%) !important;
-        background-size: 300% 300% !important;
-        animation: sweep-45-chart 5s linear infinite !important;
+        background: linear-gradient(120deg, #0a1128 25%, #1c5276 50%, #0a1128 75%) !important;
+        background-size: 200% auto !important;
+        animation: sweep-light 4s linear infinite !important;
         border-radius: 12px !important;
         padding: 25px !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
@@ -254,7 +248,6 @@ C_LBL = "#FFD700"
 C_VAL = "#00E5FF"  
 C_PCT = "#00E676"  
 
-# 🔥 補回這個關鍵函式！加入基準虛線用
 def add_zero_baseline(fig):
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
     return fig
@@ -265,7 +258,8 @@ def style_fig(fig, title):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        margin=dict(l=60, r=20, t=85, b=90),  # 左側邊距與底部邊距放大，防止文字被切斷
+        # ★ 左側邊距放大到 110，保證最左側的文字不會被切掉
+        margin=dict(l=110, r=20, t=85, b=90),  
         hovermode="x unified",
         xaxis=dict(
             showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
@@ -276,24 +270,24 @@ def style_fig(fig, title):
     )
     return fig
 
-# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器 (已修復遮擋並套用 45 度掃描引擎)
+# 🔥 專為第 2 頁設計的「獨立高階動態框」渲染器 (已修復遮擋並全面套用 sweep-light 流動引擎)
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=60, r=20, t=70, b=90) 
+        margin=dict(l=110, r=20, t=70, b=90) # 左側邊距與底部邊距同步放大
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
-            background-size: 300% 300% !important; /* 確保動態流動所需空間 */
-            animation: sweep-45-chart 5s linear infinite !important; /* 🔥 啟動真・45度角動態掃描 */
+            background-size: 200% auto !important; /* 啟動 sweep-light 動態光束的必要參數 */
+            animation: sweep-light 5s linear infinite !important; /* 與卡片共用同一個流動感，時間稍慢顯得優雅 */
             border-radius: 12px !important;
             padding: 20px 20px 20px 20px !important;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
         }}
@@ -301,29 +295,30 @@ def render_styled_chart(fig, chart_id, bg_gradient):
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種獨一無二的高階深色漸層背景 (統一為 45deg 對角線且具備 A->B->A 循環)
+# 🔥 21 種獨一無二的高階深色漸層背景
+# 已全部改寫為 120deg 與 25% 50% 75% 的三段式結構，保證每一張圖表都能產生流暢的光束掃描效果！
 chart_gradients = [
-    "linear-gradient(45deg, #141e30 0%, #243b55 50%, #141e30 100%)", # 1 深海藍
-    "linear-gradient(45deg, #0f2027 0%, #2c5364 50%, #0f2027 100%)", # 2 幽黑綠
-    "linear-gradient(45deg, #0f0c29 0%, #24243e 50%, #0f0c29 100%)", # 3 賽博紫
-    "linear-gradient(45deg, #2b5876 0%, #4e4376 50%, #2b5876 100%)", # 4 星雲藍
-    "linear-gradient(45deg, #16222A 0%, #3A6073 50%, #16222A 100%)", # 5 迷霧灰
-    "linear-gradient(45deg, #232526 0%, #414345 50%, #232526 100%)", # 6 碳纖黑
-    "linear-gradient(45deg, #1A2980 0%, #135A59 50%, #1A2980 100%)", # 7 皇室青
-    "linear-gradient(45deg, #4B1248 0%, #8E4C33 50%, #4B1248 100%)", # 8 暗夜銅
-    "linear-gradient(45deg, #114357 0%, #844c66 50%, #114357 100%)", # 9 晚霞紫
-    "linear-gradient(45deg, #1d1f20 0%, #2c3e50 50%, #1d1f20 100%)", # 10 曜石板
-    "linear-gradient(45deg, #13151a 0%, #2c3e50 50%, #13151a 100%)", # 11 午夜黑
-    "linear-gradient(45deg, #00467F 0%, #426B3D 50%, #00467F 100%)", # 12 森林藍
-    "linear-gradient(45deg, #1D2B64 0%, #734657 50%, #1D2B64 100%)", # 13 絳紫靛
-    "linear-gradient(45deg, #191654 0%, #217361 50%, #191654 100%)", # 14 翡翠黑
-    "linear-gradient(45deg, #314755 0%, #195878 50%, #314755 100%)", # 15 沉靜洋
-    "linear-gradient(45deg, #3A5573 0%, #3B6A69 50%, #3A5573 100%)", # 16 海藻丹
-    "linear-gradient(45deg, #4B0000 0%, #42271D 50%, #4B0000 100%)", # 17 鐵鏽紅
-    "linear-gradient(45deg, #0A5E4E 0%, #826E21 50%, #0A5E4E 100%)", # 18 琥珀綠
-    "linear-gradient(45deg, #1A471C 0%, #42461A 50%, #1A471C 100%)", # 19 墨光苔
-    "linear-gradient(45deg, #26555C 0%, #3F4B4D 50%, #26555C 100%)", # 20 鐵鈦灰
-    "linear-gradient(45deg, #4A0213 0%, #4A3029 50%, #4A0213 100%)"  # 21 酒桶木
+    "linear-gradient(120deg, #141e30 25%, #243b55 50%, #141e30 75%)", # 1 深海藍
+    "linear-gradient(120deg, #0f2027 25%, #2c5364 50%, #0f2027 75%)", # 2 幽黑綠
+    "linear-gradient(120deg, #0f0c29 25%, #24243e 50%, #0f0c29 75%)", # 3 賽博紫
+    "linear-gradient(120deg, #2b5876 25%, #4e4376 50%, #2b5876 75%)", # 4 星雲藍
+    "linear-gradient(120deg, #16222A 25%, #3A6073 50%, #16222A 75%)", # 5 迷霧灰
+    "linear-gradient(120deg, #232526 25%, #414345 50%, #232526 75%)", # 6 碳纖黑
+    "linear-gradient(120deg, #1A2980 25%, #135A59 50%, #1A2980 75%)", # 7 皇室青
+    "linear-gradient(120deg, #4B1248 25%, #8E4C33 50%, #4B1248 75%)", # 8 暗夜銅
+    "linear-gradient(120deg, #114357 25%, #844c66 50%, #114357 75%)", # 9 晚霞紫
+    "linear-gradient(120deg, #1d1f20 25%, #2c3e50 50%, #1d1f20 75%)", # 10 曜石板
+    "linear-gradient(120deg, #13151a 25%, #2c3e50 50%, #13151a 75%)", # 11 午夜黑
+    "linear-gradient(120deg, #00467F 25%, #426B3D 50%, #00467F 75%)", # 12 森林藍
+    "linear-gradient(120deg, #1D2B64 25%, #734657 50%, #1D2B64 75%)", # 13 絳紫靛
+    "linear-gradient(120deg, #191654 25%, #217361 50%, #191654 75%)", # 14 翡翠黑
+    "linear-gradient(120deg, #314755 25%, #195878 50%, #314755 75%)", # 15 沉靜洋
+    "linear-gradient(120deg, #3A5573 25%, #3B6A69 50%, #3A5573 75%)", # 16 海藻丹
+    "linear-gradient(120deg, #4B0000 25%, #42271D 50%, #4B0000 75%)", # 17 鐵鏽紅
+    "linear-gradient(120deg, #0A5E4E 25%, #826E21 50%, #0A5E4E 75%)", # 18 琥珀綠
+    "linear-gradient(120deg, #1A471C 25%, #42461A 50%, #1A471C 75%)", # 19 墨光苔
+    "linear-gradient(120deg, #26555C 25%, #3F4B4D 50%, #26555C 75%)", # 20 鐵鈦灰
+    "linear-gradient(120deg, #4A0213 25%, #4A3029 50%, #4A0213 75%)"  # 21 酒桶木
 ]
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
@@ -657,7 +652,7 @@ with tab1:
             st.info("尚無銀行紀錄。")
 
 # ------------------------------------------
-# 分頁 2：🌌 終極數據戰情室 (21 張圖表，皆有獨家高階漸層背景)
+# 分頁 2：🌌 終極數據戰情室 (21 張圖表)
 # ------------------------------------------
 with tab2:
     if df_h is not None:
@@ -949,7 +944,7 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     
     full_html = (
-        f'<div style="background: linear-gradient(45deg, #0a1128 0%, #1c5276 50%, #0a1128 100%); background-size: 300% 300%; animation: sweep-45-chart 5s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%;">'
+        f'<div style="background: linear-gradient(120deg, #0a1128 25%, #1c5276 50%, #0a1128 75%); background-size: 200% auto; animation: sweep-light 4s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
@@ -1051,7 +1046,7 @@ with tab3:
         font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=60, r=20, t=70, b=90),
+        margin=dict(l=110, r=20, t=70, b=90),
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
