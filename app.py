@@ -24,10 +24,11 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🔥 終極無縫流光引擎：從 100% 100% 退回 0% 0%，創造完美的「左上 ↘ 右下」單向無限掃描！ */
+    /* 🔥 終極無縫流光引擎：改為平滑來回掃描，徹底消除週期結束時的頓挫感！ */
     @keyframes sweep-light { 
         0% { background-position: 100% 100%; } 
-        100% { background-position: 0% 0%; } 
+        50% { background-position: 0% 0%; } 
+        100% { background-position: 100% 100%; } 
     }
 
     /* --- 頂部 Tab 樣式 --- */
@@ -114,7 +115,7 @@ st.markdown("""
         background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; 
         background-size: 300% 300% !important;
         background-repeat: no-repeat !important;
-        animation: sweep-light 4s linear infinite !important;
+        animation: sweep-light 4s ease-in-out infinite !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; 
         border: 1px solid rgba(255,255,255,0.1) !important;
     }
@@ -139,7 +140,7 @@ st.markdown("""
         background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important;
         background-size: 300% 300% !important;
         background-repeat: no-repeat !important;
-        animation: sweep-light 5s linear infinite !important;
+        animation: sweep-light 5s ease-in-out infinite !important;
         border-radius: 12px !important;
         padding: 25px !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
@@ -280,7 +281,7 @@ def style_fig(fig, title, height=500):
 
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
-        font=dict(color="#ffffff", size=14),
+        # 移除字體顏色硬綁定，讓系統自動判斷深淺色
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60) 
@@ -292,7 +293,7 @@ def render_styled_chart(fig, chart_id, bg_gradient):
             background: {bg_gradient} !important;
             background-size: 300% 300% !important; 
             background-repeat: no-repeat !important; /* 確保不出現拼貼縫隙 */
-            animation: sweep-light 5s linear infinite !important; /* 共用左上到右下引擎 */
+            animation: sweep-light 6s ease-in-out infinite !important; /* 共用平滑折返引擎 */
             border-radius: 12px !important;
             padding: 20px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
@@ -303,7 +304,8 @@ def render_styled_chart(fig, chart_id, bg_gradient):
         }}
     </style>
     ''', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True, theme=None)
+    # 移除 theme=None，讓 Streamlit 根據淺/深色模式自動切換黑白字體
+    st.plotly_chart(fig, use_container_width=True)
 
 # 🔥 21 種高階漸層，完美 135deg (左上至右下) 與 0% 40% 50% 60% 100% 配方
 chart_gradients = [
@@ -343,7 +345,7 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         else: bg, glow_shadow, text_c = "linear-gradient(135deg, #1e2128 0%, #1e2128 40%, #3a4a5a 50%, #1e2128 60%, #1e2128 100%)", "none", "#ffffff"
             
     return f"""
-    <div style="background: {bg}; background-size: 300% 300%; background-repeat: no-repeat; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
+    <div style="background: {bg}; background-size: 300% 300%; background-repeat: no-repeat; animation: sweep-light 4s ease-in-out infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
         <p style="margin: 5px 0 0 0; font-size: clamp(1.4rem, 2vw, 2.3rem); font-weight: 900; color: {text_c}; text-shadow: 0 0 15px {text_c}50; line-height: 1.2; word-wrap: break-word; position: relative; z-index: 1;">{value_str}</p>
         <div style="position: absolute; right: -15px; bottom: -25px; font-size: 6.5rem; opacity: 0.15; z-index: 0; transform: rotate(-15deg); pointer-events: none;">{icon}</div>
@@ -953,7 +955,7 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     
     full_html = (
-        f'<div style="background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%); background-size: 300% 300%; background-repeat: no-repeat; animation: sweep-light 5s linear infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%; box-sizing: border-box; overflow: hidden;">'
+        f'<div style="background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%); background-size: 300% 300%; background-repeat: no-repeat; animation: sweep-light 5s ease-in-out infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%; box-sizing: border-box; overflow: hidden;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
@@ -1052,19 +1054,20 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_layout(
-        font=dict(color="#ffffff", size=16),
+        # 移除 font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60),
         legend=dict(
             groupclick="toggleitem",
-            font=dict(color="#ffffff"),
-            grouptitlefont=dict(color="#ffffff", size=18)
+            # 移除圖例的白色字體限制，只保留大小
+            grouptitlefont=dict(size=18)
         )
     )
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    st.plotly_chart(fig_future, use_container_width=True, theme=None)
+    # 移除 theme=None
+    st.plotly_chart(fig_future, use_container_width=True)
 
     st.divider()
 
@@ -1086,4 +1089,3 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
-
