@@ -286,6 +286,28 @@ def style_fig(fig, title, height=500):
     )
     return fig
 
+# 🔥 讓 DataFrame 也擁有與圖表一樣的動態光束背景！
+def render_styled_dataframe(df_render_func, df_id, bg_gradient):
+    st.markdown(f'''
+    <div id="{df_id}"></div>
+    <style>
+        div[data-testid="stElementContainer"]:has(#{df_id}) + div[data-testid="stElementContainer"] {{
+            background: {bg_gradient} !important;
+            background-size: 400% 400% !important; 
+            background-repeat: no-repeat !important;
+            animation: sweep-light 6s ease-in-out infinite !important; 
+            border-radius: 12px !important;
+            padding: 20px !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            margin-bottom: 25px !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important; 
+        }}
+    </style>
+    ''', unsafe_allow_html=True)
+    df_render_func()
+
 def render_styled_chart(fig, chart_id, bg_gradient):
     fig.update_layout(
         font=dict(color="#ffffff", size=14), # 確保卡片內字體絕對白色
@@ -311,33 +333,16 @@ def render_styled_chart(fig, chart_id, bg_gradient):
         }}
     </style>
     ''', unsafe_allow_html=True)
-    # 加入 theme=None 阻擋 Streamlit 介入字體顏色
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種高階漸層，完美 135deg
+# 🔥 5 種高對比度動態光束漸層 (完全比照第 1 頁卡片的強烈光束效果，循環供應給所有圖表和表格)
 chart_gradients = [
-    "linear-gradient(135deg, #141e30 0%, #141e30 40%, #243b55 50%, #141e30 60%, #141e30 100%)",
-    "linear-gradient(135deg, #0f2027 0%, #0f2027 40%, #2c5364 50%, #0f2027 60%, #0f2027 100%)",
-    "linear-gradient(135deg, #0f0c29 0%, #0f0c29 40%, #24243e 50%, #0f0c29 60%, #0f0c29 100%)",
-    "linear-gradient(135deg, #2b5876 0%, #2b5876 40%, #4e4376 50%, #2b5876 60%, #2b5876 100%)",
-    "linear-gradient(135deg, #16222A 0%, #16222A 40%, #3A6073 50%, #16222A 60%, #16222A 100%)",
-    "linear-gradient(135deg, #232526 0%, #232526 40%, #414345 50%, #232526 60%, #232526 100%)",
-    "linear-gradient(135deg, #1A2980 0%, #1A2980 40%, #135A59 50%, #1A2980 60%, #1A2980 100%)",
-    "linear-gradient(135deg, #4B1248 0%, #4B1248 40%, #8E4C33 50%, #4B1248 60%, #4B1248 100%)",
-    "linear-gradient(135deg, #114357 0%, #114357 40%, #844c66 50%, #114357 60%, #114357 100%)",
-    "linear-gradient(135deg, #1d1f20 0%, #1d1f20 40%, #2c3e50 50%, #1d1f20 60%, #1d1f20 100%)",
-    "linear-gradient(135deg, #13151a 0%, #13151a 40%, #2c3e50 50%, #13151a 60%, #13151a 100%)",
-    "linear-gradient(135deg, #00467F 0%, #00467F 40%, #426B3D 50%, #00467F 60%, #00467F 100%)",
-    "linear-gradient(135deg, #1D2B64 0%, #1D2B64 40%, #734657 50%, #1D2B64 60%, #1D2B64 100%)",
-    "linear-gradient(135deg, #191654 0%, #191654 40%, #217361 50%, #191654 60%, #191654 100%)",
-    "linear-gradient(135deg, #314755 0%, #314755 40%, #195878 50%, #314755 60%, #314755 100%)",
-    "linear-gradient(135deg, #3A5573 0%, #3A5573 40%, #3B6A69 50%, #3A5573 60%, #3A5573 100%)",
-    "linear-gradient(135deg, #4B0000 0%, #4B0000 40%, #42271D 50%, #4B0000 60%, #4B0000 100%)",
-    "linear-gradient(135deg, #0A5E4E 0%, #0A5E4E 40%, #826E21 50%, #0A5E4E 60%, #0A5E4E 100%)",
-    "linear-gradient(135deg, #1A471C 0%, #1A471C 40%, #42461A 50%, #1A471C 60%, #1A471C 100%)",
-    "linear-gradient(135deg, #26555C 0%, #26555C 40%, #3F4B4D 50%, #26555C 60%, #26555C 100%)",
-    "linear-gradient(135deg, #4A0213 0%, #4A0213 40%, #4A3029 50%, #4A0213 60%, #4A0213 100%)" 
-]
+    "linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%)", # 科技藍光束
+    "linear-gradient(135deg, #1a1025 0%, #1a1025 40%, #4a2b75 50%, #1a1025 60%, #1a1025 100%)", # 賽博紫光束
+    "linear-gradient(135deg, #071a14 0%, #071a14 40%, #165c47 50%, #071a14 60%, #071a14 100%)", # 翡翠綠光束
+    "linear-gradient(135deg, #261505 0%, #261505 40%, #75480f 50%, #261505 60%, #261505 100%)", # 琥珀金光束
+    "linear-gradient(135deg, #1f0a0d 0%, #1f0a0d 40%, #6e1b27 50%, #1f0a0d 60%, #1f0a0d 100%)"  # 緋紅血光束
+] * 6 # 陣列擴充至 30 種，絕對足夠所有表格與圖表使用
 
 def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=False, num_val=None):
     if is_profit and num_val is not None:
@@ -632,7 +637,11 @@ with tab1:
             styled_df = df_display.style.apply(style_portfolio_row, axis=1) \
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
-            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            
+            render_styled_dataframe(
+                lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
+                "df_portfolio", chart_gradients[0]
+            )
 
     st.divider()
     
@@ -647,7 +656,11 @@ with tab1:
             
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
-            st.dataframe(styled_hist, use_container_width=True, hide_index=True)
+            
+            render_styled_dataframe(
+                lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
+                "df_history", chart_gradients[1]
+            )
         else:
             st.info("目前暫無歷史紀錄。")
             
@@ -658,13 +671,14 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            st.dataframe(
-                styled_bank, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "類型": st.column_config.TextColumn("類型", alignment="right")
-                }
+            render_styled_dataframe(
+                lambda: st.dataframe(
+                    styled_bank, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
+                ),
+                "df_bank", chart_gradients[2]
             )
         else:
             st.info("尚無銀行紀錄。")
