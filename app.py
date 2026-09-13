@@ -24,7 +24,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     
-    /* 🔥 全域核心動態光波引擎 (恢復純粹單向水平掃描，絕不折返) */
+    /* 核心動態光波引擎 (純水平單向掃描) */
     @keyframes sweep-light { 
         0% { background-position: 200% 0; } 
         100% { background-position: -200% 0; } 
@@ -113,7 +113,7 @@ st.markdown("""
     div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
         background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%) !important; 
         background-size: 200% auto !important;
-        animation: sweep-light 4s linear infinite !important; /* linear 保證單向不折返 */
+        animation: sweep-light 4s linear infinite !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; 
         border: 1px solid rgba(255,255,255,0.1) !important;
     }
@@ -132,18 +132,20 @@ st.markdown("""
     }
 
     /* =========================================
-       魔法：強制把第3頁 Plotly 圖表包成動態光波大框框
+       魔法：強制把第3頁 Plotly 圖表包成動態光波大框框 (解決水平捲軸問題)
        ========================================= */
     div[data-testid="stElementContainer"]:has(#future-chart-bg) + div[data-testid="stElementContainer"] {
         background: linear-gradient(120deg, #0a1128 0%, #1c5276 50%, #0a1128 100%) !important;
         background-size: 200% auto !important;
-        animation: sweep-light 5s linear infinite !important; /* linear 保證單向不折返 */
+        animation: sweep-light 5s linear infinite !important;
         border-radius: 12px !important;
-        padding: 25px !important;
+        padding: 20px !important;
         box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important;
         border: 1px solid rgba(255,255,255,0.05) !important;
         margin-top: 15px !important;
         margin-bottom: 30px !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important; /* 絕對防止水平捲軸出現 */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -259,7 +261,8 @@ def style_fig(fig, title, height=450):
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
         hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        margin=dict(l=40, r=40, t=85, b=60),  
+        # ★ 極小化邊距，完全仰賴 automargin 來完美置中並防止被切！
+        margin=dict(l=10, r=10, t=80, b=20),  
         hovermode="x unified",
         xaxis=dict(
             automargin=True,
@@ -279,31 +282,28 @@ def render_styled_chart(fig, chart_id, bg_gradient):
         font=dict(color="#ffffff", size=14),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=40, t=70, b=60) 
+        margin=dict(l=10, r=10, t=70, b=20) # 配合 automargin
     )
     st.markdown(f'''
     <div id="{chart_id}"></div>
     <style>
-        /* 🔥 確保圖表也是單向水平掃描，絕不折返 */
-        @keyframes sweep-horizontal-{chart_id} {{
-            0% {{ background-position: 200% 0; }}
-            100% {{ background-position: -200% 0; }}
-        }}
         div[data-testid="stElementContainer"]:has(#{chart_id}) + div[data-testid="stElementContainer"] {{
             background: {bg_gradient} !important;
             background-size: 200% auto !important; 
-            animation: sweep-horizontal-{chart_id} 6s linear infinite !important; /* linear 保證單向不折返 */
+            animation: sweep-light 5s linear infinite !important; /* 共用純粹水平光束動畫 */
             border-radius: 12px !important;
-            padding: 20px !important;
+            padding: 15px !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.4) !important;
             border: 1px solid rgba(255,255,255,0.08) !important;
             margin-bottom: 25px !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important; /* 絕對防止水平捲軸出現 */
         }}
     </style>
     ''', unsafe_allow_html=True)
     st.plotly_chart(fig, use_container_width=True, theme=None)
 
-# 🔥 21 種高階漸層，完美三段色 (消除靜止死角)，配合 linear 單向水平動畫
+# 🔥 21 種高階漸層，完美 0% 50% 100% 結構保證不卡頓
 chart_gradients = [
     "linear-gradient(120deg, #141e30 0%, #243b55 50%, #141e30 100%)", # 1 深海藍
     "linear-gradient(120deg, #0f2027 0%, #2c5364 50%, #0f2027 100%)", # 2 幽黑綠
@@ -340,7 +340,6 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
         elif theme == "gold": bg, glow_shadow, text_c = "linear-gradient(120deg, #FF8008 0%, #FFC837 50%, #FF8008 100%)", "0 8px 20px rgba(200, 128, 8, 0.4)", "#ffffff"
         else: bg, glow_shadow, text_c = "linear-gradient(120deg, #1e2128 0%, #3a4a5a 50%, #1e2128 100%)", "none", "#ffffff"
             
-    # linear infinite 保證單向無縫滑動，不再折返
     return f"""
     <div style="background: {bg}; background-size: 200% auto; animation: sweep-light 4s linear infinite; border-radius: 12px; padding: 15px; box-shadow: {glow_shadow}; border: 1px solid rgba(255,255,255,0.05); min-height: 120px; height: 100%; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; margin-bottom: 15px;">
         <p style="margin: 0; font-size: 1.1rem; color: #d1d5db; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); position: relative; z-index: 1;">{title}</p>
@@ -607,7 +606,7 @@ with tab1:
         d = dashboard_data
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.markdown(create_colorful_card("總市值", f"NT$ {d['total_assets']:,.0f}", "💎", "purple"), unsafe_allow_html=True)
-        # ★ 總投入成本 改套用 purple，使其與總市值擁有相同的流動光波特效
+        # ★ 已經將總投入成本的 theme 改為與總市值一樣的 purple
         c2.markdown(create_colorful_card("總投入成本", f"NT$ {d['total_cost']:,.0f}", "📥", "purple"), unsafe_allow_html=True)
         c3.markdown(create_colorful_card("銀行活存餘額", f"NT$ {bank_balance:,.0f}", "🏦", "gold"), unsafe_allow_html=True)
         c4.markdown(create_colorful_card("帳面總損益", f"{d['total_profit']:+,.0f}", "🔥", is_profit=True, num_val=d['total_profit']), unsafe_allow_html=True)
@@ -1055,7 +1054,7 @@ with tab3:
         font=dict(color="#ffffff", size=16),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=130, r=30, t=70, b=120),
+        margin=dict(l=40, r=40, t=70, b=60),
         legend=dict(
             groupclick="toggleitem",
             font=dict(color="#ffffff"),
@@ -1078,7 +1077,7 @@ with tab3:
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
     with c3_1:
-        # ★ 左側卡片換回 blue，使其擁有紫色系背景與水平流動光束
+        # ★ 左側卡片換回 blue (這版 blue 的參數已經被我完全改寫，保證與 purple 有一模一樣的流動光束感！)
         st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "blue"), unsafe_allow_html=True)
         diff_pct = ((market_price_0050 - avg_cost_0050) / avg_cost_0050 * 100) if avg_cost_0050 > 0 else 0
         color = "#ff4b4b" if diff_pct > 0 else "#09ab3b"
