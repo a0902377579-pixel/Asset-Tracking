@@ -258,7 +258,7 @@ def add_zero_baseline(fig):
 def style_fig(fig, title, height=500):
     fig.update_layout(
         height=height,
-        font=dict(color="#ffffff"), # 👑 圖表背景固定為深色，所以字體強制鎖定白色
+        font=dict(color="#ffffff"), 
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)",
@@ -280,7 +280,7 @@ def style_fig(fig, title, height=500):
 
 # 🌈 核心黑科技：純遮罩技術邊框流光 (背景控制參數：圖表使用深色，表格使用透明色)
 def render_neon_container(render_func, element_id, conic_colors, glow_color, padding="15px", bg_color="#0f1117"):
-    bg_style = f"background: {bg_color} !important;" if bg_color else ""
+    bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
     st.markdown(f'''
     <div id="{element_id}"></div>
     <style>
@@ -298,18 +298,48 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
             position: absolute;
             inset: 0;
             border-radius: 14px;
-            padding: 4px; /* 發光邊框厚度 */
+            padding: 4px; 
             background: conic-gradient(from var(--border-angle), {conic_colors});
-            /* 使用 CSS Mask 把內部挖空，只保留外圍 4px 的光束邊緣！ */
             -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
             animation: spin-border 3.5s linear infinite;
-            pointer-events: none; /* 確保滑鼠可以點擊裡面的圖表與表格 */
+            pointer-events: none; 
         }}
     </style>
     ''', unsafe_allow_html=True)
     render_func()
+
+# 🎯 專屬提供給表單區塊 (Sidebar / Container) 套用無縫光束外框的組件
+def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="15px", bg_color="transparent"):
+    bg_style = f"background: {bg_color} !important;" if bg_color != "transparent" else ""
+    st.markdown(f'''
+    <div id="{element_id}"></div>
+    <style>
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{
+            position: relative !important;
+            border-radius: 14px !important;
+            padding: {padding} !important;
+            box-shadow: 0 0 20px {glow_color} !important;
+            margin-top: 10px !important;
+            margin-bottom: 20px !important;
+            {bg_style}
+        }}
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 4px; 
+            background: conic-gradient(from var(--border-angle), {conic_colors});
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: spin-border 3.5s linear infinite;
+            pointer-events: none;
+        }}
+    </style>
+    ''', unsafe_allow_html=True)
 
 # 🔥 21 種獨一無二的炫彩旋轉邊框配方！
 neon_styles = [
@@ -476,127 +506,133 @@ with st.sidebar:
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
     with tab_bank:
-        st.markdown("### 新增銀行金流")
-        
-        if "bank_confirm" not in st.session_state:
-            st.session_state.bank_confirm = False
+        # 🚀 側邊欄金流表單套用動態琥珀金邊框
+        apply_neon_to_next_container("sidebar_bank_neon", neon_styles[2][0], neon_styles[2][1], padding="15px", bg_color="transparent")
+        with st.container():
+            st.markdown("### 新增銀行金流")
+            
+            if "bank_confirm" not in st.session_state:
+                st.session_state.bank_confirm = False
 
-        is_locked = st.session_state.bank_confirm
+            is_locked = st.session_state.bank_confirm
 
-        rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
-        amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
-        
-        is_zero = (amount == 0)
-        
-        action_container = st.empty()
+            rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
+            rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
+            amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
+            
+            is_zero = (amount == 0)
+            
+            action_container = st.empty()
 
-        if not st.session_state.bank_confirm:
-            if action_container.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
-                st.session_state.bank_confirm = True
-                st.rerun()
-        else:
-            action_container.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
-            c_yes, c_no = action_container.columns(2)
-            with c_yes:
-                if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
-                    try:
-                        fmt_date = rec_date.strftime('%Y/%m/%d')
-                        final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
-                            
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
-                        
-                        load_bank_data.clear()
-                        load_sheet_data.clear()
-                        load_stock_transactions.clear()
-                        st.session_state.bank_confirm = False
-                        st.success("紀錄成功寫入！")
-                        st.rerun()
-                    except Exception as e: 
-                        st.error(f"寫入失敗: {e}")
-            with c_no:
-                if st.button("❌ 取消", use_container_width=True, key="bank_no"):
-                    st.session_state.bank_confirm = False
+            if not st.session_state.bank_confirm:
+                if action_container.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
+                    st.session_state.bank_confirm = True
                     st.rerun()
+            else:
+                action_container.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
+                c_yes, c_no = action_container.columns(2)
+                with c_yes:
+                    if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
+                        try:
+                            fmt_date = rec_date.strftime('%Y/%m/%d')
+                            final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
+                                
+                            sh = get_gspread_client().open(SPREADSHEET_NAME)
+                            sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
+                            
+                            load_bank_data.clear()
+                            load_sheet_data.clear()
+                            load_stock_transactions.clear()
+                            st.session_state.bank_confirm = False
+                            st.success("紀錄成功寫入！")
+                            st.rerun()
+                        except Exception as e: 
+                            st.error(f"寫入失敗: {e}")
+                with c_no:
+                    if st.button("❌ 取消", use_container_width=True, key="bank_no"):
+                        st.session_state.bank_confirm = False
+                        st.rerun()
                 
     with tab_stock:
-        st.markdown("### 新增股票交易")
-        
-        if "stock_confirm" not in st.session_state:
-            st.session_state.stock_confirm = False
-
-        is_stock_locked = st.session_state.stock_confirm
-
-        selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change, disabled=is_stock_locked)
-        
-        if selected_stock == "其他 (手動輸入新股)":
-            st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee, disabled=is_stock_locked)
+        # 🚀 側邊欄股票表單套用動態冰流藍邊框
+        apply_neon_to_next_container("sidebar_stock_neon", neon_styles[1][0], neon_styles[1][1], padding="15px", bg_color="transparent")
+        with st.container():
+            st.markdown("### 新增股票交易")
             
-        s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today(), disabled=is_stock_locked)
-        
-        st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee, disabled=is_stock_locked)
-        st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee, disabled=is_stock_locked)
-        st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee", disabled=is_stock_locked)
-        
-        current_shares = st.session_state.s_shares
-        current_price = st.session_state.s_price
-        current_fee = st.session_state.s_fee
-        
-        st.markdown("""
-        <style>
-            .est-box { padding: 12px 15px; border-radius: 8px; font-weight: 900; white-space: nowrap; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-            .est-blue { background-color: #74b9ff !important; border-left: 6px solid #0984e3 !important; color: #0c2461 !important; }
-            .est-green { background-color: #55efc4 !important; border-left: 6px solid #00b894 !important; color: #004d40 !important; }
-            .est-gray { background-color: #dfe6e9 !important; border-left: 6px solid #636e72 !important; color: #2d3436 !important; }
-            .est-blue *, .est-green *, .est-gray * { color: inherit !important; }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        if current_shares > 0:
-            est_total = round((current_shares * current_price) + current_fee)
-            st.markdown(f'<div class="est-box est-blue">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
-        elif current_shares < 0:
-            est_total = round(abs(current_shares * current_price) - current_fee)
-            st.markdown(f'<div class="est-box est-green">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
-        
-        name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
-        is_stock_zero = (current_shares == 0 or not name_check.strip())
-        
-        stock_action_container = st.empty()
+            if "stock_confirm" not in st.session_state:
+                st.session_state.stock_confirm = False
 
-        if not st.session_state.stock_confirm:
-            if stock_action_container.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
-                st.session_state.stock_confirm = True
-                st.rerun()
+            is_stock_locked = st.session_state.stock_confirm
 
-        if st.session_state.stock_confirm:
-            total_amt_check = round((current_shares * current_price) + st.session_state.s_fee)
+            selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change, disabled=is_stock_locked)
             
-            stock_action_container.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
-            sc_yes, sc_no = stock_action_container.columns(2)
-            with sc_yes:
-                if st.button("✅ 確認寫入股票", use_container_width=True, key="stock_yes"):
-                    try:
-                        s_date_fmt = s_date.strftime('%Y/%m/%d')
-                        total_amt = round((current_shares * current_price) + st.session_state.s_fee)
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name_check, current_shares, current_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
-                        
-                        load_sheet_data.clear()
-                        load_bank_data.clear()
-                        load_stock_transactions.clear()
-                        st.session_state.stock_confirm = False
-                        st.success("股票紀錄成功寫入！")
-                        st.rerun()
-                    except Exception as e: 
-                        st.error(f"寫入失敗: {e}")
-            with sc_no:
-                if st.button("❌ 取消寫入", use_container_width=True, key="stock_no"):
-                    st.session_state.stock_confirm = False
+            if selected_stock == "其他 (手動輸入新股)":
+                st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee, disabled=is_stock_locked)
+                
+            s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today(), disabled=is_stock_locked)
+            
+            st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee, disabled=is_stock_locked)
+            st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee, disabled=is_stock_locked)
+            st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee", disabled=is_stock_locked)
+            
+            current_shares = st.session_state.s_shares
+            current_price = st.session_state.s_price
+            current_fee = st.session_state.s_fee
+            
+            st.markdown("""
+            <style>
+                .est-box { padding: 12px 15px; border-radius: 8px; font-weight: 900; white-space: nowrap; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+                .est-blue { background-color: #74b9ff !important; border-left: 6px solid #0984e3 !important; color: #0c2461 !important; }
+                .est-green { background-color: #55efc4 !important; border-left: 6px solid #00b894 !important; color: #004d40 !important; }
+                .est-gray { background-color: #dfe6e9 !important; border-left: 6px solid #636e72 !important; color: #2d3436 !important; }
+                .est-blue *, .est-green *, .est-gray * { color: inherit !important; }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            if current_shares > 0:
+                est_total = round((current_shares * current_price) + current_fee)
+                st.markdown(f'<div class="est-box est-blue">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            elif current_shares < 0:
+                est_total = round(abs(current_shares * current_price) - current_fee)
+                st.markdown(f'<div class="est-box est-green">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
+            
+            name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
+            is_stock_zero = (current_shares == 0 or not name_check.strip())
+            
+            stock_action_container = st.empty()
+
+            if not st.session_state.stock_confirm:
+                if stock_action_container.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
+                    st.session_state.stock_confirm = True
                     st.rerun()
+
+            if st.session_state.stock_confirm:
+                total_amt_check = round((current_shares * current_price) + st.session_state.s_fee)
+                
+                stock_action_container.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
+                sc_yes, sc_no = stock_action_container.columns(2)
+                with sc_yes:
+                    if st.button("✅ 確認寫入股票", use_container_width=True, key="stock_yes"):
+                        try:
+                            s_date_fmt = s_date.strftime('%Y/%m/%d')
+                            total_amt = round((current_shares * current_price) + st.session_state.s_fee)
+                            sh = get_gspread_client().open(SPREADSHEET_NAME)
+                            sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name_check, current_shares, current_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                            
+                            load_sheet_data.clear()
+                            load_bank_data.clear()
+                            load_stock_transactions.clear()
+                            st.session_state.stock_confirm = False
+                            st.success("股票紀錄成功寫入！")
+                            st.rerun()
+                        except Exception as e: 
+                            st.error(f"寫入失敗: {e}")
+                with sc_no:
+                    if st.button("❌ 取消寫入", use_container_width=True, key="stock_no"):
+                        st.session_state.stock_confirm = False
+                        st.rerun()
 
 # ==========================================
 # 主畫面開始
@@ -630,7 +666,7 @@ with tab1:
                                         .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
                                                  "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
             
-            # 🌈 第一頁大表：背景設定為透明 (transparent)，完美融合淺色/深色模式
+            # 🌈 第一頁大表：全部換上七彩霓虹旋轉光束，背景設定透明
             render_neon_container(
                 lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
                 "df_portfolio", 
@@ -651,11 +687,11 @@ with tab1:
             styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
                             .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
             
-            # 🌈 左下小表：背景同樣透明
+            # 🌈 左下小表：同樣七彩旋轉光束，背景透明
             render_neon_container(
                 lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
                 "df_history", 
-                neon_styles[7][0], neon_styles[7][1], padding="6px", bg_color="transparent" 
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent" 
             )
         else:
             st.info("目前暫無歷史紀錄。")
@@ -667,7 +703,7 @@ with tab1:
             styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
                             .format({"金額": "{:+,.0f}"})
             
-            # 🌈 右下小表：背景同樣透明
+            # 🌈 右下小表：同樣七彩旋轉光束，背景透明
             render_neon_container(
                 lambda: st.dataframe(
                     styled_bank, 
@@ -676,7 +712,7 @@ with tab1:
                     column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
                 ),
                 "df_bank", 
-                neon_styles[2][0], neon_styles[2][1], padding="6px", bg_color="transparent" 
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent" 
             )
         else:
             st.info("尚無銀行紀錄。")
@@ -974,14 +1010,19 @@ with tab3:
     blocks_str = ''.join(html_blocks)
     
     full_html = (
-        f'<div style="background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%); background-size: 400% 400%; background-repeat: no-repeat; animation: sweep-light 5s ease-in-out infinite; padding: 25px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 8px 20px rgba(28, 82, 118, 0.4); margin-bottom: 30px; width: 100%; box-sizing: border-box; overflow: hidden;">'
+        f'<div style="width: 100%; box-sizing: border-box;">'
         f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
         f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
         f'{blocks_str}'
         f'</div>'
         f'</div>'
     )
-    st.markdown(full_html, unsafe_allow_html=True)
+    
+    # 🌈 幫紀律矩陣也加上七彩旋轉光束！
+    render_neon_container(
+        lambda: st.markdown(full_html, unsafe_allow_html=True),
+        "matrix_vision", neon_styles[0][0], neon_styles[0][1], padding="25px", bg_color="#0a1128"
+    )
     
     st.divider()
 
@@ -1071,7 +1112,7 @@ with tab3:
         fig_future.update_xaxes(type='category')
         
     fig_future.update_layout(
-        font=dict(size=16, color="#ffffff"), # 👑 確保大圖也是強迫白色
+        font=dict(size=16, color="#ffffff"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=40, t=70, b=60),
@@ -1083,10 +1124,9 @@ with tab3:
     
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
     
-    # 🌈 幫願景大圖表也加上七彩旋轉光束邊框！
     render_neon_container(
         lambda: st.plotly_chart(fig_future, use_container_width=True, theme=None),
-        "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px"
+        "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px", bg_color="#0f1117"
     )
 
     st.divider()
