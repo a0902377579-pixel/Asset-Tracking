@@ -23,7 +23,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🔒 系統安全門神：並排雙通道解鎖 (自動下載 AI 模型)
+# 🔒 系統安全門神：並排雙通道解鎖 (隱藏密碼版)
 # ==========================================
 @st.cache_resource
 def load_face_models():
@@ -49,7 +49,8 @@ def load_face_models():
 
 def check_password():
     def password_entered():
-        if st.session_state.get("password_input") == "024689":
+        # 🔑 核心修改：不再寫死密碼，而是從 Streamlit 的 Secrets 保險箱讀取！
+        if st.session_state.get("password_input") == st.secrets["APP_PASSWORD"]:
             st.session_state["password_correct"] = True
             if "password_input" in st.session_state:
                 del st.session_state["password_input"]
