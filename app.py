@@ -7,6 +7,10 @@ from streamlit_autorefresh import st_autorefresh
 import gspread
 from google.oauth2.service_account import Credentials
 import datetime
+import cv2
+from PIL import Image
+import os
+import urllib.request
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -19,48 +23,108 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🔒 系統安全門神：密碼驗證機制
+# 🔒 系統安全門神：密碼 + 臉部辨識自動下載版 (YuNet + SFace)
 # ==========================================
+@st.cache_resource
+def load_face_models():
+    """快取載入 AI 模型與特徵值，若雲端無模型則自動從官方下載"""
+    yunet_path = "face_detection_yunet_2023mar.onnx"
+    sface_path = "face_recognition_sface_2021dec.onnx"
+    
+    # 🌟 核心黑科技：自動下載大檔案，繞過 GitHub 25MB 限制
+    try:
+        if not os.path.exists(yunet_path):
+            urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", yunet_path)
+            
+        if not os.path.exists(sface_path):
+            urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx", sface_path)
+
+        # 載入模型與你的臉部金鑰
+        detector = cv2.FaceDetectorYN.create(yunet_path, "", (320, 320))
+        recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
+        my_feature = np.load("my_feature.npy")
+        return detector, recognizer, my_feature
+    except Exception as e:
+        print(f"模型載入失敗: {e}")
+        return None, None, None
+
 def check_password():
-    """驗證密碼是否正確，並使用 session_state 記住登入狀態"""
     def password_entered():
         if st.session_state["password_input"] == "024689":
             st.session_state["password_correct"] = True
-            del st.session_state["password_input"]  # 驗證成功後清除輸入框的明文
+            del st.session_state["password_input"]
         else:
             st.session_state["password_correct"] = False
 
-    # 如果還沒有驗證過，顯示登入畫面
-    if "password_correct" not in st.session_state:
-        st.markdown("<h1 style='text-align: center; margin-top: 15vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #a0a5b1;'>請輸入專屬訪問密碼以解鎖終端</p>", unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            st.text_input("Password", type="password", on_change=password_entered, key="password_input", label_visibility="collapsed")
-        return False
-        
-    # 如果輸入錯誤，顯示錯誤訊息並要求重試
-    elif not st.session_state["password_correct"]:
-        st.markdown("<h1 style='text-align: center; margin-top: 15vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            st.text_input("Password", type="password", on_change=password_entered, key="password_input", label_visibility="collapsed")
-            st.error("❌ 密碼錯誤，請重新輸入。")
-        return False
-        
-    # 密碼正確，放行
-    return True
+    # 狀態 1：已登入，直接放行
+    if st.session_state.get("password_correct", False):
+        return True
 
-# 🛑 如果密碼不正確，st.stop() 會強制停止執行後面的所有程式碼 (包含資料庫讀取)
+    # 狀態 2：未登入，顯示雙通道登入畫面
+    st.markdown("<h1 style='text-align: center; margin-top: 10vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
+    
+    tab_pwd, tab_face = st.tabs(["🔑 密碼登入", "📸 臉部解鎖"])
+    
+    # --- 通道 A: 密碼登入 ---
+    with tab_pwd:
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.text_input("輸入密碼", type="password", on_change=password_entered, key="password_input", placeholder="輸入密碼後按 Enter")
+            if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+                st.error("❌ 密碼錯誤")
+                
+    # --- 通道 B: 臉部辨識登入 ---
+    with tab_face:
+        col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
+        with col_f2:
+            st.info("💡 請允許網頁存取攝影機權限，按下拍照後系統將自動比對。")
+            camera_img = st.camera_input("拍攝臉部進行解鎖", label_visibility="collapsed")
+            
+            if camera_img is not None:
+                detector, recognizer, my_feature = load_face_models()
+                
+                if detector is None:
+                    st.error("⚠️ 找不到特徵檔，請確認 my_feature.npy 檔案已上傳。")
+                else:
+                    # 將網頁拍到的照片轉成 OpenCV 格式
+                    img = Image.open(camera_img)
+                    img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                    
+                    height, width, _ = img_cv.shape
+                    detector.setInputSize((width, height))
+                    
+                    # 偵測人臉
+                    _, faces = detector.detect(img_cv)
+                    
+                    if faces is not None and len(faces) > 0:
+                        face = faces[0]
+                        # 提取當前拍攝的特徵
+                        face_align = recognizer.alignCrop(img_cv, face)
+                        current_feature = recognizer.feature(face_align)
+                        
+                        # 計算 Cosine 相似度
+                        score = recognizer.match(my_feature, current_feature, cv2.FaceRecognizerSF_FR_COSINE)
+                        
+                        # 分數越接近 1 越相似
+                        if score >= 0.55:
+                            st.success("✅ 臉部驗證成功！正在登入...")
+                            st.session_state["password_correct"] = True
+                            st.rerun()  # 刷新頁面進入主畫面
+                        else:
+                            st.error(f"❌ 辨識失敗，這不是你！(相似度: {score:.2f})")
+                    else:
+                        st.warning("⚠️ 畫面中偵測不到人臉，請確認光源並正對鏡頭。")
+                        
+    return False
+
+# 🛑 門神發揮作用：如果未通過驗證，強制停止後方所有程式碼
 if not check_password():
     st.stop()
 
-# ==========================================
-# 以下為通過驗證後的主程式碼
-# ==========================================
 
+# ==========================================
+# (🚀 從這裡開始，是通過登入驗證後才會執行的主程式)
+# ==========================================
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
 st.markdown("""
