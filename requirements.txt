@@ -8,3 +8,4 @@ google-auth
 opencv-python-headless
 numpy
 Pillow
+google-generativeai
