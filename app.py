@@ -151,7 +151,7 @@ st.markdown("""
         border-radius: 12px !important;
     }
 
-    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用落日餘暉旋轉光束 */
+    /* 🚀 側邊欄專屬 */
     section[data-testid="stSidebar"] div[data-testid="stTabs"] {
         position: relative !important;
         border-radius: 14px !important;
@@ -167,7 +167,6 @@ st.markdown("""
         inset: 0;
         border-radius: 14px;
         padding: 4px; 
-        /* 落日餘暉 (Sunset Glow) */
         background: conic-gradient(from var(--border-angle), #f12711, #FC466B, #ff8008, #f12711);
         -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
         -webkit-mask-composite: xor;
@@ -177,13 +176,14 @@ st.markdown("""
         z-index: 10;
     }
 
-    /* --- 頂部 Tab 樣式 --- */
+    /* --- 頂部 Tab 樣式 (修正了隱藏問題) --- */
     div[data-baseweb="tab-list"] { 
         display: flex !important;
         width: 100% !important;
         gap: 15px !important; 
         background-color: transparent !important;
         border-bottom: none !important;
+        flex-wrap: wrap !important; /* 確保四個分頁塞不下的時候會換行，不會直接消失 */
     }
     
     div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
@@ -192,7 +192,8 @@ st.markdown("""
     }
     
     button[data-baseweb="tab"] { 
-        flex: 1 1 0 !important;
+        flex: 1 1 auto !important; /* 改成 auto 確保它有合理的寬度 */
+        min-width: 220px !important; /* 避免按鈕被縮小到看不見 */
         background-color: #1e2128 !important; 
         border-radius: 50px !important;  
         padding: 12px 0px !important; 
@@ -221,9 +222,7 @@ st.markdown("""
     
     div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
 
-    /* =========================================
-       科技感動態切換按鈕
-       ========================================= */
+    /* 科技感動態切換按鈕 */
     div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
     }
@@ -788,8 +787,8 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-# 🔥 修改點：新增了第四個分頁 "⚡ 個人生活中樞 (Life OS)"
-tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)", "🎯 定期定額與願景", "⚡ 個人生活中樞 (Life OS)"])
+# 🔥 確保 4 個分頁一定在陣列中，且文字稍微縮減避免擠壓
+tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景", "⚡ 生活中樞 (Life OS)"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
