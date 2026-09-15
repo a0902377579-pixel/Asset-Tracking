@@ -18,6 +18,49 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ==========================================
+# 🔒 系統安全門神：密碼驗證機制
+# ==========================================
+def check_password():
+    """驗證密碼是否正確，並使用 session_state 記住登入狀態"""
+    def password_entered():
+        if st.session_state["password_input"] == "024689":
+            st.session_state["password_correct"] = True
+            del st.session_state["password_input"]  # 驗證成功後清除輸入框的明文
+        else:
+            st.session_state["password_correct"] = False
+
+    # 如果還沒有驗證過，顯示登入畫面
+    if "password_correct" not in st.session_state:
+        st.markdown("<h1 style='text-align: center; margin-top: 15vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #a0a5b1;'>請輸入專屬訪問密碼以解鎖終端</p>", unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.text_input("Password", type="password", on_change=password_entered, key="password_input", label_visibility="collapsed")
+        return False
+        
+    # 如果輸入錯誤，顯示錯誤訊息並要求重試
+    elif not st.session_state["password_correct"]:
+        st.markdown("<h1 style='text-align: center; margin-top: 15vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.text_input("Password", type="password", on_change=password_entered, key="password_input", label_visibility="collapsed")
+            st.error("❌ 密碼錯誤，請重新輸入。")
+        return False
+        
+    # 密碼正確，放行
+    return True
+
+# 🛑 如果密碼不正確，st.stop() 會強制停止執行後面的所有程式碼 (包含資料庫讀取)
+if not check_password():
+    st.stop()
+
+# ==========================================
+# 以下為通過驗證後的主程式碼
+# ==========================================
+
 st_autorefresh(interval=1200000, key="realtime_data_refresher")
 
 st.markdown("""
@@ -885,7 +928,6 @@ with tab2:
             render_neon_container(lambda: st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True, theme=None), "chart_11", neon_styles[10][0], neon_styles[10][1])
 
         with c2_12:
-            # ✅ 這裡已將 customdata 改為 custom_data (Plotly Express 語法)
             fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
