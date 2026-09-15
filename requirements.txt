@@ -5,3 +5,6 @@ plotly
 streamlit-autorefresh
 gspread
 google-auth
+opencv-python-headless
+numpy
+Pillow
