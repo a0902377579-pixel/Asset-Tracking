@@ -11,6 +11,7 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
+import requests  # 新增：用於 LINE Notify API 發送通知
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -787,7 +788,8 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)", "🎯 定期定額與願景"])
+# 🔥 修改點：新增了第四個分頁 "⚡ 個人生活中樞 (Life OS)"
+tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)", "🎯 定期定額與願景", "⚡ 個人生活中樞 (Life OS)"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -1296,3 +1298,130 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
+
+# ------------------------------------------
+# 分頁 4：⚡ 個人生活中樞 (Life OS)
+# ------------------------------------------
+with tab4:
+    st.markdown("### 🚀 捷徑與快速導航中樞")
+    st.caption("點擊按鈕即可在新分頁秒開常用網頁")
+    
+    # 捷徑網格設計 (帶有你原本的發光漸層美學)
+    shortcut_html = """
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <a href="https://github.com" target="_blank" style="text-decoration: none;">
+            <div style="background: linear-gradient(135deg, #1e2128 0%, #3a4a5a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                <span style="font-size: 2rem;">🐙</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">GitHub</span>
+            </div>
+        </a>
+        <a href="https://chatgpt.com" target="_blank" style="text-decoration: none;">
+            <div style="background: linear-gradient(135deg, #1e2128 0%, #1c5276 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(28, 82, 118, 0.3);">
+                <span style="font-size: 2rem;">🤖</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">AI 助手 (GPT/Gemini)</span>
+            </div>
+        </a>
+        <a href="https://www.youtube.com" target="_blank" style="text-decoration: none;">
+            <div style="background: linear-gradient(135deg, #1e2128 0%, #761c1c 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(118, 28, 28, 0.3);">
+                <span style="font-size: 2rem;">▶️</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">YouTube</span>
+            </div>
+        </a>
+        <a href="https://calendar.google.com" target="_blank" style="text-decoration: none;">
+            <div style="background: linear-gradient(135deg, #1e2128 0%, #74b9ff 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(116, 185, 255, 0.3);">
+                <span style="font-size: 2rem;">📅</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">Google 日曆</span>
+            </div>
+        </a>
+    </div>
+    <style>
+        a > div:hover { transform: translateY(-5px) scale(1.02); filter: brightness(1.2); }
+    </style>
+    """
+    
+    # 套用發光邊框容器
+    render_neon_container(
+        lambda: st.markdown(shortcut_html, unsafe_allow_html=True),
+        "shortcut_grid", neon_styles[1][0], neon_styles[1][1], padding="15px", bg_color="transparent"
+    )
+
+    st.divider()
+
+    # ------------------- 閃電筆記 -------------------
+    st.markdown("### 📝 閃電筆記與大腦暫存區")
+    st.caption("支援 Markdown 語法，打字即時自動儲存，重整也不會消失")
+    
+    # 本地儲存機制
+    NOTE_FILE = "quick_notes.txt"
+    if not os.path.exists(NOTE_FILE):
+        with open(NOTE_FILE, "w", encoding="utf-8") as f:
+            f.write("在這裡隨手寫下靈感...\n- 支援條列式\n- 支援 Markdown")
+            
+    with open(NOTE_FILE, "r", encoding="utf-8") as f:
+        saved_note = f.read()
+
+    def save_note_callback():
+        # 當輸入框內容改變時，自動寫入本地檔案
+        with open(NOTE_FILE, "w", encoding="utf-8") as f:
+            f.write(st.session_state.my_quick_note)
+
+    apply_neon_to_next_container(
+        "note_neon", 
+        "#00f2fe, #4facfe, #00f2fe", 
+        "rgba(0, 242, 254, 0.2)", padding="2px"
+    )
+    st.text_area("大腦暫存區", value=saved_note, height=250, key="my_quick_note", on_change=save_note_callback, label_visibility="collapsed")
+
+    st.divider()
+
+    # ------------------- 日曆與 LINE 提醒 -------------------
+    st.markdown("### 📅 任務排程與 LINE 助理")
+    
+    col_t1, col_t2 = st.columns([1, 1.5])
+    
+    with col_t1:
+        st.markdown("#### 🔔 新增提醒事件")
+        task_date = st.date_input("任務日期", datetime.date.today())
+        task_time = st.time_input("任務時間", datetime.datetime.now().time())
+        task_msg = st.text_input("提醒內容", placeholder="例如：晚上8點搶高鐵票...")
+        
+        # 如果你有 LINE Notify Token 可以直接貼在這裡，或者設定在 st.secrets
+        line_token = st.text_input("LINE Notify 權杖 (Token)", type="password", placeholder="輸入你的 Token 以啟用真實發送")
+        
+        if st.button("🚀 設定排程提醒", use_container_width=True):
+            if task_msg:
+                # 這裡保留了真實呼叫 LINE API 的功能
+                if line_token:
+                    headers = {"Authorization": "Bearer " + line_token}
+                    data = {'message': f"\n【系統提醒】\n時間：{task_date.strftime('%Y-%m-%d')} {task_time.strftime('%H:%M')}\n內容：{task_msg}"}
+                    try:
+                        req = requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
+                        if req.status_code == 200:
+                            st.success("✅ LINE 提醒發送成功！(此為即時發送測試)")
+                        else:
+                            st.error(f"❌ 發送失敗，狀態碼：{req.status_code}")
+                    except Exception as e:
+                        st.error(f"發送發生錯誤：{e}")
+                else:
+                    # 無 Token 時的視覺模擬
+                    st.success(f"✅ 【模擬排程成功】將於 {task_date.strftime('%Y-%m-%d')} {task_time.strftime('%H:%M')} 提醒：{task_msg}")
+            else:
+                st.warning("⚠️ 請輸入提醒內容")
+
+    with col_t2:
+        st.markdown("#### 📆 近期待辦清單預覽")
+        # 用簡單的 DataFrame 模擬待辦清單，未來可串接 Google 試算表或本地資料庫
+        mock_tasks = pd.DataFrame({
+            "狀態": [True, False, False],
+            "日期": ["2024-05-10", task_date.strftime('%Y-%m-%d'), "2024-12-31"],
+            "時間": ["12:00", task_time.strftime('%H:%M'), "23:59"],
+            "事件內容": ["買咖啡豆", task_msg if task_msg else "未命名任務", "跨年煙火"]
+        })
+        
+        # 使用 Streamlit 的可編輯資料表功能
+        edited_df = st.data_editor(
+            mock_tasks,
+            column_config={
+                "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成", default=False),
+                "事件內容": st.column_config.TextColumn("事件內容", width="large")
+            },
+            disabled=["日期", "時間", "事件內容"],
+            hide_index=True,
+            use_container_width=True
+        )
