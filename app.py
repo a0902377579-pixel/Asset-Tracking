@@ -11,7 +11,6 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
-import google.generativeai as genai
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -24,7 +23,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🔒 系統安全門神：並排雙通道解鎖 (自動下載 AI 模型)
+# 🔒 系統安全門神：並排雙通道解鎖 (隱藏密碼版)
 # ==========================================
 @st.cache_resource
 def load_face_models():
@@ -32,6 +31,7 @@ def load_face_models():
     yunet_path = "face_detection_yunet_2023mar.onnx"
     sface_path = "face_recognition_sface_2021dec.onnx"
     
+    # 自動下載大檔案，繞過 GitHub 25MB 限制
     try:
         if not os.path.exists(yunet_path):
             urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", yunet_path)
@@ -49,6 +49,7 @@ def load_face_models():
 
 def check_password():
     def password_entered():
+        # 🔑 核心修改：不再寫死密碼，而是從 Streamlit 的 Secrets 保險箱讀取！
         if st.session_state.get("password_input") == st.secrets["APP_PASSWORD"]:
             st.session_state["password_correct"] = True
             if "password_input" in st.session_state:
@@ -64,6 +65,7 @@ def check_password():
     st.markdown("<h1 style='text-align: center; margin-top: 10vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #a0a5b1; margin-bottom: 30px;'>請進行身份驗證以解鎖終端</p>", unsafe_allow_html=True)
     
+    # 建立左右兩欄
     col_left, col_right = st.columns([1, 1], gap="large")
     
     # --- 左側通道: 臉部辨識 ---
@@ -111,6 +113,7 @@ def check_password():
             
     return False
 
+# 🛑 門神發揮作用：如果未通過驗證，強制停止後方所有程式碼
 if not check_password():
     st.stop()
 
@@ -124,54 +127,156 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
 
-    @property --border-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-    @keyframes spin-border { to { --border-angle: 360deg; } }
-    @keyframes sweep-light { 0% { background-position: 15% 50%; } 50% { background-position: 85% 50%; } 100% { background-position: 15% 50%; } }
-
-    div[data-testid="stFullScreenFrame"]:has(div[data-testid="stPlotlyChart"]) {
-        background-color: #0a1128 !important; border-radius: 12px !important;
+    /* 🌈 360° 邊框跑馬燈旋轉引擎 */
+    @property --border-angle {
+        syntax: '<angle>';
+        inherits: false;
+        initial-value: 0deg;
+    }
+    @keyframes spin-border {
+        to { --border-angle: 360deg; }
+    }
+    
+    /* 🔥 保留給頂部卡片的無縫流光引擎 */
+    @keyframes sweep-light { 
+        0% { background-position: 15% 50%; } 
+        50% { background-position: 85% 50%; } 
+        100% { background-position: 15% 50%; } 
     }
 
+    /* 🌟 全螢幕黑屏保護：只對「Plotly 圖表」生效 */
+    div[data-testid="stFullScreenFrame"]:has(div[data-testid="stPlotlyChart"]) {
+        background-color: #0a1128 !important; 
+        border-radius: 12px !important;
+    }
+
+    /* 🚀 側邊欄專屬：精準鎖定 Sidebar 內的 Tabs 結構，動態自適應高度並套用落日餘暉旋轉光束 */
     section[data-testid="stSidebar"] div[data-testid="stTabs"] {
-        position: relative !important; border-radius: 14px !important; padding: 10px !important;
-        box-shadow: 0 0 20px rgba(241, 39, 17, 0.45) !important; margin-top: 5px !important; margin-bottom: 20px !important;
+        position: relative !important;
+        border-radius: 14px !important;
+        padding: 10px !important;
+        box-shadow: 0 0 20px rgba(241, 39, 17, 0.45) !important;
+        margin-top: 5px !important;
+        margin-bottom: 20px !important;
         background: transparent !important;
     }
     section[data-testid="stSidebar"] div[data-testid="stTabs"]::before {
-        content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 4px; 
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 14px;
+        padding: 4px; 
+        /* 落日餘暉 (Sunset Glow) */
         background: conic-gradient(from var(--border-angle), #f12711, #FC466B, #ff8008, #f12711);
         -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor; mask-composite: exclude;
-        animation: spin-border 3.5s linear infinite; pointer-events: none; z-index: 10;
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: spin-border 3.5s linear infinite;
+        pointer-events: none;
+        z-index: 10;
     }
 
-    div[data-baseweb="tab-list"] { display: flex !important; width: 100% !important; gap: 15px !important; background-color: transparent !important; border-bottom: none !important; }
-    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] { display: none !important; background-color: transparent !important; }
+    /* --- 頂部 Tab 樣式 --- */
+    div[data-baseweb="tab-list"] { 
+        display: flex !important;
+        width: 100% !important;
+        gap: 15px !important; 
+        background-color: transparent !important;
+        border-bottom: none !important;
+    }
+    
+    div[data-baseweb="tab-highlight"], div[data-baseweb="tab-border"] {
+        display: none !important;
+        background-color: transparent !important;
+    }
     
     button[data-baseweb="tab"] { 
-        flex: 1 1 0 !important; background-color: #1e2128 !important; border-radius: 50px !important;  
-        padding: 12px 0px !important; border: 1px solid rgba(255, 255, 255, 0.05) !important; margin: 0 !important;
+        flex: 1 1 0 !important;
+        background-color: #1e2128 !important; 
+        border-radius: 50px !important;  
+        padding: 12px 0px !important; 
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        margin: 0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
+    
     button[data-baseweb="tab"] div[data-testid="stMarkdownContainer"] p {
-        width: 100%; text-align: center; font-size: 18px !important; font-weight: 600 !important; color: #a0a5b1 !important;
+        width: 100%;
+        text-align: center;
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        color: #a0a5b1 !important;
     }
+    
     button[data-baseweb="tab"][aria-selected="true"] { 
-        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; 
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important;
     }
-    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p { color: white !important; font-weight: bold !important; }
+    button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p {
+        color: white !important; 
+        font-weight: bold !important; 
+    }
     
     div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
 
-    div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not([data-testid="stMarkdownContainer"]) { display: none !important; }
-    div[data-testid="stRadio"] > div { gap: 10px; background: #111318 !important; padding: 6px 10px; border-radius: 50px; display: inline-flex; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 6px rgba(0,0,0,0.5); }
-    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 32px !important; border-radius: 50px !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:hover { background: rgba(255,255,255,0.05) !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) { background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; background-size: 400% 400% !important; background-repeat: no-repeat !important; animation: sweep-light 4s ease-in-out infinite !important; box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label p { color: #7f8ca6 !important; font-weight: 600 !important; font-size: 16px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p { color: #ffffff !important; font-weight: 900 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important; }
+    /* =========================================
+       科技感動態切換按鈕
+       ========================================= */
+    div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
+        display: none !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not([data-testid="stMarkdownContainer"]) {
+        display: none !important;
+    }
+    
+    div[data-testid="stRadio"] > div { 
+        gap: 10px; 
+        background: #111318 !important; 
+        padding: 6px 10px; 
+        border-radius: 50px; 
+        display: inline-flex; 
+        border: 1px solid rgba(255,255,255,0.05); 
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+    
+    div[data-testid="stRadio"] div[role="radiogroup"] label { 
+        padding: 8px 32px !important; 
+        border-radius: 50px !important; 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; 
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: transparent !important;
+        margin: 0 !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        background: rgba(255,255,255,0.05) !important;
+    }
+    
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { 
+        background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; 
+        background-size: 400% 400% !important;
+        background-repeat: no-repeat !important;
+        animation: sweep-light 4s ease-in-out infinite !important;
+        box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+    
+    div[data-testid="stRadio"] div[role="radiogroup"] label p { 
+        color: #7f8ca6 !important; 
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        margin: 0 !important;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) p { 
+        color: #ffffff !important; 
+        font-weight: 900 !important; 
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -179,12 +284,15 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 SPREADSHEET_NAME = "個人資產" 
 
 # ==========================================
-# 2. 核心資料庫與外掛讀取
+# 2. 核心資料讀取
 # ==========================================
 @st.cache_resource(ttl=600)
 def get_gspread_client():
     try:
-        creds = Credentials.from_service_account_info(dict(st.secrets["gcp_json"]), scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
+        creds = Credentials.from_service_account_info(
+            dict(st.secrets["gcp_json"]), 
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        )
         return gspread.authorize(creds)
     except Exception as e:
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
@@ -207,10 +315,12 @@ def load_sheet_data():
         if len(s_rows) > 1:
             price_map = {sr[7].strip(): parse_num(sr[8]) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
             change_map = {sr[7].strip(): parse_num(str(sr[9]).replace('%', '')) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
+            
             for sr in s_rows[1:]:
                 if len(sr) >= 6 and sr[0]:
                     name, shares, cost = sr[0].strip(), parse_num(sr[1]), parse_num(sr[2])
                     avg_cost, profit, m_val = parse_num(sr[3]), parse_num(sr[4]), parse_num(sr[5])
+                    
                     if cost > 0 or m_val > 0:
                         total_cost += cost; total_assets += m_val; total_profit += profit
                         curr_price, chg_pct = 0.0, 0.0
@@ -222,11 +332,12 @@ def load_sheet_data():
                         holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
 
         profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
+
         ws_overview = sh.worksheet("每日損益追蹤")
         hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
+                
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
-    except: 
-        return None, None
+    except: return None, None
 
 @st.cache_data(ttl=600, show_spinner=False)
 def load_bank_data():
@@ -236,10 +347,10 @@ def load_bank_data():
         sh = client.open(SPREADSHEET_NAME)
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
+        
         txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 3 and str(r[0]).strip() != ""]
         return b_val, txs
-    except: 
-        return 58661.0, []
+    except: return 58661.0, []
 
 @st.cache_data(ttl=600, show_spinner=False)
 def load_stock_transactions():
@@ -258,28 +369,16 @@ def load_stock_transactions():
                 df['YYYY-MM-DD'] = df['日期_dt'].dt.strftime('%Y-%m-%d')
                 df['YYYY-MM'] = df['日期_dt'].dt.strftime('%Y-%m')
                 return df
-    except: 
+    except:
         pass
     return pd.DataFrame()
-
-# 📋 剪貼簿資料讀取 (極短快取 2 秒，實現跨裝置秒同步)
-@st.cache_data(ttl=2, show_spinner=False)
-def load_clipboard_data():
-    client = get_gspread_client()
-    if not client: return []
-    try:
-        sh = client.open(SPREADSHEET_NAME)
-        ws = sh.worksheet("db_clipboard")
-        data = ws.get_all_values()
-        if len(data) > 1: return data[1:]
-        return []
-    except: 
-        return []
 
 # ==========================================
 # 3. 視覺化引擎與樣式函數
 # ==========================================
-C_LBL, C_VAL, C_PCT = "#FFD700", "#00E5FF", "#00E676"  
+C_LBL = "#FFD700"  
+C_VAL = "#00E5FF"  
+C_PCT = "#00E676"  
 
 def add_zero_baseline(fig):
     fig.add_hline(y=0, line_dash="dash", line_color="#FFD700", line_width=2)
@@ -287,13 +386,24 @@ def add_zero_baseline(fig):
 
 def style_fig(fig, title, height=500):
     fig.update_layout(
-        height=height, font=dict(color="#ffffff"), 
+        height=height,
+        font=dict(color="#ffffff"), 
         title=dict(text=f"<b>{title}</b>", font=dict(size=22, color="#FFD700"), x=0.01, y=0.95),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
-        margin=dict(l=40, r=40, t=85, b=60), hovermode="x unified",
-        xaxis=dict(showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2, tickangle=-45), 
-        yaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.2)", zeroline=True, zerolinecolor="rgba(128,128,128,0.3)", title="")
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)",
+        hoverlabel=dict(bgcolor="rgba(25, 30, 40, 0.95)", font=dict(size=16, family="Arial, sans-serif", color="#ffffff"), bordercolor="rgba(0, 229, 255, 0.8)", namelength=-1),
+        margin=dict(l=40, r=40, t=85, b=60),  
+        hovermode="x unified",
+        xaxis=dict(
+            automargin=True,
+            showgrid=False, zeroline=False, title="", tickformat="%Y-%m-%d", 
+            showspikes=True, spikemode="across", spikedash="dash", spikecolor="#FF00FF", spikethickness=2,
+            tickangle=-45 
+        ), 
+        yaxis=dict(
+            automargin=True,
+            showgrid=True, gridcolor="rgba(128,128,128,0.2)", zeroline=True, zerolinecolor="rgba(128,128,128,0.3)", title=""
+        )
     )
     return fig
 
@@ -302,8 +412,28 @@ def render_neon_container(render_func, element_id, conic_colors, glow_color, pad
     st.markdown(f'''
     <div id="{element_id}"></div>
     <style>
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{ position: relative !important; border-radius: 14px !important; padding: {padding} !important; box-shadow: 0 0 20px {glow_color} !important; margin-top: 10px !important; margin-bottom: 30px !important; {bg_style} }}
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{ content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 4px; background: conic-gradient(from var(--border-angle), {conic_colors}); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin-border 3.5s linear infinite; pointer-events: none; }}
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{
+            position: relative !important;
+            border-radius: 14px !important;
+            padding: {padding} !important;
+            box-shadow: 0 0 20px {glow_color} !important;
+            margin-top: 10px !important;
+            margin-bottom: 30px !important;
+            {bg_style}
+        }}
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 4px; 
+            background: conic-gradient(from var(--border-angle), {conic_colors});
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: spin-border 3.5s linear infinite;
+            pointer-events: none; 
+        }}
     </style>
     ''', unsafe_allow_html=True)
     render_func()
@@ -313,22 +443,53 @@ def apply_neon_to_next_container(element_id, conic_colors, glow_color, padding="
     st.markdown(f'''
     <div id="{element_id}"></div>
     <style>
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{ position: relative !important; border-radius: 14px !important; padding: {padding} !important; box-shadow: 0 0 20px {glow_color} !important; margin-top: 5px !important; margin-bottom: 20px !important; {bg_style} }}
-        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{ content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 4px; background: conic-gradient(from var(--border-angle), {conic_colors}); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin-border 3.5s linear infinite; pointer-events: none; z-index: 10; }}
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"] {{
+            position: relative !important;
+            border-radius: 14px !important;
+            padding: {padding} !important;
+            box-shadow: 0 0 20px {glow_color} !important;
+            margin-top: 5px !important;
+            margin-bottom: 20px !important;
+            {bg_style}
+        }}
+        div[data-testid="stElementContainer"]:has(#{element_id}) + div[data-testid="stElementContainer"]::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 14px;
+            padding: 4px; 
+            background: conic-gradient(from var(--border-angle), {conic_colors});
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: spin-border 3.5s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }}
     </style>
     ''', unsafe_allow_html=True)
 
 neon_styles = [
-    ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), ("#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.45)"), 
-    ("#ff8008, #ffc837, #ff8008", "rgba(255, 128, 8, 0.45)"), ("#11998e, #38ef7d, #11998e", "rgba(56, 239, 125, 0.45)"), 
-    ("#FC466B, #3F5EFB, #FC466B", "rgba(252, 70, 107, 0.45)"), ("#FDBB2D, #22C1C3, #FDBB2D", "rgba(34, 193, 195, 0.45)"), 
-    ("#8E2DE2, #4A00E0, #8E2DE2", "rgba(142, 45, 226, 0.45)"), ("#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)"), 
-    ("#f12711, #f5af19, #f12711", "rgba(241, 39, 17, 0.45)"), ("#654ea3, #eaafc8, #654ea3", "rgba(101, 78, 163, 0.45)"), 
-    ("#FF416C, #FF4B2B, #FF416C", "rgba(255, 65, 108, 0.45)"), ("#00B4DB, #0083B0, #00B4DB", "rgba(0, 180, 219, 0.45)"), 
-    ("#b92b27, #1565C0, #b92b27", "rgba(185, 43, 39, 0.45)"), ("#ee0979, #ff6a00, #ee0979", "rgba(238, 9, 121, 0.45)"), 
-    ("#00c3ff, #ffff1c, #00c3ff", "rgba(0, 195, 255, 0.45)"), ("#f85032, #e73827, #f85032", "rgba(248, 80, 50, 0.45)"), 
-    ("#5614B0, #DBD65C, #5614B0", "rgba(86, 20, 176, 0.45)"), ("#F09819, #EDDE5D, #F09819", "rgba(240, 152, 25, 0.45)"), 
-    ("#8A2387, #E94057, #F27121, #8A2387", "rgba(233, 64, 87, 0.45)"), ("#1D976C, #93F9B9, #1D976C", "rgba(29, 151, 108, 0.45)"), 
+    ("#ff007f, #7928ca, #0070f3, #00dfd8, #7928ca, #ff007f", "rgba(0, 223, 216, 0.45)"), 
+    ("#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.45)"), 
+    ("#ff8008, #ffc837, #ff8008", "rgba(255, 128, 8, 0.45)"), 
+    ("#11998e, #38ef7d, #11998e", "rgba(56, 239, 125, 0.45)"), 
+    ("#FC466B, #3F5EFB, #FC466B", "rgba(252, 70, 107, 0.45)"), 
+    ("#FDBB2D, #22C1C3, #FDBB2D", "rgba(34, 193, 195, 0.45)"), 
+    ("#8E2DE2, #4A00E0, #8E2DE2", "rgba(142, 45, 226, 0.45)"), 
+    ("#00c6ff, #0072ff, #00c6ff", "rgba(0, 198, 255, 0.45)"), 
+    ("#f12711, #f5af19, #f12711", "rgba(241, 39, 17, 0.45)"), 
+    ("#654ea3, #eaafc8, #654ea3", "rgba(101, 78, 163, 0.45)"), 
+    ("#FF416C, #FF4B2B, #FF416C", "rgba(255, 65, 108, 0.45)"), 
+    ("#00B4DB, #0083B0, #00B4DB", "rgba(0, 180, 219, 0.45)"), 
+    ("#b92b27, #1565C0, #b92b27", "rgba(185, 43, 39, 0.45)"), 
+    ("#ee0979, #ff6a00, #ee0979", "rgba(238, 9, 121, 0.45)"), 
+    ("#00c3ff, #ffff1c, #00c3ff", "rgba(0, 195, 255, 0.45)"), 
+    ("#f85032, #e73827, #f85032", "rgba(248, 80, 50, 0.45)"), 
+    ("#5614B0, #DBD65C, #5614B0", "rgba(86, 20, 176, 0.45)"), 
+    ("#F09819, #EDDE5D, #F09819", "rgba(240, 152, 25, 0.45)"), 
+    ("#8A2387, #E94057, #F27121, #8A2387", "rgba(233, 64, 87, 0.45)"), 
+    ("#1D976C, #93F9B9, #1D976C", "rgba(29, 151, 108, 0.45)"), 
     ("#3E5151, #DECBA4, #3E5151", "rgba(62, 81, 81, 0.45)")  
 ]
 
@@ -354,12 +515,15 @@ def create_colorful_card(title, value_str, icon="", theme="blue", is_profit=Fals
 
 def style_profit_loss(s):
     return ['color: #ff4b4b; font-weight: bold;' if isinstance(v, (int, float)) and v > 0 else ('color: #09ab3b; font-weight: bold;' if isinstance(v, (int, float)) and v < 0 else '') for v in s]
+
 def style_portfolio_row(row):
     styles = [''] * len(row)
     for i, col in enumerate(row.index):
-        if col in ['各股損益', '各股損益(%)', '即時現價', '即時漲跌幅(%)']:
-            val = row[col] if col in ['各股損益', '各股損益(%)'] else row['即時漲跌幅(%)']
-            styles[i] = 'color: #ff4b4b; font-weight: bold;' if val > 0 else ('color: #09ab3b; font-weight: bold;' if val < 0 else '')
+        if col in ['各股損益', '各股損益(%)']:
+            styles[i] = 'color: #ff4b4b; font-weight: bold;' if row[col] > 0 else ('color: #09ab3b; font-weight: bold;' if row[col] < 0 else '')
+        elif col in ['即時現價', '即時漲跌幅(%)']:
+            chg = row['即時漲跌幅(%)']
+            styles[i] = 'color: #ff4b4b; font-weight: bold;' if chg > 0 else ('color: #09ab3b; font-weight: bold;' if chg < 0 else '')
     return styles
 
 # ==========================================
@@ -370,6 +534,7 @@ dashboard_data, hist_data = load_sheet_data()
 df_st = load_stock_transactions()
 
 df_h, df_hist, df_txs = None, None, None
+
 stock_price_dict = {"元大台灣0050": 0.0, "台積電": 0.0}
 stock_options = ["元大台灣0050", "台積電", "其他 (手動輸入新股)"]
 
@@ -377,9 +542,11 @@ if dashboard_data and dashboard_data.get("holdings"):
     df_h = pd.DataFrame(dashboard_data["holdings"])
     df_h["各股損益(%)"] = df_h.apply(lambda x: (x["各股損益"]/x["total_cost"]*100) if x["total_cost"]>0 else 0, axis=1).astype(float).round(2)
     df_h["各股損益_str"] = df_h["各股損益(%)"].apply(lambda x: f"{x:+.2f}")
+    
     for h in dashboard_data["holdings"]:
         name = h["stock_name"]
-        if name not in stock_options: stock_options.insert(0, name)
+        if name not in stock_options:
+            stock_options.insert(0, name)
         stock_price_dict[name] = h["current_price"]
 
 if hist_data:
@@ -388,11 +555,14 @@ if hist_data:
     df_hist = df_hist.dropna(subset=["真實日期"]).sort_values("真實日期")
     df_hist["星期"] = df_hist["真實日期"].dt.weekday.map(WEEK_MAP)
     df_hist["日期_顯示"] = df_hist["真實日期"].dt.strftime('%Y/%m/%d') + "(" + df_hist["星期"] + ")"
+    
     df_hist["總損益(%)"] = ((df_hist["總投資損益"] / df_hist["總累積成本"]) * 100).fillna(0).astype(float).round(2)
     df_hist["單日損益變化"] = df_hist["總投資損益"].diff().fillna(0).astype(float)
     df_hist["單日漲跌幅(%)"] = ((df_hist["單日損益變化"] / df_hist["總累積成本"].shift(1)) * 100).fillna(0).astype(float).round(2)
+    
     df_hist["總損益_str"] = df_hist["總損益(%)"].apply(lambda x: f"{x:+.2f}")
     df_hist["單日漲跌幅_str"] = df_hist["單日漲跌幅(%)"].apply(lambda x: f"{x:+.2f}")
+
     df_hist["最高市值"] = df_hist["總市值"].cummax()
     df_hist["市值回撤"] = df_hist["總市值"] - df_hist["最高市值"]
     df_hist["20日均線"] = df_hist["總市值"].rolling(window=20, min_periods=1).mean()
@@ -412,103 +582,204 @@ if txs:
 # ==========================================
 # 5. 側邊欄：控制中心與聯動輸入表單
 # ==========================================
-if "stock_selector" not in st.session_state: st.session_state.stock_selector = stock_options[0]
-if "s_price" not in st.session_state: st.session_state.s_price = float(stock_price_dict.get(stock_options[0], 0.0))
-if "s_shares" not in st.session_state: st.session_state.s_shares = 0
-if "s_fee" not in st.session_state: st.session_state.s_fee = 0.0
+if "stock_selector" not in st.session_state:
+    st.session_state.stock_selector = stock_options[0]
+if "s_price" not in st.session_state:
+    st.session_state.s_price = float(stock_price_dict.get(stock_options[0], 0.0))
+if "s_shares" not in st.session_state:
+    st.session_state.s_shares = 0
+if "s_fee" not in st.session_state:
+    st.session_state.s_fee = 0.0
 
 def on_stock_change():
     sel = st.session_state.stock_selector
-    st.session_state.s_price = float(stock_price_dict.get(sel, 0.0)) if sel != "其他 (手動輸入新股)" else 0.0
+    if sel != "其他 (手動輸入新股)":
+        st.session_state.s_price = float(stock_price_dict.get(sel, 0.0))
+    else:
+        st.session_state.s_price = 0.0
     calc_fee()
 
 def calc_fee():
-    shares, price, name = st.session_state.s_shares, st.session_state.s_price, st.session_state.stock_selector
-    if name == "其他 (手動輸入新股)": name = st.session_state.get("s_name_input", "")
+    shares = st.session_state.s_shares
+    price = st.session_state.s_price
+    name = st.session_state.stock_selector
+    if name == "其他 (手動輸入新股)":
+        name = st.session_state.get("s_name_input", "")
+        
     if shares == 0 or price == 0.0:
         st.session_state.s_fee = 0.0
         return
+        
     cost = abs(shares) * price
     broker_fee = max(20, int(cost * 0.001425 * 0.6))
-    tax = int(cost * (0.001 if "00" in name else 0.003)) if shares < 0 else 0
+    tax = 0
+    if shares < 0: 
+        tax_rate = 0.001 if "00" in name else 0.003
+        tax = int(cost * tax_rate)
     st.session_state.s_fee = float(broker_fee + tax)
 
 with st.sidebar:
     st.title("⚙️ 異動控制中心")
-    apply_neon_to_next_container("sidebar_info_neon", "#ff007f, #00f2fe, #8E2DE2, #ff007f", "rgba(255, 0, 127, 0.45)", padding="4px", bg_color="transparent")
+    
+    # 1. 🩷 賽博龐克 (Cyberpunk) for 提示訊息
+    apply_neon_to_next_container(
+        "sidebar_info_neon", 
+        "#ff007f, #00f2fe, #8E2DE2, #ff007f", 
+        "rgba(255, 0, 127, 0.45)", 
+        padding="4px", 
+        bg_color="transparent"
+    )
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
-    apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
+    
+    # 2. 💚 極光森林 (Aurora Forest) for 更新按鈕
+    apply_neon_to_next_container(
+        "sidebar_btn_neon", 
+        "#00b894, #00c6ff, #11998e, #00b894", 
+        "rgba(0, 184, 148, 0.45)", 
+        padding="4px", 
+        bg_color="transparent"
+    )
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True):
         load_sheet_data.clear()
         load_bank_data.clear()
         load_stock_transactions.clear()
-        load_clipboard_data.clear()
         st.rerun()
+    
     st.divider()
-    apply_neon_to_next_container("sidebar_tabs_neon", "#f12711, #FC466B, #ff8008, #f12711", "rgba(241, 39, 17, 0.45)", padding="8px", bg_color="transparent")
+    
+    # 3. ❤️ 落日餘暉 (Sunset Glow) for Tabs 整體套用
+    apply_neon_to_next_container(
+        "sidebar_tabs_neon", 
+        "#f12711, #FC466B, #ff8008, #f12711", 
+        "rgba(241, 39, 17, 0.45)", 
+        padding="8px", 
+        bg_color="transparent"
+    )
+    
     tab_bank, tab_stock = st.tabs(["🏦 銀行金流", "📈 股票交易"])
     
     with tab_bank:
         st.markdown("### 新增銀行金流")
-        if "bank_confirm" not in st.session_state: st.session_state.bank_confirm = False
+        
+        if "bank_confirm" not in st.session_state:
+            st.session_state.bank_confirm = False
+
         is_locked = st.session_state.bank_confirm
+
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
         rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
+        
+        is_zero = (amount == 0)
+        
         action_container = st.empty()
+
         if not st.session_state.bank_confirm:
-            if action_container.button("寫入金流紀錄", use_container_width=True, disabled=(amount == 0)):
-                st.session_state.bank_confirm = True; st.rerun()
+            if action_container.button("寫入金流紀錄", use_container_width=True, disabled=is_zero, key="bank_submit_btn"):
+                st.session_state.bank_confirm = True
+                st.rerun()
         else:
-            action_container.warning(f"⚠️ 確定寫入此筆銀行金流嗎？\n\n- 日期: {rec_date.strftime('%Y/%m/%d')}\n- 類型: {rec_type}\n- 金額: {amount:,.0f}")
+            action_container.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}")
             c_yes, c_no = action_container.columns(2)
             with c_yes:
-                if st.button("✅ 確認", use_container_width=True):
+                if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
+                        fmt_date = rec_date.strftime('%Y/%m/%d')
+                        final_amount = amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount
+                            
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_bank_ledger").append_row([rec_date.strftime('%Y/%m/%d'), rec_type, amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount], value_input_option="USER_ENTERED")
-                        load_bank_data.clear(); load_sheet_data.clear(); load_stock_transactions.clear()
-                        st.session_state.bank_confirm = False; st.success("寫入成功！"); st.rerun()
-                    except Exception as e: st.error(f"寫入失敗: {e}")
+                        sh.worksheet("db_bank_ledger").append_row([fmt_date, rec_type, final_amount], value_input_option="USER_ENTERED")
+                        
+                        load_bank_data.clear()
+                        load_sheet_data.clear()
+                        load_stock_transactions.clear()
+                        st.session_state.bank_confirm = False
+                        st.success("紀錄成功寫入！")
+                        st.rerun()
+                    except Exception as e: 
+                        st.error(f"寫入失敗: {e}")
             with c_no:
-                if st.button("❌ 取消", use_container_width=True): st.session_state.bank_confirm = False; st.rerun()
+                if st.button("❌ 取消", use_container_width=True, key="bank_no"):
+                    st.session_state.bank_confirm = False
+                    st.rerun()
                 
     with tab_stock:
         st.markdown("### 新增股票交易")
-        if "stock_confirm" not in st.session_state: st.session_state.stock_confirm = False
+        
+        if "stock_confirm" not in st.session_state:
+            st.session_state.stock_confirm = False
+
         is_stock_locked = st.session_state.stock_confirm
+
         selected_stock = st.selectbox("選擇操作標的", stock_options, key="stock_selector", on_change=on_stock_change, disabled=is_stock_locked)
-        if selected_stock == "其他 (手動輸入新股)": st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee, disabled=is_stock_locked)
+        
+        if selected_stock == "其他 (手動輸入新股)":
+            st.text_input("輸入新股票名稱", key="s_name_input", on_change=calc_fee, disabled=is_stock_locked)
+            
         s_date = st.date_input("交易日期", value=datetime.date.today(), max_value=datetime.date.today(), disabled=is_stock_locked)
+        
         st.number_input("股數 (買入為正，賣出為負)", step=1, key="s_shares", on_change=calc_fee, disabled=is_stock_locked)
         st.number_input("成交單價", step=0.1, key="s_price", on_change=calc_fee, disabled=is_stock_locked)
-        st.number_input("手續費/稅金 (自動試算)", step=1.0, key="s_fee", disabled=is_stock_locked)
+        st.number_input("手續費/稅金 (已自動試算中信費率)", step=1.0, key="s_fee", disabled=is_stock_locked)
         
-        current_shares, current_price, current_fee = st.session_state.s_shares, st.session_state.s_price, st.session_state.s_fee
-        st.markdown("""<style>.est-box { padding: 12px; border-radius: 8px; font-weight: 900; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); } .est-blue { background: #74b9ff; border-left: 6px solid #0984e3; color: #0c2461; } .est-green { background: #55efc4; border-left: 6px solid #00b894; color: #004d40; } .est-gray { background: #dfe6e9; border-left: 6px solid #636e72; color: #2d3436; }</style>""", unsafe_allow_html=True)
-        if current_shares > 0: st.markdown(f'<div class="est-box est-blue">💵 預估扣款: NT$ {round((current_shares * current_price) + current_fee):,.0f}</div>', unsafe_allow_html=True)
-        elif current_shares < 0: st.markdown(f'<div class="est-box est-green">💰 預估入帳: NT$ {round(abs(current_shares * current_price) - current_fee):,.0f}</div>', unsafe_allow_html=True)
-        else: st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
+        current_shares = st.session_state.s_shares
+        current_price = st.session_state.s_price
+        current_fee = st.session_state.s_fee
+        
+        st.markdown("""
+        <style>
+            .est-box { padding: 12px 15px; border-radius: 8px; font-weight: 900; white-space: nowrap; font-size: 16px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+            .est-blue { background-color: #74b9ff !important; border-left: 6px solid #0984e3 !important; color: #0c2461 !important; }
+            .est-green { background-color: #55efc4 !important; border-left: 6px solid #00b894 !important; color: #004d40 !important; }
+            .est-gray { background-color: #dfe6e9 !important; border-left: 6px solid #636e72 !important; color: #2d3436 !important; }
+            .est-blue *, .est-green *, .est-gray * { color: inherit !important; }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if current_shares > 0:
+            est_total = round((current_shares * current_price) + current_fee)
+            st.markdown(f'<div class="est-box est-blue">💵 預估扣款: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+        elif current_shares < 0:
+            est_total = round(abs(current_shares * current_price) - current_fee)
+            st.markdown(f'<div class="est-box est-green">💰 預估入帳: NT$ {est_total:,.0f}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="est-box est-gray">💡 預估交割: NT$ 0</div>', unsafe_allow_html=True)
         
         name_check = st.session_state.get("s_name_input", "") if selected_stock == "其他 (手動輸入新股)" else selected_stock
+        is_stock_zero = (current_shares == 0 or not name_check.strip())
+        
         stock_action_container = st.empty()
+
         if not st.session_state.stock_confirm:
-            if stock_action_container.button("寫入股票紀錄", use_container_width=True, disabled=(current_shares == 0 or not name_check.strip())):
-                st.session_state.stock_confirm = True; st.rerun()
+            if stock_action_container.button("寫入股票紀錄", use_container_width=True, disabled=is_stock_zero):
+                st.session_state.stock_confirm = True
+                st.rerun()
+
         if st.session_state.stock_confirm:
             total_amt_check = round((current_shares * current_price) + st.session_state.s_fee)
-            stock_action_container.warning(f"⚠️ 確定寫入此筆股票交易嗎？\n\n- 日期: {s_date.strftime('%Y/%m/%d')}\n- 標的: {name_check}\n- 金額: NT$ {total_amt_check:,.0f}")
+            
+            stock_action_container.warning(f"⚠️ 請問確定要寫入此筆股票交易嗎？\n\n- **日期**: {s_date.strftime('%Y/%m/%d')}\n- **標的**: {name_check}\n- **股數**: {current_shares:,}\n- **單價**: {current_price}\n- **金額**: NT$ {total_amt_check:,.0f}")
             sc_yes, sc_no = stock_action_container.columns(2)
             with sc_yes:
-                if st.button("✅ 確認", use_container_width=True):
+                if st.button("✅ 確認寫入股票", use_container_width=True, key="stock_yes"):
                     try:
+                        s_date_fmt = s_date.strftime('%Y/%m/%d')
+                        total_amt = round((current_shares * current_price) + st.session_state.s_fee)
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
-                        sh.worksheet("db_stock_transactions").append_row([s_date.strftime('%Y/%m/%d'), name_check, current_shares, current_price, st.session_state.s_fee, total_amt_check], value_input_option="USER_ENTERED")
-                        load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear()
-                        st.session_state.stock_confirm = False; st.success("寫入成功！"); st.rerun()
-                    except Exception as e: st.error(f"寫入失敗: {e}")
+                        sh.worksheet("db_stock_transactions").append_row([s_date_fmt, name_check, current_shares, current_price, st.session_state.s_fee, total_amt], value_input_option="USER_ENTERED")
+                        
+                        load_sheet_data.clear()
+                        load_bank_data.clear()
+                        load_stock_transactions.clear()
+                        st.session_state.stock_confirm = False
+                        st.success("股票紀錄成功寫入！")
+                        st.rerun()
+                    except Exception as e: 
+                        st.error(f"寫入失敗: {e}")
             with sc_no:
-                if st.button("❌ 取消", use_container_width=True): st.session_state.stock_confirm = False; st.rerun()
+                if st.button("❌ 取消寫入", use_container_width=True, key="stock_no"):
+                    st.session_state.stock_confirm = False
+                    st.rerun()
 
 # ==========================================
 # 主畫面開始
@@ -516,8 +787,7 @@ with st.sidebar:
 st.title("💼 個人旗艦資產工作站 ☁️")
 st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
 
-# 🔥 在這裡！已經成功加入了第四個分頁「專屬私人 OS」
-tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 終極數據戰情室", "🎯 定期定額與願景", "🚀 專屬私人 OS"])
+tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板 (含報表與明細)", "🌌 終極數據戰情室 (21種圖表)", "🎯 定期定額與願景"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -534,32 +804,68 @@ with tab1:
 
         if df_h is not None:
             st.subheader("📋 投資組合即時明細")
-            df_display = df_h.rename(columns={"stock_name":"股票名稱", "shares":"總股數", "avg_cost":"平均成本", "total_cost":"總成本", "current_price":"即時現價", "market_value":"即時市值", "change_pct":"即時漲跌幅(%)"})[["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]]
-            styled_df = df_display.style.apply(style_portfolio_row, axis=1).format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
-            render_neon_container(lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True), "df_portfolio", neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent")
+            df_display = df_h.rename(columns={
+                "stock_name":"股票名稱", "shares":"總股數", "avg_cost":"平均成本", 
+                "total_cost":"總成本", "current_price":"即時現價", "market_value":"即時市值", "change_pct":"即時漲跌幅(%)"
+            })[["股票名稱", "總股數", "平均成本", "總成本", "即時現價", "即時市值", "各股損益", "即時漲跌幅(%)", "各股損益(%)"]]
+            
+            styled_df = df_display.style.apply(style_portfolio_row, axis=1) \
+                                        .format({"總股數": "{:,.0f}", "平均成本": "{:,.2f}", "總成本": "{:,.0f}", "即時現價": "{:,.2f}", 
+                                                 "即時市值": "{:,.0f}", "各股損益": "{:+,.0f}", "即時漲跌幅(%)": "{:+.2f}%", "各股損益(%)": "{:+.2f}%"})
+            
+            # 🌈 第一頁大表：全部換上七彩霓虹旋轉光束，背景設定透明
+            render_neon_container(
+                lambda: st.dataframe(styled_df, use_container_width=True, hide_index=True),
+                "df_portfolio", 
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent"
+            )
 
     st.divider()
+    
     col_hist, col_bank = st.columns(2)
+    
     with col_hist:
         st.subheader("📜 歷史每日結算報表")
         if df_hist is not None:
             df_hist_filtered = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
             df_hist_filtered['日期'] = df_hist_filtered['日期_顯示']
             df_hist_display = df_hist_filtered.drop(columns=["單日損益變化", "單日漲跌幅(%)", "最高市值", "市值回撤", "20日均線", "真實日期", "日期_顯示", "星期", "0050累計", "台積電累計", "總損益_str", "單日漲跌幅_str"], errors='ignore')[::-1]
-            styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]).format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
-            render_neon_container(lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True), "df_history", neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent")
-        else: st.info("目前暫無歷史紀錄。")
+            
+            styled_hist = df_hist_display.style.apply(style_profit_loss, subset=["總投資損益", "0050每日損益", "台積電每日損益", "總損益(%)"]) \
+                            .format({"總累積成本": "{:,.0f}", "總市值": "{:,.0f}", "總投資損益": "{:+,.0f}", "0050每日損益": "{:+,.0f}", "台積電每日損益": "{:+,.0f}", "總損益(%)": "{:+.2f}%"})
+            
+            # 🌈 左下小表：同樣七彩旋轉光束，背景透明
+            render_neon_container(
+                lambda: st.dataframe(styled_hist, use_container_width=True, hide_index=True),
+                "df_history", 
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent" 
+            )
+        else:
+            st.info("目前暫無歷史紀錄。")
             
     with col_bank:
         st.subheader("🏦 銀行帳戶資金流水明細")
         if df_txs is not None:
             df_bank_display = df_txs[::-1][["日期_顯示", "類型", "金額"]].copy().rename(columns={"日期_顯示": "日期"})
-            styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"]).format({"金額": "{:+,.0f}"})
-            render_neon_container(lambda: st.dataframe(styled_bank, use_container_width=True, hide_index=True, column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}), "df_bank", neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent")
-        else: st.info("尚無銀行紀錄。")
+            styled_bank = df_bank_display.style.apply(style_profit_loss, subset=["金額"])\
+                            .format({"金額": "{:+,.0f}"})
+            
+            # 🌈 右下小表：同樣七彩旋轉光束，背景透明
+            render_neon_container(
+                lambda: st.dataframe(
+                    styled_bank, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    column_config={"類型": st.column_config.TextColumn("類型", alignment="right")}
+                ),
+                "df_bank", 
+                neon_styles[0][0], neon_styles[0][1], padding="6px", bg_color="transparent" 
+            )
+        else:
+            st.info("尚無銀行紀錄。")
 
 # ------------------------------------------
-# 分頁 2：🌌 終極數據戰情室
+# 分頁 2：🌌 終極數據戰情室 (21 張圖表)
 # ------------------------------------------
 with tab2:
     if df_h is not None:
@@ -588,12 +894,19 @@ with tab2:
             render_neon_container(lambda: st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True, theme=None), "chart_4", neon_styles[3][0], neon_styles[3][1])
 
         with c2_5:
-            fig5 = go.Figure(go.Waterfall(orientation="v", measure=["relative"]*len(df_h) + ["total"], x=df_h['stock_name'].tolist() + ["淨損益總計"], y=df_h['各股損益'].tolist() + [dashboard_data["total_profit"]], decreasing={"marker":{"color":"#09ab3b"}}, increasing={"marker":{"color":"#ff4b4b"}}, totals={"marker":{"color":"#3498db"}}))
+            fig5 = go.Figure(go.Waterfall(
+                orientation="v", measure=["relative"]*len(df_h) + ["total"],
+                x=df_h['stock_name'].tolist() + ["淨損益總計"], y=df_h['各股損益'].tolist() + [dashboard_data["total_profit"]],
+                decreasing={"marker":{"color":"#09ab3b"}}, increasing={"marker":{"color":"#ff4b4b"}}, totals={"marker":{"color":"#3498db"}}
+            ))
             fig5.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>損益金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>", texttemplate="%{y:+,.0s}", textposition="outside")
             render_neon_container(lambda: st.plotly_chart(style_fig(fig5, "5. 各股獲利貢獻瀑布圖"), use_container_width=True, theme=None), "chart_5", neon_styles[4][0], neon_styles[4][1])
 
         with c2_6:
-            fig6 = go.Figure(data=[go.Bar(name='總投入成本', x=df_h['stock_name'], y=df_h['total_cost'], marker_color='#9b59b6'), go.Bar(name='當前總市值', x=df_h['stock_name'], y=df_h['market_value'], marker_color='#f1c40f')])
+            fig6 = go.Figure(data=[
+                go.Bar(name='總投入成本', x=df_h['stock_name'], y=df_h['total_cost'], marker_color='#9b59b6'),
+                go.Bar(name='當前總市值', x=df_h['stock_name'], y=df_h['market_value'], marker_color='#f1c40f')
+            ])
             fig6.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             fig6.update_layout(barmode='group')
             render_neon_container(lambda: st.plotly_chart(style_fig(fig6, "6. 個股成本 vs 現值對比"), use_container_width=True, theme=None), "chart_6", neon_styles[5][0], neon_styles[5][1])
@@ -607,11 +920,29 @@ with tab2:
         c2_7, c2_8 = st.columns(2)
         with c2_7:
             fig7 = go.Figure()
-            fig7.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0), mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), hoverinfo='skip', showlegend=False))
-            fig7.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0), mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), hoverinfo='skip', showlegend=False))
+            fig7.add_trace(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0),
+                mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), 
+                hoverinfo='skip', showlegend=False
+            ))
+            fig7.add_trace(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0),
+                mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), 
+                hoverinfo='skip', showlegend=False
+            ))
+            
             c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
             c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
-            fig7.add_trace(go.Bar(x=df_hist_plot['繪圖日期'], y=[0] * len(df_hist_plot), customdata=np.column_stack((c7_vals, c7_colors)), marker_color=c7_colors, name="", hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"))
+            
+            fig7.add_trace(go.Bar(
+                x=df_hist_plot['繪圖日期'], 
+                y=[0] * len(df_hist_plot), 
+                customdata=np.column_stack((c7_vals, c7_colors)),
+                marker_color=c7_colors, 
+                name="", 
+                hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
+            ))
+            
             fig7.update_xaxes(type='category')
             fig7 = add_zero_baseline(fig7) 
             fig7.update_layout(showlegend=False)
@@ -627,7 +958,11 @@ with tab2:
 
         c2_9, c2_10 = st.columns(2)
         with c2_9:
-            fig9 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總損益(%)'], customdata=df_hist_plot['總損益_str'], mode='lines+markers', line=dict(color='#9b59b6', width=2)))
+            fig9 = go.Figure(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總損益(%)'], 
+                customdata=df_hist_plot['總損益_str'], 
+                mode='lines+markers', line=dict(color='#9b59b6', width=2)
+            ))
             fig9.update_xaxes(type='category')
             fig9 = add_zero_baseline(fig9) 
             fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata}}%</b></span><extra></extra>")
@@ -665,7 +1000,8 @@ with tab2:
         with c2_13:
             vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist_plot['單日損益變化']]
             fig13 = go.Figure(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日損益變化'], marker_color=vol_colors))
-            fig13.update_xaxes(type='category'); fig13 = add_zero_baseline(fig13) 
+            fig13.update_xaxes(type='category')
+            fig13 = add_zero_baseline(fig13) 
             fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             render_neon_container(lambda: st.plotly_chart(style_fig(fig13, "13. 單日總損益震盪圖"), use_container_width=True, theme=None), "chart_13", neon_styles[12][0], neon_styles[12][1])
             
@@ -677,14 +1013,20 @@ with tab2:
             
         with c2_15:
             fig15 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
-            fig15.update_xaxes(type='category'); fig15 = add_zero_baseline(fig15) 
+            fig15.update_xaxes(type='category')
+            fig15 = add_zero_baseline(fig15) 
             fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
             render_neon_container(lambda: st.plotly_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), use_container_width=True, theme=None), "chart_15", neon_styles[14][0], neon_styles[14][1])
 
         c2_16, c2_17, c2_18 = st.columns(3)
         with c2_16:
-            fig16 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日漲跌幅(%)'], customdata=df_hist_plot['單日漲跌幅_str'], mode='lines', line=dict(color='#1abc9c', width=2)))
-            fig16.update_xaxes(type='category'); fig16 = add_zero_baseline(fig16) 
+            fig16 = go.Figure(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日漲跌幅(%)'], 
+                customdata=df_hist_plot['單日漲跌幅_str'], 
+                mode='lines', line=dict(color='#1abc9c', width=2)
+            ))
+            fig16.update_xaxes(type='category')
+            fig16 = add_zero_baseline(fig16) 
             fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{customdata}}%</b></span><extra></extra>")
             fig16.update_yaxes(tickformat=".2f")  
             render_neon_container(lambda: st.plotly_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), use_container_width=True, theme=None), "chart_16", neon_styles[15][0], neon_styles[15][1])
@@ -723,7 +1065,8 @@ with tab2:
             
         with c2_21:
             fig21 = go.Figure(go.Scatter(x=df_txs_plot['繪圖日期'], y=df_txs_plot['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
-            fig21.update_xaxes(type='category'); fig21 = add_zero_baseline(fig21)
+            fig21.update_xaxes(type='category')
+            fig21 = add_zero_baseline(fig21)
             fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
             render_neon_container(lambda: st.plotly_chart(style_fig(fig21, "21. 累計淨現金流走勢"), use_container_width=True, theme=None), "chart_21", neon_styles[20][0], neon_styles[20][1])
 
@@ -731,24 +1074,42 @@ with tab2:
 # 分頁 3：🎯 定期定額與願景
 # ------------------------------------------
 with tab3:
-    current_0050_value = current_0050_shares = current_0050_cost = current_tsmc_value = current_tsmc_cost = 0
+    # 1. 預先獨立計算 0050 與 台積電 的基底狀態
+    current_0050_value = 0
+    current_0050_shares = 0
+    current_0050_cost = 0
+    
+    current_tsmc_value = 0
+    current_tsmc_cost = 0
+    
     if df_h is not None:
         stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
         if not stock_0050.empty:
-            current_0050_value, current_0050_shares, current_0050_cost = stock_0050['market_value'].sum(), stock_0050['shares'].sum(), stock_0050['total_cost'].sum()
+            current_0050_value = stock_0050['market_value'].sum()
+            current_0050_shares = stock_0050['shares'].sum()
+            current_0050_cost = stock_0050['total_cost'].sum()
+            
         stock_tsmc = df_h[df_h['stock_name'].str.contains('台積電', na=False)]
         if not stock_tsmc.empty:
-            current_tsmc_value, current_tsmc_cost = stock_tsmc['market_value'].sum(), stock_tsmc['total_cost'].sum()
+            current_tsmc_value = stock_tsmc['market_value'].sum()
+            current_tsmc_cost = stock_tsmc['total_cost'].sum()
             
     avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
     market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
 
+    # ==========================================
+    # 🎯 區塊一：10 年 120 期紀律矩陣
+    # ==========================================
     st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
-    sip_records, real_sip_avg = [], 6000  
+    
+    sip_records = []
+    real_sip_avg = 6000  
+    
     if df_txs is not None and not df_txs.empty:
         df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
         if not df_sip.empty:
             real_sip_avg = int(df_sip['金額'].abs().mean())
+            
             df_sip = df_sip.sort_values('日期_dt')
             df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
             df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
@@ -759,79 +1120,170 @@ with tab3:
     for i in range(120):
         if i < len(sip_records):
             rec = sip_records[i]
-            amt, date_str, shares = abs(rec['金額']), rec['日期_dt'].strftime('%Y/%m/%d'), 0
+            amt = abs(rec['金額'])
+            date_str = rec['日期_dt'].strftime('%Y/%m/%d')
+            
+            shares = 0
             if df_st is not None and not df_st.empty:
                 match = df_st[(df_st['YYYY-MM-DD'] == rec['YYYY-MM-DD']) & (df_st['標的'].str.contains('0050', na=False)) & (df_st['股數'] > 0)]
                 if not match.empty:
-                    if len(match) == 1: 
+                    if len(match) == 1:
                         shares = int(match['股數'].iloc[0])
                     else:
                         match = match.copy()
                         match['diff'] = (match['單筆總價'] - amt).abs()
-                        shares = int(match.sort_values('diff').iloc[0]['股數'])
-            if shares == 0: 
+                        best_match = match.sort_values('diff').iloc[0]
+                        shares = int(best_match['股數'])
+            
+            if shares == 0:
                 shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
             
-            html_blocks.append(f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;"><div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div><div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px; white-space: nowrap;">{date_str}</div><div style="font-size: 11px; color: #d1d5db; white-space: nowrap;">{shares} 股</div></div>')
+            html_blocks.append(
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">'
+                f'<div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px; white-space: nowrap;">{date_str}</div>'
+                f'<div style="font-size: 11px; color: #d1d5db; white-space: nowrap;">{shares} 股</div>'
+                f'</div>'
+            )
         else:
-            html_blocks.append(f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;"><div style="width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div><div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.8); margin-top: 6px; white-space: nowrap;">#{i+1}</div><div style="font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap;">待扣款</div></div>')
+            html_blocks.append(
+                f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;">'
+                f'<div style="width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div>'
+                f'<div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.8); margin-top: 6px; white-space: nowrap;">#{i+1}</div>'
+                f'<div style="font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap;">待扣款</div>'
+                f'</div>'
+            )
 
-    full_html = f'<div style="width: 100%; box-sizing: border-box;"><p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度</p><div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">{"".join(html_blocks)}</div></div>'
-    render_neon_container(lambda: st.markdown(full_html, unsafe_allow_html=True), "matrix_vision", neon_styles[0][0], neon_styles[0][1], padding="25px", bg_color="#0a1128")
+    blocks_str = ''.join(html_blocks)
+    
+    full_html = (
+        f'<div style="width: 100%; box-sizing: border-box;">'
+        f'<p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p>'
+        f'<div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">'
+        f'{blocks_str}'
+        f'</div>'
+        f'</div>'
+    )
+    
+    # 🌈 幫紀律矩陣也加上七彩旋轉光束！
+    render_neon_container(
+        lambda: st.markdown(full_html, unsafe_allow_html=True),
+        "matrix_vision", neon_styles[0][0], neon_styles[0][1], padding="25px", bg_color="#0a1128"
+    )
+    
     st.divider()
 
+    # ==========================================
+    # 🎯 區塊二：多重資產複利雪球時光機
+    # ==========================================
     st.markdown("### ⏳ 多重資產動態投影 (0050 + 台積電)")
+    
     col_s1, col_s2, col_s3, col_s4 = st.columns(4)
     monthly_invest = col_s1.number_input("預測每月扣款 (專攻 0050)", value=real_sip_avg, step=100)
     years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
     price_rate = col_s3.slider("市場年化成長預期 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
     div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
 
+    st.markdown("##### ⚙️ 圖表時間跨度設定")
     resolution = st.radio("切換解析度", ["每年", "每月"], horizontal=True, label_visibility="collapsed")
-    months, monthly_price_rate, monthly_div_rate = years * 12, price_rate / 100 / 12, div_yield / 100 / 12
-    acc_cost_0050, val_nodrip_0050, val_drip_0050 = current_0050_cost, current_0050_value, current_0050_value
-    acc_cost_tsmc, val_nodrip_tsmc, val_drip_tsmc = current_tsmc_cost, current_tsmc_value, current_tsmc_value
-    curr_year, curr_month = datetime.date.today().year, datetime.date.today().month
+
+    months = years * 12
+    monthly_price_rate = price_rate / 100 / 12
+    monthly_div_rate = div_yield / 100 / 12
     
-    future_data = [{"時間": f"現在 ({curr_year}年{curr_month}月)", "總累積本金": current_0050_cost + current_tsmc_cost, "總無再投入": current_0050_value + current_tsmc_value, "總再投入": current_0050_value + current_tsmc_value, "0050累積本金": current_0050_cost, "0050無再投入": current_0050_value, "0050再投入": current_0050_value, "TSMC累積本金": current_tsmc_cost, "TSMC無再投入": current_tsmc_value, "TSMC再投入": current_tsmc_value}]
+    acc_cost_0050 = current_0050_cost
+    val_nodrip_0050 = current_0050_value
+    val_drip_0050 = current_0050_value
+    
+    acc_cost_tsmc = current_tsmc_cost
+    val_nodrip_tsmc = current_tsmc_value
+    val_drip_tsmc = current_tsmc_value
+    
+    curr_year = datetime.date.today().year
+    curr_month = datetime.date.today().month
+    
+    future_data = [{
+        "時間": f"現在 ({curr_year}年{curr_month}月)", 
+        "總累積本金": current_0050_cost + current_tsmc_cost, 
+        "總無再投入": current_0050_value + current_tsmc_value, 
+        "總再投入": current_0050_value + current_tsmc_value,
+        "0050累積本金": current_0050_cost, "0050無再投入": current_0050_value, "0050再投入": current_0050_value,
+        "TSMC累積本金": current_tsmc_cost, "TSMC無再投入": current_tsmc_value, "TSMC再投入": current_tsmc_value
+    }]
     
     for m in range(1, months + 1):
-        div_0050, div_tsmc = val_drip_0050 * monthly_div_rate, val_drip_tsmc * monthly_div_rate
+        div_0050 = val_drip_0050 * monthly_div_rate
+        div_tsmc = val_drip_tsmc * monthly_div_rate
+
         acc_cost_0050 += monthly_invest
         val_nodrip_0050 = (val_nodrip_0050 + monthly_invest) * (1 + monthly_price_rate)
         val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_price_rate) + div_0050 + div_tsmc
+
         val_nodrip_tsmc = val_nodrip_tsmc * (1 + monthly_price_rate)
         val_drip_tsmc = val_drip_tsmc * (1 + monthly_price_rate)
         
         future_total_months = curr_month + m - 1
-        fy, fm = curr_year + (future_total_months // 12), (future_total_months % 12) + 1
+        fy = curr_year + (future_total_months // 12)
+        fm = (future_total_months % 12) + 1
+        
         time_lbl = f"{fy}年{fm}月" if resolution == "每月" else f"{fy}年"
         
         if resolution == "每月" or (resolution == "每年" and m % 12 == 0):
-            future_data.append({"時間": time_lbl, "總累積本金": acc_cost_0050 + acc_cost_tsmc, "總無再投入": val_nodrip_0050 + val_nodrip_tsmc, "總再投入": val_drip_0050 + val_drip_tsmc, "0050累積本金": acc_cost_0050, "0050無再投入": val_nodrip_0050, "0050再投入": val_drip_0050, "TSMC累積本金": acc_cost_tsmc, "TSMC無再投入": val_nodrip_tsmc, "TSMC再投入": val_drip_tsmc})
+            future_data.append({
+                "時間": time_lbl, 
+                "總累積本金": acc_cost_0050 + acc_cost_tsmc, 
+                "總無再投入": val_nodrip_0050 + val_nodrip_tsmc, 
+                "總再投入": val_drip_0050 + val_drip_tsmc,
+                "0050累積本金": acc_cost_0050, "0050無再投入": val_nodrip_0050, "0050再投入": val_drip_0050,
+                "TSMC累積本金": acc_cost_tsmc, "TSMC無再投入": val_nodrip_tsmc, "TSMC再投入": val_drip_tsmc
+            })
             
     df_future = pd.DataFrame(future_data)
+    
     fig_future = go.Figure()
+
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
+
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
+
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
     fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
 
     fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)", height=850)
-    if resolution == "每年": 
+    
+    if resolution == "每年":
         fig_future.update_xaxes(type='category')
         
-    fig_future.update_layout(font=dict(size=16, color="#ffffff"), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=40, r=40, t=70, b=60), legend=dict(groupclick="toggleitem", grouptitlefont=dict(size=18, color="#ffffff")))
+    fig_future.update_layout(
+        font=dict(size=16, color="#ffffff"),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=40, r=40, t=70, b=60),
+        legend=dict(
+            groupclick="toggleitem",
+            grouptitlefont=dict(size=18, color="#ffffff")
+        )
+    )
+    
     fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
-    render_neon_container(lambda: st.plotly_chart(fig_future, use_container_width=True, theme=None), "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px", bg_color="#0f1117")
+    
+    render_neon_container(
+        lambda: st.plotly_chart(fig_future, use_container_width=True, theme=None),
+        "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px", bg_color="#0f1117"
+    )
 
     st.divider()
+
+    # ==========================================
+    # 🎯 區塊三：紀律引擎透視
+    # ==========================================
     st.markdown("### 💸 紀律引擎：0050 定期定額透視")
     c3_1, c3_2 = st.columns(2)
+    
     est_dividends = current_0050_cost * (div_yield / 100)
     free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
 
@@ -844,100 +1296,3 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
-
-
-# ------------------------------------------
-# 分頁 4：🚀 專屬私人 OS (AI 管家、剪貼簿、啟動台)
-# ------------------------------------------
-with tab4:
-    # 📌 模組一：一鍵啟動台 (Launchpad)
-    st.markdown("### 🔗 一鍵啟動台 (Quick Launchpad)")
-    st.caption("專屬於你的快捷入口，全螢幕操作更從容。")
-    
-    c_l1, c_l2, c_l3, c_l4, c_l5 = st.columns(5)
-    c_l1.link_button("💻 GitHub", "https://github.com", use_container_width=True)
-    c_l2.link_button("🎮 Valorant 戰績", "https://tracker.gg/valorant", use_container_width=True)
-    c_l3.link_button("🤖 Arduino 官方庫", "https://www.arduino.cc/reference/en/", use_container_width=True)
-    c_l4.link_button("📝 LeetCode", "https://leetcode.com", use_container_width=True)
-    c_l5.link_button("☁️ Google Keep", "https://keep.google.com", use_container_width=True)
-    
-    st.divider()
-    
-    col_clip, col_ai = st.columns([1, 1.5], gap="large")
-    
-    # 📌 模組二：跨裝置傳輸站 (Cloud Clipboard)
-    with col_clip:
-        st.markdown("### 📋 跨裝置閃電傳輸站")
-        st.caption("打字丟上去，手機電腦瞬間同步 (透過你的私有 Google Sheets)")
-        
-        # 上傳區
-        clip_input = st.text_area("貼上你想跨裝置複製的內容：", height=100)
-        if st.button("🚀 丟上雲端", use_container_width=True):
-            if clip_input.strip():
-                try:
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
-                    # 自動尋找或建立 db_clipboard 工作表
-                    try:
-                        ws = sh.worksheet("db_clipboard")
-                    except:
-                        ws = sh.add_worksheet(title="db_clipboard", rows=100, cols=2)
-                        ws.append_row(["時間", "內容"])
-                    
-                    # 寫入最新資料
-                    ws.append_row([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), clip_input])
-                    load_clipboard_data.clear() # 清除快取，立即刷新
-                    st.success("✅ 傳送成功！")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"上傳失敗: {e}")
-
-        st.markdown("##### 📥 最近接收的內容")
-        clip_data = load_clipboard_data()
-        if clip_data:
-            # 只顯示最新 5 筆
-            for row in clip_data[::-1][:5]:
-                time_str = row[0] if len(row) > 0 else "未知時間"
-                content_str = row[1] if len(row) > 1 else ""
-                with st.expander(f"🕒 {time_str}"):
-                    st.code(content_str, language="text")
-        else:
-            st.info("目前剪貼簿是空的。")
-
-    # 📌 模組三：專屬 AI 管家 (Gemini)
-    with col_ai:
-        st.markdown("### 🤖 私人助理 (Gemini AI)")
-        st.caption("直接在這裡問我程式碼 bug 或是行程規劃，我隨時待命！")
-        
-        # 初始化 AI 聊天紀錄
-        if "messages" not in st.session_state:
-            st.session_state.messages = [{"role": "assistant", "content": "歡迎回來，指揮官。我是你的專屬 AI 管家，有什麼我可以效勞的嗎？"}]
-        
-        # 建立 Gemini 模型與會話
-        if "chat_session" not in st.session_state:
-            if "GEMINI_API_KEY" in st.secrets:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                st.session_state.chat_session = model.start_chat(history=[])
-            else:
-                st.session_state.chat_session = None
-                st.session_state.messages = [{"role": "assistant", "content": "⚠️ 請先在 Streamlit Cloud 的 Settings -> Secrets 中設定 `GEMINI_API_KEY = \"你的金鑰\"` 才能喚醒我喔！"}]
-        
-        # 顯示聊天視窗 (固定高度並可滾動)
-        chat_container = st.container(height=400)
-        for msg in st.session_state.messages:
-            chat_container.chat_message(msg["role"]).write(msg["content"])
-        
-        # 接收使用者輸入
-        if prompt := st.chat_input("請輸入你想問的問題..."):
-            # 顯示使用者的訊息
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            chat_container.chat_message("user").write(prompt)
-            
-            # 呼叫 Gemini 並顯示回覆
-            if st.session_state.chat_session:
-                try:
-                    response = st.session_state.chat_session.send_message(prompt)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                    chat_container.chat_message("assistant").write(response.text)
-                except Exception as e:
-                    chat_container.error(f"連線 AI 失敗: {e}")
