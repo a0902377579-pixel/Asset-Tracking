@@ -335,7 +335,7 @@ if "s_fee" not in st.session_state: st.session_state.s_fee = 0.0
 
 def on_stock_change():
     sel = st.session_state.stock_selector
-    st.session_state.s_price = float(stock_price_dict.get(sel, 0.0)) if sel != "其他 (手手動輸入新股)" else 0.0
+    st.session_state.s_price = float(stock_price_dict.get(sel, 0.0)) if sel != "其他 (手動輸入新股)" else 0.0
     calc_fee()
 
 def calc_fee():
@@ -813,8 +813,9 @@ with tab4:
     with col_t1:
         st.markdown("#### 🔔 新增提醒事件")
         
-        # 動態取得當下真實時間 (你點開這個分頁的瞬間)
-        current_now = datetime.datetime.now()
+        # 動態取得當下真實時間 (強制切換為台灣時間 UTC+8)
+        tz_tw = datetime.timezone(datetime.timedelta(hours=8))
+        current_now = datetime.datetime.now(tz_tw)
         task_date = st.date_input("任務日期", current_now.date())
         
         # 使用下拉選單代替手動輸入！(完全符合 "要有選框讓我按" 需求)
