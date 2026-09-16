@@ -775,9 +775,12 @@ with tab3:
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
 
 # ------------------------------------------
-# 分頁 4：⚡ 個人生活中樞 (Life OS) - 終極全自動版
+# 分頁 4：⚡ 個人生活中樞 (Life OS) - 排程通知版
 # ------------------------------------------
 with tab4:
+    # ⏱️ 新增：每 60 秒自動刷新一次這個區塊，用來檢查時間是否到了！
+    st_autorefresh(interval=60000, key="lifeos_minute_ticker")
+
     st.markdown("### 🚀 捷徑與快速導航中樞")
     shortcut_html = """
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -804,21 +807,70 @@ with tab4:
     # ------------------- 📅 任務排程與動態待辦清單 -------------------
     st.markdown("### 📅 任務排程與 LINE 助理")
     
-    # 初始化動態空清單 (讓網頁一開始不會有一堆預設假資料)
+    # 初始化動態空清單
     if "lifeos_tasks" not in st.session_state:
         st.session_state.lifeos_tasks = []
+
+    # ==========================================
+    # 🕵️ 背景時間檢查器 (時間到了才發送)
+    # ==========================================
+    tz_tw = datetime.timezone(datetime.timedelta(hours=8))
+    current_now = datetime.datetime.now(tz_tw)
+
+    try:
+        line_access_token = st.secrets["LINE_ACCESS_TOKEN"]
+        line_user_id = st.secrets["LINE_USER_ID"]
+        is_line_ready = True
+    except KeyError:
+        is_line_ready = False
+        st.warning("⚠️ 系統尚未讀取到 LINE 金鑰，請確認 secrets.toml 設定。")
+
+    # 每次網頁刷新時，檢查清單中是否有「時間已到」且「尚未發送」的任務
+    for i, task in enumerate(st.session_state.lifeos_tasks):
+        if not task.get("已發送", False) and not task.get("狀態", False):
+            # 將任務字串轉換成 Python datetime 物件以進行比對
+            task_dt_str = f"{task['日期']} {task['時間']}"
+            task_dt = datetime.datetime.strptime(task_dt_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz_tw)
+
+            if current_now >= task_dt:
+                # 時間到了！觸發發送 API
+                if is_line_ready:
+                    url = "https://api.line.me/v2/bot/message/push"
+                    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {line_access_token}"}
+                    data = {
+                        "to": line_user_id,
+                        "messages": [
+                            {
+                                "type": "template",
+                                "altText": f"【任務提醒】{task['事件內容']}",
+                                "template": {
+                                    "type": "buttons",
+                                    "title": "🔔 任務時間到囉！",
+                                    "text": f"日期：{task['日期']}\n時間：{task['時間']}\n內容：{task['事件內容']}",
+                                    "actions": [
+                                        {"type": "message", "label": "✅ 已完成", "text": f"✅ 已完成任務：{task['事件內容']}"},
+                                        {"type": "message", "label": "⏳ 稍後提醒", "text": f"⏳ 稍後提醒：{task['事件內容']}"}
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                    try:
+                        requests.post(url, headers=headers, json=data)
+                    except Exception:
+                        pass
+                
+                # 標記為已發送，避免下一分鐘重複發送
+                st.session_state.lifeos_tasks[i]["已發送"] = True
+
 
     col_t1, col_t2 = st.columns([1, 1.5])
     
     with col_t1:
         st.markdown("#### 🔔 新增提醒事件")
         
-        # 動態取得當下真實時間 (強制切換為台灣時間 UTC+8)
-        tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-        current_now = datetime.datetime.now(tz_tw)
         task_date = st.date_input("任務日期", current_now.date())
         
-        # 使用下拉選單代替手動輸入！(完全符合 "要有選框讓我按" 需求)
         st.caption("任務時間")
         col_th, col_tm = st.columns(2)
         task_hour = col_th.selectbox("時", [f"{i:02d}" for i in range(24)], index=current_now.hour)
@@ -826,67 +878,18 @@ with tab4:
         
         task_msg = st.text_input("提醒內容", placeholder="例如：晚上搶高鐵票...")
         
-        # 安全讀取 LINE 金鑰
-        try:
-            line_access_token = st.secrets["LINE_ACCESS_TOKEN"]
-            line_user_id = st.secrets["LINE_USER_ID"]
-            is_line_ready = True
-        except KeyError:
-            is_line_ready = False
-            st.warning("⚠️ 系統尚未讀取到 LINE 金鑰，請確認 secrets.toml 設定。")
-        
         if st.button("🚀 設定排程提醒", use_container_width=True):
             if task_msg:
-                # 【功能1】將新任務存入動態待辦清單
+                # 點擊按鈕時「只寫入清單」，不再立刻發送！
                 st.session_state.lifeos_tasks.append({
                     "狀態": False, 
                     "日期": task_date.strftime('%Y-%m-%d'), 
                     "時間": f"{task_hour}:{task_min}", 
-                    "事件內容": task_msg
+                    "事件內容": task_msg,
+                    "已發送": False  # 新增追蹤標籤
                 })
-                
-                # 【功能2】發送有「互動按鈕」的 LINE 訊息
-                if is_line_ready:
-                    url = "https://api.line.me/v2/bot/message/push"
-                    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {line_access_token}"}
-                    
-                    # 這是 LINE 的 Template Message (按鈕模板)
-                    data = {
-                        "to": line_user_id,
-                        "messages": [
-                            {
-                                "type": "template",
-                                "altText": f"【任務提醒】{task_msg}",
-                                "template": {
-                                    "type": "buttons",
-                                    "title": "🔔 新任務指派",
-                                    "text": f"日期：{task_date.strftime('%Y-%m-%d')}\n時間：{task_hour}:{task_min}\n內容：{task_msg}",
-                                    "actions": [
-                                        {
-                                            "type": "message",
-                                            "label": "✅ 已完成",
-                                            "text": f"✅ 已完成任務：{task_msg}"
-                                        },
-                                        {
-                                            "type": "message",
-                                            "label": "⏳ 稍後提醒",
-                                            "text": f"⏳ 稍後提醒：{task_msg}"
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                    try:
-                        req = requests.post(url, headers=headers, json=data)
-                        if req.status_code == 200:
-                            st.success("✅ LINE 推播成功！(帶有互動按鈕)")
-                        else:
-                            st.error(f"❌ 發送失敗，狀態碼：{req.status_code}\n{req.text}")
-                    except Exception as e:
-                        st.error(f"發送發生錯誤：{e}")
-                else:
-                    st.success(f"✅ 【模擬成功】清單已更新！(填妥 Secrets 即可發送 LINE)")
+                st.success(f"✅ 任務已加入排程！將於 {task_date.strftime('%Y-%m-%d')} {task_hour}:{task_min} 準時提醒。")
+                st.rerun() # 強制刷新畫面顯示新任務
             else:
                 st.warning("⚠️ 請輸入提醒內容")
 
@@ -894,13 +897,15 @@ with tab4:
         st.markdown("#### 📆 近期待辦清單預覽")
         st.caption("你可以隨時在這裡手動打勾已完成的任務！")
         
-        # 轉換成 DataFrame 並顯示
         if len(st.session_state.lifeos_tasks) > 0:
-            df_tasks = pd.DataFrame(st.session_state.lifeos_tasks)
+            # 為了畫面乾淨，隱藏「已發送」這個系統欄位不讓使用者看到
+            display_tasks = [{k: v for k, v in t.items() if k != "已發送"} for t in st.session_state.lifeos_tasks]
+            df_tasks = pd.DataFrame(display_tasks)
+            
             edited_df = st.data_editor(
                 df_tasks,
                 column_config={
-                    "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成", default=False),
+                    "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成"),
                     "事件內容": st.column_config.TextColumn("事件內容", width="large")
                 },
                 disabled=["日期", "時間", "事件內容"],
@@ -908,7 +913,9 @@ with tab4:
                 use_container_width=True,
                 key="task_editor"
             )
-            # 如果你在網頁上打勾，把變更寫回 session_state 保持記憶
-            st.session_state.lifeos_tasks = edited_df.to_dict('records')
+            
+            # 將打勾狀態存回 session_state 保持記憶
+            for i, row in enumerate(edited_df.to_dict('records')):
+                st.session_state.lifeos_tasks[i]["狀態"] = row["狀態"]
         else:
             st.info("📦 目前清單是空的喔！快在左邊新增一個任務吧！")
