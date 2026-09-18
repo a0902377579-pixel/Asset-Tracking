@@ -812,7 +812,7 @@ with tab4:
     if len(tasks_raw) > 1:
         headers = tasks_raw[0]
         df_tasks = pd.DataFrame(tasks_raw[1:], columns=headers)
-        # 將字串轉換為 Python 的布林值以供核取方塊使用
+        # 強制轉換布林值
         df_tasks['狀態'] = df_tasks['狀態'].apply(lambda x: str(x).upper() == 'TRUE')
         df_tasks['已發送'] = df_tasks['已發送'].apply(lambda x: str(x).upper() == 'TRUE')
     else:
@@ -836,7 +836,7 @@ with tab4:
         
         if st.button("🚀 設定排程提醒", use_container_width=True):
             if task_msg:
-                # 產生一組亂數不重複的任務 ID (用時間戳記)
+                # 產生一組亂數不重複的任務 ID
                 new_task_id = "T" + datetime.datetime.now(tz_tw).strftime("%Y%m%d%H%M%S")
                 date_str = task_date.strftime('%Y-%m-%d')
                 time_str = f"{task_hour}:{task_min}"
@@ -844,9 +844,8 @@ with tab4:
                 try:
                     sh = get_gspread_client().open(SPREADSHEET_NAME)
                     ws = sh.worksheet("db_tasks")
-                    # 將任務直接寫入 Google 試算表 (大腦)
                     ws.append_row([new_task_id, False, date_str, time_str, task_msg, False], value_input_option="USER_ENTERED")
-                    load_tasks_data.clear() # 清除快取，強制下次刷新時抓取新任務
+                    load_tasks_data.clear() 
                     st.success(f"✅ 任務已安全送達 Google 大腦！將於 {date_str} {time_str} 準時提醒。")
                     st.rerun()
                 except Exception as e:
@@ -859,7 +858,6 @@ with tab4:
         st.caption("你可以隨時在這裡手動打勾已完成的任務！網頁與 LINE 將自動雙向同步。")
         
         if not df_tasks.empty:
-            # 使用 st.data_editor 顯示清單，隱藏不必要的系統欄位
             edited_df = st.data_editor(
                 df_tasks,
                 column_config={
@@ -874,7 +872,6 @@ with tab4:
                 key="task_editor"
             )
             
-            # 偵測是否有人在網頁上手動點擊了「打勾」或「取消打勾」
             has_changed = False
             for i in range(len(df_tasks)):
                 if df_tasks.loc[i, '狀態'] != edited_df.loc[i, '狀態']:
@@ -884,17 +881,15 @@ with tab4:
                     try:
                         sh = get_gspread_client().open(SPREADSHEET_NAME)
                         ws = sh.worksheet("db_tasks")
-                        # 在試算表中找到這個任務 ID 的位置
                         cell = ws.find(task_id_to_update)
                         if cell:
-                            # 狀態在 B 欄 (也就是第 2 欄)
                             ws.update_cell(cell.row, 2, new_status)
                         has_changed = True
                     except Exception as e:
                         st.error(f"狀態同步失敗：{e}")
             
             if has_changed:
-                load_tasks_data.clear() # 清除快取，載入最新狀態
+                load_tasks_data.clear() 
                 st.rerun()
                 
         else:
