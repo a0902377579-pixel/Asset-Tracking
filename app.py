@@ -11,10 +11,7 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
-import requests  
-import json
-import threading  # 新增：用於建立背景常駐引擎
-import time       # 新增：用於背景引擎的時間間隔
+import time
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -27,97 +24,20 @@ st.set_page_config(
 )
 
 # ==========================================
-# 🤖 核心背景常駐引擎：關掉網頁也能發 LINE 的秘密
-# ==========================================
-@st.cache_resource
-def start_background_worker(access_token, user_id):
-    def worker():
-        TASKS_FILE = "lifeos_tasks.json"
-        tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-        while True:
-            if os.path.exists(TASKS_FILE):
-                try:
-                    with open(TASKS_FILE, "r", encoding="utf-8") as f:
-                        tasks = json.load(f)
-                    
-                    changed = False
-                    current_now = datetime.datetime.now(tz_tw)
-
-                    for i, task in enumerate(tasks):
-                        # 如果任務還沒完成，且還沒發送過
-                        if not task.get("已發送", False) and not task.get("狀態", False):
-                            task_dt_str = f"{task['日期']} {task['時間']}"
-                            task_dt = datetime.datetime.strptime(task_dt_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz_tw)
-
-                            if current_now >= task_dt:
-                                # 時間到了！發送 LINE 互動按鈕
-                                url = "https://api.line.me/v2/bot/message/push"
-                                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {access_token}"}
-                                
-                                # 為了避免超過 LINE API 字數限制，進行安全裁切
-                                safe_msg = task['事件內容'][:40]
-                                safe_btn_msg = task['事件內容'][:10]
-                                
-                                data = {
-                                    "to": user_id,
-                                    "messages": [
-                                        {
-                                            "type": "template",
-                                            "altText": f"【任務提醒】{safe_msg}",
-                                            "template": {
-                                                "type": "buttons",
-                                                "title": "🔔 任務時間到囉！",
-                                                "text": f"日期：{task['日期']}\n時間：{task['時間']}\n內容：{safe_msg}",
-                                                "actions": [
-                                                    {"type": "message", "label": "✅ 已完成", "text": f"✅ 已完成：{safe_btn_msg}"},
-                                                    {"type": "message", "label": "⏳ 稍後", "text": f"⏳ 稍後提醒：{safe_btn_msg}"}
-                                                ]
-                                            }
-                                        }
-                                    ]
-                                }
-                                try:
-                                    requests.post(url, headers=headers, json=data)
-                                except Exception:
-                                    pass
-                                
-                                # 標記為已發送，避免重複推播
-                                tasks[i]["已發送"] = True
-                                changed = True
-                    
-                    if changed:
-                        with open(TASKS_FILE, "w", encoding="utf-8") as f:
-                            json.dump(tasks, f, ensure_ascii=False, indent=4)
-                except Exception:
-                    pass # 背景執行出錯時默默吸收，不影響主程式
-            
-            # 每 20 秒檢查一次清單
-            time.sleep(20) 
-            
-    # 建立一個與主程式脫鉤的常駐執行緒
-    t = threading.Thread(target=worker, daemon=True)
-    t.start()
-    return True
-
-# 啟動背景引擎 (如果沒有設定金鑰就跳過)
-try:
-    start_background_worker(st.secrets["LINE_ACCESS_TOKEN"], st.secrets["LINE_USER_ID"])
-except KeyError:
-    pass
-
-
-# ==========================================
 # 🔒 系統安全門神：並排雙通道解鎖 (隱藏密碼版)
 # ==========================================
 @st.cache_resource
 def load_face_models():
+    """快取載入 AI 模型與特徵值，若雲端無模型則自動從官方下載"""
     yunet_path = "face_detection_yunet_2023mar.onnx"
     sface_path = "face_recognition_sface_2021dec.onnx"
+    
     try:
         if not os.path.exists(yunet_path):
             urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", yunet_path)
         if not os.path.exists(sface_path):
             urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx", sface_path)
+
         detector = cv2.FaceDetectorYN.create(yunet_path, "", (320, 320))
         recognizer = cv2.FaceRecognizerSF.create(sface_path, "")
         my_feature = np.load("my_feature.npy")
@@ -134,15 +54,20 @@ def check_password():
                 del st.session_state["password_input"]
         else:
             st.session_state["password_correct"] = False
+
     if st.session_state.get("password_correct", False):
         return True
+
     st.markdown("<h1 style='text-align: center; margin-top: 10vh;'>🔒 個人旗艦資產工作站</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #a0a5b1; margin-bottom: 30px;'>請進行身份驗證以解鎖終端</p>", unsafe_allow_html=True)
+    
     col_left, col_right = st.columns([1, 1], gap="large")
+    
     with col_left:
         st.markdown("### 📸 臉部辨識解鎖")
         st.caption("請允許攝影機權限，對準後點擊拍照進行比對")
         camera_img = st.camera_input("拍攝臉部進行解鎖", label_visibility="collapsed")
+        
         if camera_img is not None:
             detector, recognizer, my_feature = load_face_models()
             if detector is None:
@@ -166,10 +91,12 @@ def check_password():
                         st.error(f"❌ 辨識失敗，這不是你！(相似度: {score:.2f})")
                 else:
                     st.warning("⚠️ 畫面中偵測不到人臉，請確認光源並正對鏡頭。")
+
     with col_right:
         st.markdown("### 🔑 手動密碼登入")
         st.caption("備用通道，輸入正確密碼後按 Enter")
         st.text_input("輸入密碼", type="password", on_change=password_entered, key="password_input", placeholder="輸入密碼...")
+        
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.error("❌ 密碼錯誤")
     return False
@@ -179,9 +106,9 @@ if not check_password():
 
 
 # ==========================================
-# (🚀 從這裡開始，是通過登入驗證後才會執行的主程式)
+# (🚀 主程式開始) 每 60 秒刷新以保持資料庫同步
 # ==========================================
-st_autorefresh(interval=1200000, key="realtime_data_refresher")
+st_autorefresh(interval=60000, key="realtime_data_refresher")
 
 st.markdown("""
 <style>
@@ -238,23 +165,29 @@ def load_sheet_data():
             if not v: return 0.0
             try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
             except: return 0.0
+
         s_rows = sh.worksheet("資產總覽").get_all_values()
         holdings, total_assets, total_cost, total_profit = [], 0.0, 0.0, 0.0
+        
         if len(s_rows) > 1:
             price_map = {sr[7].strip(): parse_num(sr[8]) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
             change_map = {sr[7].strip(): parse_num(str(sr[9]).replace('%', '')) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
+            
             for sr in s_rows[1:]:
                 if len(sr) >= 6 and sr[0]:
                     name, shares, cost = sr[0].strip(), parse_num(sr[1]), parse_num(sr[2])
                     avg_cost, profit, m_val = parse_num(sr[3]), parse_num(sr[4]), parse_num(sr[5])
+                    
                     if cost > 0 or m_val > 0:
                         total_cost += cost; total_assets += m_val; total_profit += profit
                         curr_price, chg_pct = 0.0, 0.0
                         for k, p in price_map.items():
                             if ("0050" in name and "0050" in k) or ("台積電" in name and "台積電" in k) or (name in k or k in name):
-                                curr_price, chg_pct = p, change_map.get(k, 0.0); break
+                                curr_price, chg_pct = p, change_map.get(k, 0.0)
+                                break
                         if curr_price == 0.0 and shares > 0: curr_price = m_val / shares
                         holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
+
         profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
         ws_overview = sh.worksheet("每日損益追蹤")
         hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
@@ -292,6 +225,18 @@ def load_stock_transactions():
                 return df
     except: pass
     return pd.DataFrame()
+
+# 🚀 專屬任務清單的快取 (每 30 秒過期自動重新抓取一次)
+@st.cache_data(ttl=30, show_spinner=False)
+def load_tasks_data():
+    client = get_gspread_client()
+    if not client: return []
+    try:
+        sh = client.open(SPREADSHEET_NAME)
+        ws = sh.worksheet("db_tasks")
+        return ws.get_all_values()
+    except Exception as e:
+        return []
 
 # ==========================================
 # 3. 視覺化引擎與樣式函數
@@ -407,7 +352,7 @@ with st.sidebar:
     apply_neon_to_next_container("sidebar_info_neon", "#ff007f, #00f2fe, #8E2DE2, #ff007f", "rgba(255, 0, 127, 0.45)", padding="4px", bg_color="transparent")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
-    if st.button("🔄 強制同步最新試算表資料", use_container_width=True): load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear(); st.rerun()
+    if st.button("🔄 強制同步最新試算表資料", use_container_width=True): load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear(); load_tasks_data.clear(); st.rerun()
     st.divider()
     apply_neon_to_next_container("sidebar_tabs_neon", "#f12711, #FC466B, #ff8008, #f12711", "rgba(241, 39, 17, 0.45)", padding="8px", bg_color="transparent")
     
@@ -832,12 +777,9 @@ with tab3:
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
 
 # ------------------------------------------
-# 分頁 4：⚡ 個人生活中樞 (Life OS) - 排程通知版
+# 分頁 4：⚡ 個人生活中樞 (Life OS) - 全雲端資料庫版
 # ------------------------------------------
 with tab4:
-    # ⏱️ 每 60 秒自動刷新一次這個區塊，用來更新前端畫面
-    st_autorefresh(interval=60000, key="lifeos_minute_ticker")
-
     st.markdown("### 🚀 捷徑與快速導航中樞")
     shortcut_html = """
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -861,40 +803,28 @@ with tab4:
     st.text_area("大腦暫存區", value=saved_note, height=200, key="my_quick_note", on_change=save_note_callback, label_visibility="collapsed")
     st.divider()
 
-    # ------------------- 📅 任務排程與動態待辦清單 -------------------
+    # ------------------- 📅 任務排程與動態待辦清單 (完全雲端化) -------------------
     st.markdown("### 📅 任務排程與 LINE 助理")
     
-    # 初始化本機儲存檔案
-    TASKS_FILE = "lifeos_tasks.json"
+    # 從 Google Sheet 動態抓取任務清單
+    tasks_raw = load_tasks_data()
     
-    def save_tasks_to_file():
-        with open(TASKS_FILE, "w", encoding="utf-8") as f:
-            json.dump(st.session_state.lifeos_tasks, f, ensure_ascii=False, indent=4)
-
-    # 讀取待辦清單 (防止網頁重整後消失)
-    if "lifeos_tasks" not in st.session_state:
-        if os.path.exists(TASKS_FILE):
-            with open(TASKS_FILE, "r", encoding="utf-8") as f:
-                st.session_state.lifeos_tasks = json.load(f)
-        else:
-            st.session_state.lifeos_tasks = []
+    if len(tasks_raw) > 1:
+        headers = tasks_raw[0]
+        df_tasks = pd.DataFrame(tasks_raw[1:], columns=headers)
+        # 將字串轉換為 Python 的布林值以供核取方塊使用
+        df_tasks['狀態'] = df_tasks['狀態'].apply(lambda x: str(x).upper() == 'TRUE')
+        df_tasks['已發送'] = df_tasks['已發送'].apply(lambda x: str(x).upper() == 'TRUE')
+    else:
+        df_tasks = pd.DataFrame(columns=["任務ID", "狀態", "日期", "時間", "事件內容", "已發送"])
 
     tz_tw = datetime.timezone(datetime.timedelta(hours=8))
     current_now = datetime.datetime.now(tz_tw)
-
-    try:
-        line_access_token = st.secrets["LINE_ACCESS_TOKEN"]
-        line_user_id = st.secrets["LINE_USER_ID"]
-        is_line_ready = True
-    except KeyError:
-        is_line_ready = False
-        st.warning("⚠️ 系統尚未讀取到 LINE 金鑰，請確認 secrets.toml 設定。")
 
     col_t1, col_t2 = st.columns([1, 1.5])
     
     with col_t1:
         st.markdown("#### 🔔 新增提醒事件")
-        
         task_date = st.date_input("任務日期", current_now.date())
         
         st.caption("任務時間")
@@ -906,46 +836,66 @@ with tab4:
         
         if st.button("🚀 設定排程提醒", use_container_width=True):
             if task_msg:
-                st.session_state.lifeos_tasks.append({
-                    "狀態": False, 
-                    "日期": task_date.strftime('%Y-%m-%d'), 
-                    "時間": f"{task_hour}:{task_min}", 
-                    "事件內容": task_msg,
-                    "已發送": False
-                })
-                save_tasks_to_file()
-                st.success(f"✅ 任務已加入排程！將於 {task_date.strftime('%Y-%m-%d')} {task_hour}:{task_min} 準時提醒。")
-                st.rerun()
+                # 產生一組亂數不重複的任務 ID (用時間戳記)
+                new_task_id = "T" + datetime.datetime.now(tz_tw).strftime("%Y%m%d%H%M%S")
+                date_str = task_date.strftime('%Y-%m-%d')
+                time_str = f"{task_hour}:{task_min}"
+                
+                try:
+                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    ws = sh.worksheet("db_tasks")
+                    # 將任務直接寫入 Google 試算表 (大腦)
+                    ws.append_row([new_task_id, False, date_str, time_str, task_msg, False], value_input_option="USER_ENTERED")
+                    load_tasks_data.clear() # 清除快取，強制下次刷新時抓取新任務
+                    st.success(f"✅ 任務已安全送達 Google 大腦！將於 {date_str} {time_str} 準時提醒。")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"寫入雲端失敗：{e}")
             else:
                 st.warning("⚠️ 請輸入提醒內容")
 
     with col_t2:
         st.markdown("#### 📆 近期待辦清單預覽")
-        st.caption("你可以隨時在這裡手動打勾已完成的任務！")
+        st.caption("你可以隨時在這裡手動打勾已完成的任務！網頁與 LINE 將自動雙向同步。")
         
-        if len(st.session_state.lifeos_tasks) > 0:
-            display_tasks = [{k: v for k, v in t.items() if k != "已發送"} for t in st.session_state.lifeos_tasks]
-            df_tasks = pd.DataFrame(display_tasks)
-            
+        if not df_tasks.empty:
+            # 使用 st.data_editor 顯示清單，隱藏不必要的系統欄位
             edited_df = st.data_editor(
                 df_tasks,
                 column_config={
+                    "任務ID": None,   # 隱藏
+                    "已發送": None,   # 隱藏
                     "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成"),
                     "事件內容": st.column_config.TextColumn("事件內容", width="large")
                 },
-                disabled=["日期", "時間", "事件內容"],
+                disabled=["任務ID", "日期", "時間", "事件內容", "已發送"],
                 hide_index=True,
                 use_container_width=True,
                 key="task_editor"
             )
             
+            # 偵測是否有人在網頁上手動點擊了「打勾」或「取消打勾」
             has_changed = False
-            for i, row in enumerate(edited_df.to_dict('records')):
-                if st.session_state.lifeos_tasks[i]["狀態"] != row["狀態"]:
-                    st.session_state.lifeos_tasks[i]["狀態"] = row["狀態"]
-                    has_changed = True
+            for i in range(len(df_tasks)):
+                if df_tasks.loc[i, '狀態'] != edited_df.loc[i, '狀態']:
+                    task_id_to_update = df_tasks.loc[i, '任務ID']
+                    new_status = bool(edited_df.loc[i, '狀態'])
                     
+                    try:
+                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        ws = sh.worksheet("db_tasks")
+                        # 在試算表中找到這個任務 ID 的位置
+                        cell = ws.find(task_id_to_update)
+                        if cell:
+                            # 狀態在 B 欄 (也就是第 2 欄)
+                            ws.update_cell(cell.row, 2, new_status)
+                        has_changed = True
+                    except Exception as e:
+                        st.error(f"狀態同步失敗：{e}")
+            
             if has_changed:
-                save_tasks_to_file()
+                load_tasks_data.clear() # 清除快取，載入最新狀態
+                st.rerun()
+                
         else:
-            st.info("📦 目前清單是空的喔！快在左邊新增一個任務吧！")
+            st.info("📦 雲端資料庫目前是空的喔！快在左邊新增一個任務吧！")
