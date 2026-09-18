@@ -11,7 +11,8 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
-import requests  # 新增：用於 LINE Messaging API 發送通知
+import requests  
+import json  # 新增：用於將待辦清單永久存成檔案
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -778,7 +779,7 @@ with tab3:
 # 分頁 4：⚡ 個人生活中樞 (Life OS) - 排程通知版
 # ------------------------------------------
 with tab4:
-    # ⏱️ 新增：每 60 秒自動刷新一次這個區塊，用來檢查時間是否到了！
+    # ⏱️ 每 60 秒自動刷新一次這個區塊，用來檢查時間是否到了
     st_autorefresh(interval=60000, key="lifeos_minute_ticker")
 
     st.markdown("### 🚀 捷徑與快速導航中樞")
@@ -807,9 +808,20 @@ with tab4:
     # ------------------- 📅 任務排程與動態待辦清單 -------------------
     st.markdown("### 📅 任務排程與 LINE 助理")
     
-    # 初始化動態空清單
+    # 初始化本機儲存檔案
+    TASKS_FILE = "lifeos_tasks.json"
+    
+    def save_tasks_to_file():
+        with open(TASKS_FILE, "w", encoding="utf-8") as f:
+            json.dump(st.session_state.lifeos_tasks, f, ensure_ascii=False, indent=4)
+
+    # 讀取待辦清單 (防止網頁重整後消失)
     if "lifeos_tasks" not in st.session_state:
-        st.session_state.lifeos_tasks = []
+        if os.path.exists(TASKS_FILE):
+            with open(TASKS_FILE, "r", encoding="utf-8") as f:
+                st.session_state.lifeos_tasks = json.load(f)
+        else:
+            st.session_state.lifeos_tasks = []
 
     # ==========================================
     # 🕵️ 背景時間檢查器 (時間到了才發送)
@@ -828,12 +840,10 @@ with tab4:
     # 每次網頁刷新時，檢查清單中是否有「時間已到」且「尚未發送」的任務
     for i, task in enumerate(st.session_state.lifeos_tasks):
         if not task.get("已發送", False) and not task.get("狀態", False):
-            # 將任務字串轉換成 Python datetime 物件以進行比對
             task_dt_str = f"{task['日期']} {task['時間']}"
             task_dt = datetime.datetime.strptime(task_dt_str, "%Y-%m-%d %H:%M").replace(tzinfo=tz_tw)
 
             if current_now >= task_dt:
-                # 時間到了！觸發發送 API
                 if is_line_ready:
                     url = "https://api.line.me/v2/bot/message/push"
                     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {line_access_token}"}
@@ -860,9 +870,9 @@ with tab4:
                     except Exception:
                         pass
                 
-                # 標記為已發送，避免下一分鐘重複發送
+                # 標記為已發送並存檔
                 st.session_state.lifeos_tasks[i]["已發送"] = True
-
+                save_tasks_to_file()
 
     col_t1, col_t2 = st.columns([1, 1.5])
     
@@ -880,16 +890,16 @@ with tab4:
         
         if st.button("🚀 設定排程提醒", use_container_width=True):
             if task_msg:
-                # 點擊按鈕時「只寫入清單」，不再立刻發送！
                 st.session_state.lifeos_tasks.append({
                     "狀態": False, 
                     "日期": task_date.strftime('%Y-%m-%d'), 
                     "時間": f"{task_hour}:{task_min}", 
                     "事件內容": task_msg,
-                    "已發送": False  # 新增追蹤標籤
+                    "已發送": False
                 })
+                save_tasks_to_file()
                 st.success(f"✅ 任務已加入排程！將於 {task_date.strftime('%Y-%m-%d')} {task_hour}:{task_min} 準時提醒。")
-                st.rerun() # 強制刷新畫面顯示新任務
+                st.rerun()
             else:
                 st.warning("⚠️ 請輸入提醒內容")
 
@@ -898,7 +908,6 @@ with tab4:
         st.caption("你可以隨時在這裡手動打勾已完成的任務！")
         
         if len(st.session_state.lifeos_tasks) > 0:
-            # 為了畫面乾淨，隱藏「已發送」這個系統欄位不讓使用者看到
             display_tasks = [{k: v for k, v in t.items() if k != "已發送"} for t in st.session_state.lifeos_tasks]
             df_tasks = pd.DataFrame(display_tasks)
             
@@ -914,8 +923,13 @@ with tab4:
                 key="task_editor"
             )
             
-            # 將打勾狀態存回 session_state 保持記憶
+            has_changed = False
             for i, row in enumerate(edited_df.to_dict('records')):
-                st.session_state.lifeos_tasks[i]["狀態"] = row["狀態"]
+                if st.session_state.lifeos_tasks[i]["狀態"] != row["狀態"]:
+                    st.session_state.lifeos_tasks[i]["狀態"] = row["狀態"]
+                    has_changed = True
+                    
+            if has_changed:
+                save_tasks_to_file()
         else:
             st.info("📦 目前清單是空的喔！快在左邊新增一個任務吧！")
