@@ -11,6 +11,7 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
+import time
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -776,18 +777,46 @@ with tab4:
     render_neon_container(lambda: st.markdown(shortcut_html, unsafe_allow_html=True), "shortcut_grid", neon_styles[1][0], neon_styles[1][1], padding="15px", bg_color="transparent")
     st.divider()
 
-    st.markdown("### 📝 閃ঠাকুর筆記與大腦暫存區")
-    NOTE_FILE = "quick_notes.txt"
-    if not os.path.exists(NOTE_FILE):
-        with open(NOTE_FILE, "w", encoding="utf-8") as f: f.write("在這裡隨手寫下靈感...\n- 支援條列式\n- 支援 Markdown")
-    with open(NOTE_FILE, "r", encoding="utf-8") as f: saved_note = f.read()
-    def save_note_callback():
-        with open(NOTE_FILE, "w", encoding="utf-8") as f: f.write(st.session_state.my_quick_note)
-    apply_neon_to_next_container("note_neon", "#00f2fe, #4facfe, #00f2fe", "rgba(0, 242, 254, 0.2)", padding="2px")
-    st.text_area("大腦暫存區", value=saved_note, height=200, key="my_quick_note", on_change=save_note_callback, label_visibility="collapsed")
+    # ==========================================
+    # 📝 閃電筆記與大腦暫存區 (雲端永久保存版)
+    # ==========================================
+    st.markdown("### 📝 多功能大腦暫存看板 (雲端永久保存)")
+    try:
+        sh = get_gspread_client().open(SPREADSHEET_NAME)
+        # 嘗試讀取 db_notes，沒有的話就幫你自動建立！
+        try:
+            ws_notes = sh.worksheet("db_notes")
+        except:
+            ws_notes = sh.add_worksheet("db_notes", 10, 2)
+            ws_notes.append_row(["區塊", "內容"])
+            ws_notes.append_rows([["靈感與隨筆", ""], ["購物與待辦", ""], ["工作暫存區", ""], ["長期備忘錄", ""]])
+        
+        note_records = ws_notes.get_all_values()
+        notes_dict = {row[0]: row[1] for row in note_records[1:]} if len(note_records) > 1 else {}
+        
+        with st.form("notes_form"):
+            nc1, nc2 = st.columns(2)
+            with nc1:
+                n1 = st.text_area("📌 靈感與隨筆", value=notes_dict.get("靈感與隨筆", ""), height=150)
+                n2 = st.text_area("🛒 購物與待辦", value=notes_dict.get("購物與待辦", ""), height=150)
+            with nc2:
+                n3 = st.text_area("💼 工作暫存區", value=notes_dict.get("工作暫存區", ""), height=150)
+                n4 = st.text_area("🎯 長期備忘錄", value=notes_dict.get("長期備忘錄", ""), height=150)
+            
+            submit_notes = st.form_submit_button("💾 儲存筆記至雲端大腦")
+            if submit_notes:
+                ws_notes.clear()
+                ws_notes.append_row(["區塊", "內容"])
+                ws_notes.append_rows([["靈感與隨筆", n1], ["購物與待辦", n2], ["工作暫存區", n3], ["長期備忘錄", n4]])
+                st.success("✅ 筆記已永久保存！就算換電腦、重新整理也不會消失。")
+    except Exception as e:
+        st.error("讀取筆記發生錯誤，請確認 Google 試算表連線。")
+
     st.divider()
 
-    # ------------------- 📅 任務排程與動態待辦清單 (完全雲端化) -------------------
+    # ==========================================
+    # 📅 任務排程與動態待辦清單
+    # ==========================================
     st.markdown("### 📅 任務排程與 LINE 助理")
     
     tasks_raw = load_tasks_data()
@@ -836,7 +865,7 @@ with tab4:
 
     with col_t2:
         st.markdown("#### 📆 近期待辦清單預覽")
-        st.caption("你可以隨時在這裡手動打勾已完成的任務！網頁與 LINE 將自動雙向同步。")
+        st.caption("你可以隨時在這裡手動打勾已完成的任務！")
         
         if not df_tasks.empty:
             edited_df = st.data_editor(
@@ -853,6 +882,7 @@ with tab4:
                 key="task_editor"
             )
             
+            # 偵測是否有人手動點擊打勾
             has_changed = False
             for i in range(len(df_tasks)):
                 if df_tasks.loc[i, '狀態'] != edited_df.loc[i, '狀態']:
@@ -865,6 +895,11 @@ with tab4:
                         cell = ws.find(task_id_to_update)
                         if cell:
                             ws.update_cell(cell.row, 2, new_status)
+                            # 如果在網頁上標記完成，也要自動覆寫當下的時間！
+                            if new_status:
+                                finish_now = datetime.datetime.now(tz_tw)
+                                ws.update_cell(cell.row, 3, finish_now.strftime('%Y-%m-%d'))
+                                ws.update_cell(cell.row, 4, finish_now.strftime('%H:%M'))
                         has_changed = True
                     except Exception as e:
                         st.error(f"狀態同步失敗：{e}")
@@ -872,6 +907,31 @@ with tab4:
             if has_changed:
                 load_tasks_data.clear() 
                 st.rerun()
-                
+
+            # 🗑️ 一鍵清除已完成任務
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🗑️ 清除所有『已完成』的任務", use_container_width=True):
+                try:
+                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    ws = sh.worksheet("db_tasks")
+                    all_records = ws.get_all_values()
+                    
+                    rows_to_delete = []
+                    for idx, row in enumerate(all_records):
+                        if idx == 0: continue
+                        if str(row[1]).upper() == 'TRUE':
+                            rows_to_delete.append(idx + 1)
+                            
+                    if rows_to_delete:
+                        # 倒著刪除，避免刪除過程中行號跑掉
+                        for r_idx in reversed(rows_to_delete):
+                            ws.delete_rows(r_idx)
+                        load_tasks_data.clear()
+                        st.success(f"✅ 已成功清理 {len(rows_to_delete)} 筆完成任務！")
+                        st.rerun()
+                    else:
+                        st.info("💡 目前沒有需要清理的已完成任務。")
+                except Exception as e:
+                    st.error(f"清理失敗: {e}")
         else:
             st.info("📦 雲端資料庫目前是空的喔！快在左邊新增一個任務吧！")
