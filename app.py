@@ -11,7 +11,6 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
-import time
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -28,10 +27,8 @@ st.set_page_config(
 # ==========================================
 @st.cache_resource
 def load_face_models():
-    """快取載入 AI 模型與特徵值，若雲端無模型則自動從官方下載"""
     yunet_path = "face_detection_yunet_2023mar.onnx"
     sface_path = "face_recognition_sface_2021dec.onnx"
-    
     try:
         if not os.path.exists(yunet_path):
             urllib.request.urlretrieve("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx", yunet_path)
@@ -43,7 +40,6 @@ def load_face_models():
         my_feature = np.load("my_feature.npy")
         return detector, recognizer, my_feature
     except Exception as e:
-        print(f"模型載入失敗: {e}")
         return None, None, None
 
 def check_password():
@@ -62,12 +58,10 @@ def check_password():
     st.markdown("<p style='text-align: center; color: #a0a5b1; margin-bottom: 30px;'>請進行身份驗證以解鎖終端</p>", unsafe_allow_html=True)
     
     col_left, col_right = st.columns([1, 1], gap="large")
-    
     with col_left:
         st.markdown("### 📸 臉部辨識解鎖")
         st.caption("請允許攝影機權限，對準後點擊拍照進行比對")
         camera_img = st.camera_input("拍攝臉部進行解鎖", label_visibility="collapsed")
-        
         if camera_img is not None:
             detector, recognizer, my_feature = load_face_models()
             if detector is None:
@@ -91,19 +85,16 @@ def check_password():
                         st.error(f"❌ 辨識失敗，這不是你！(相似度: {score:.2f})")
                 else:
                     st.warning("⚠️ 畫面中偵測不到人臉，請確認光源並正對鏡頭。")
-
     with col_right:
         st.markdown("### 🔑 手動密碼登入")
         st.caption("備用通道，輸入正確密碼後按 Enter")
         st.text_input("輸入密碼", type="password", on_change=password_entered, key="password_input", placeholder="輸入密碼...")
-        
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.error("❌ 密碼錯誤")
     return False
 
 if not check_password():
     st.stop()
-
 
 # ==========================================
 # (🚀 主程式開始) 每 60 秒刷新以保持資料庫同步
@@ -126,14 +117,12 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"] { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; box-shadow: 0 6px 15px rgba(52, 152, 219, 0.5) !important; }
     button[data-baseweb="tab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p { color: white !important; font-weight: bold !important; }
     div[data-testid="stDataFrame"] { border-radius: 10px; overflow: hidden; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not([data-testid="stMarkdownContainer"]) { display: none !important; }
     div[data-testid="stRadio"] > div { gap: 10px; background: #111318 !important; padding: 6px 10px; border-radius: 50px; display: inline-flex; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 6px rgba(0,0,0,0.5); }
     div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 32px !important; border-radius: 50px !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; margin: 0 !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label:hover { background: rgba(255,255,255,0.05) !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked), div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) { background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; background-size: 400% 400% !important; background-repeat: no-repeat !important; animation: sweep-light 4s ease-in-out infinite !important; box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) { background: linear-gradient(135deg, #0a1128 0%, #0a1128 40%, #1c5276 50%, #0a1128 60%, #0a1128 100%) !important; background-size: 400% 400% !important; background-repeat: no-repeat !important; animation: sweep-light 4s ease-in-out infinite !important; box-shadow: 0 8px 20px rgba(28, 82, 118, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label p { color: #7f8ca6 !important; font-weight: 600 !important; font-size: 16px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p, div[data-testid="stRadio"] div[role="radiogroup"] label:has(div[aria-checked="true"]) p { color: #ffffff !important; font-weight: 900 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p { color: #ffffff !important; font-weight: 900 !important; text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -165,19 +154,15 @@ def load_sheet_data():
             if not v: return 0.0
             try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
             except: return 0.0
-
         s_rows = sh.worksheet("資產總覽").get_all_values()
         holdings, total_assets, total_cost, total_profit = [], 0.0, 0.0, 0.0
-        
         if len(s_rows) > 1:
             price_map = {sr[7].strip(): parse_num(sr[8]) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
             change_map = {sr[7].strip(): parse_num(str(sr[9]).replace('%', '')) for sr in s_rows[1:] if len(sr) >= 10 and sr[7]}
-            
             for sr in s_rows[1:]:
                 if len(sr) >= 6 and sr[0]:
                     name, shares, cost = sr[0].strip(), parse_num(sr[1]), parse_num(sr[2])
                     avg_cost, profit, m_val = parse_num(sr[3]), parse_num(sr[4]), parse_num(sr[5])
-                    
                     if cost > 0 or m_val > 0:
                         total_cost += cost; total_assets += m_val; total_profit += profit
                         curr_price, chg_pct = 0.0, 0.0
@@ -187,7 +172,6 @@ def load_sheet_data():
                                 break
                         if curr_price == 0.0 and shares > 0: curr_price = m_val / shares
                         holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
-
         profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
         ws_overview = sh.worksheet("每日損益追蹤")
         hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
@@ -226,7 +210,7 @@ def load_stock_transactions():
     except: pass
     return pd.DataFrame()
 
-# 🚀 專屬任務清單的快取 (每 30 秒過期自動重新抓取一次)
+# 🚀 專屬任務清單快取
 @st.cache_data(ttl=30, show_spinner=False)
 def load_tasks_data():
     client = get_gspread_client()
@@ -792,7 +776,7 @@ with tab4:
     render_neon_container(lambda: st.markdown(shortcut_html, unsafe_allow_html=True), "shortcut_grid", neon_styles[1][0], neon_styles[1][1], padding="15px", bg_color="transparent")
     st.divider()
 
-    st.markdown("### 📝 閃電筆記與大腦暫存區")
+    st.markdown("### 📝 閃ঠাকুর筆記與大腦暫存區")
     NOTE_FILE = "quick_notes.txt"
     if not os.path.exists(NOTE_FILE):
         with open(NOTE_FILE, "w", encoding="utf-8") as f: f.write("在這裡隨手寫下靈感...\n- 支援條列式\n- 支援 Markdown")
@@ -806,13 +790,11 @@ with tab4:
     # ------------------- 📅 任務排程與動態待辦清單 (完全雲端化) -------------------
     st.markdown("### 📅 任務排程與 LINE 助理")
     
-    # 從 Google Sheet 動態抓取任務清單
     tasks_raw = load_tasks_data()
     
     if len(tasks_raw) > 1:
         headers = tasks_raw[0]
         df_tasks = pd.DataFrame(tasks_raw[1:], columns=headers)
-        # 強制轉換布林值
         df_tasks['狀態'] = df_tasks['狀態'].apply(lambda x: str(x).upper() == 'TRUE')
         df_tasks['已發送'] = df_tasks['已發送'].apply(lambda x: str(x).upper() == 'TRUE')
     else:
@@ -836,7 +818,6 @@ with tab4:
         
         if st.button("🚀 設定排程提醒", use_container_width=True):
             if task_msg:
-                # 產生一組亂數不重複的任務 ID
                 new_task_id = "T" + datetime.datetime.now(tz_tw).strftime("%Y%m%d%H%M%S")
                 date_str = task_date.strftime('%Y-%m-%d')
                 time_str = f"{task_hour}:{task_min}"
@@ -861,8 +842,8 @@ with tab4:
             edited_df = st.data_editor(
                 df_tasks,
                 column_config={
-                    "任務ID": None,   # 隱藏
-                    "已發送": None,   # 隱藏
+                    "任務ID": None,   
+                    "已發送": None,   
                     "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成"),
                     "事件內容": st.column_config.TextColumn("事件內容", width="large")
                 },
