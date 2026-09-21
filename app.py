@@ -11,6 +11,7 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
+import time
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -336,7 +337,61 @@ with st.sidebar:
     apply_neon_to_next_container("sidebar_info_neon", "#ff007f, #00f2fe, #8E2DE2, #ff007f", "rgba(255, 0, 127, 0.45)", padding="4px", bg_color="transparent")
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
-    if st.button("🔄 強制同步最新試算表資料", use_container_width=True): load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear(); load_tasks_data.clear(); st.rerun()
+    
+    if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
+        load_sheet_data.clear()
+        load_bank_data.clear()
+        load_stock_transactions.clear()
+        load_tasks_data.clear()
+        st.rerun()
+
+    # 🚀 終極新增：隨時手動補登今日結算報表！
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("📸 補登/覆寫今日結算報表", use_container_width=True):
+        if dashboard_data:
+            try:
+                sh = get_gspread_client().open(SPREADSHEET_NAME)
+                ws_hist = sh.worksheet("每日損益追蹤")
+                hist_records = ws_hist.get_all_values()
+                
+                # 計算當下最新的數值
+                p_0050 = sum(h['各股損益'] for h in dashboard_data['holdings'] if '0050' in h['stock_name'])
+                p_tsmc = sum(h['各股損益'] for h in dashboard_data['holdings'] if '台積電' in h['stock_name'])
+                
+                # 台灣時間
+                tz_tw = datetime.timezone(datetime.timedelta(hours=8))
+                today_str = datetime.datetime.now(tz_tw).strftime('%Y/%m/%d')
+                
+                last_row_idx = len(hist_records)
+                last_date = hist_records[-1][0].strip() if last_row_idx > 1 else ""
+                
+                if last_date == today_str:
+                    # 如果今天已經有了，就覆寫最新的數字
+                    ws_hist.update_cell(last_row_idx, 6, dashboard_data['total_cost'])
+                    ws_hist.update_cell(last_row_idx, 7, dashboard_data['total_assets'])
+                    ws_hist.update_cell(last_row_idx, 8, dashboard_data['total_profit'])
+                    ws_hist.update_cell(last_row_idx, 13, p_0050)
+                    ws_hist.update_cell(last_row_idx, 14, p_tsmc)
+                else:
+                    # 如果今天還沒建立，就新增一行
+                    new_row = [""] * 14
+                    new_row[0] = today_str
+                    new_row[5] = dashboard_data['total_cost']
+                    new_row[6] = dashboard_data['total_assets']
+                    new_row[7] = dashboard_data['total_profit']
+                    new_row[12] = p_0050
+                    new_row[13] = p_tsmc
+                    ws_hist.append_row(new_row, value_input_option="USER_ENTERED")
+                
+                load_sheet_data.clear()
+                st.success("✅ 今日結算報表已成功記錄並補登！")
+                time.sleep(1)
+                st.rerun()
+            except Exception as e:
+                st.error(f"補登失敗: {e}")
+        else:
+            st.warning("⚠️ 讀取不到目前的資產資料，無法補登。")
+            
     st.divider()
     apply_neon_to_next_container("sidebar_tabs_neon", "#f12711, #FC466B, #ff8008, #f12711", "rgba(241, 39, 17, 0.45)", padding="8px", bg_color="transparent")
     
@@ -346,7 +401,7 @@ with st.sidebar:
         if "bank_confirm" not in st.session_state: st.session_state.bank_confirm = False
         is_locked = st.session_state.bank_confirm
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        rec_type = st.selectbox("異犯類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
+        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         action_container = st.empty()
         if not st.session_state.bank_confirm:
@@ -570,7 +625,7 @@ with tab2:
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
-            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資Asset Expansion Scatter Plot (Dashed Line = Break Even)"), use_container_width=True, theme=None), "chart_12", neon_styles[11][0], neon_styles[11][1])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True, theme=None), "chart_12", neon_styles[11][0], neon_styles[11][1])
 
         st.divider()
         st.markdown("### ⚠️ 展區三：風險回撤與規律矩陣")
