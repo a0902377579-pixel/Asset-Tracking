@@ -11,7 +11,6 @@ import cv2
 from PIL import Image
 import os
 import urllib.request
-import time
 
 # ==========================================
 # 1. 頁面基本配置與頂級美化 CSS
@@ -347,7 +346,7 @@ with st.sidebar:
         if "bank_confirm" not in st.session_state: st.session_state.bank_confirm = False
         is_locked = st.session_state.bank_confirm
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
-        rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
+        rec_type = st.selectbox("異犯類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
         amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         action_container = st.empty()
         if not st.session_state.bank_confirm:
@@ -571,7 +570,7 @@ with tab2:
             fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
             fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
             fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
-            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True, theme=None), "chart_12", neon_styles[11][0], neon_styles[11][1])
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資Asset Expansion Scatter Plot (Dashed Line = Break Even)"), use_container_width=True, theme=None), "chart_12", neon_styles[11][0], neon_styles[11][1])
 
         st.divider()
         st.markdown("### ⚠️ 展區三：風險回撤與規律矩陣")
@@ -783,7 +782,6 @@ with tab4:
     st.markdown("### 📝 多功能大腦暫存看板 (雲端永久保存)")
     try:
         sh = get_gspread_client().open(SPREADSHEET_NAME)
-        # 嘗試讀取 db_notes，沒有的話就幫你自動建立！
         try:
             ws_notes = sh.worksheet("db_notes")
         except:
@@ -882,7 +880,6 @@ with tab4:
                 key="task_editor"
             )
             
-            # 偵測是否有人手動點擊打勾
             has_changed = False
             for i in range(len(df_tasks)):
                 if df_tasks.loc[i, '狀態'] != edited_df.loc[i, '狀態']:
@@ -895,7 +892,6 @@ with tab4:
                         cell = ws.find(task_id_to_update)
                         if cell:
                             ws.update_cell(cell.row, 2, new_status)
-                            # 如果在網頁上標記完成，也要自動覆寫當下的時間！
                             if new_status:
                                 finish_now = datetime.datetime.now(tz_tw)
                                 ws.update_cell(cell.row, 3, finish_now.strftime('%Y-%m-%d'))
@@ -908,7 +904,6 @@ with tab4:
                 load_tasks_data.clear() 
                 st.rerun()
 
-            # 🗑️ 一鍵清除已完成任務
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("🗑️ 清除所有『已完成』的任務", use_container_width=True):
                 try:
@@ -923,7 +918,6 @@ with tab4:
                             rows_to_delete.append(idx + 1)
                             
                     if rows_to_delete:
-                        # 倒著刪除，避免刪除過程中行號跑掉
                         for r_idx in reversed(rows_to_delete):
                             ws.delete_rows(r_idx)
                         load_tasks_data.clear()
