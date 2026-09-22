@@ -345,53 +345,6 @@ with st.sidebar:
         load_tasks_data.clear()
         st.rerun()
 
-    # 🚀 終極新增：隨時手動補登今日結算報表！
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("📸 補登/覆寫今日結算報表", use_container_width=True):
-        if dashboard_data:
-            try:
-                sh = get_gspread_client().open(SPREADSHEET_NAME)
-                ws_hist = sh.worksheet("每日損益追蹤")
-                hist_records = ws_hist.get_all_values()
-                
-                # 計算當下最新的數值
-                p_0050 = sum(h['各股損益'] for h in dashboard_data['holdings'] if '0050' in h['stock_name'])
-                p_tsmc = sum(h['各股損益'] for h in dashboard_data['holdings'] if '台積電' in h['stock_name'])
-                
-                # 台灣時間
-                tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-                today_str = datetime.datetime.now(tz_tw).strftime('%Y/%m/%d')
-                
-                last_row_idx = len(hist_records)
-                last_date = hist_records[-1][0].strip() if last_row_idx > 1 else ""
-                
-                if last_date == today_str:
-                    # 如果今天已經有了，就覆寫最新的數字
-                    ws_hist.update_cell(last_row_idx, 6, dashboard_data['total_cost'])
-                    ws_hist.update_cell(last_row_idx, 7, dashboard_data['total_assets'])
-                    ws_hist.update_cell(last_row_idx, 8, dashboard_data['total_profit'])
-                    ws_hist.update_cell(last_row_idx, 13, p_0050)
-                    ws_hist.update_cell(last_row_idx, 14, p_tsmc)
-                else:
-                    # 如果今天還沒建立，就新增一行
-                    new_row = [""] * 14
-                    new_row[0] = today_str
-                    new_row[5] = dashboard_data['total_cost']
-                    new_row[6] = dashboard_data['total_assets']
-                    new_row[7] = dashboard_data['total_profit']
-                    new_row[12] = p_0050
-                    new_row[13] = p_tsmc
-                    ws_hist.append_row(new_row, value_input_option="USER_ENTERED")
-                
-                load_sheet_data.clear()
-                st.success("✅ 今日結算報表已成功記錄並補登！")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"補登失敗: {e}")
-        else:
-            st.warning("⚠️ 讀取不到目前的資產資料，無法補登。")
-            
     st.divider()
     apply_neon_to_next_container("sidebar_tabs_neon", "#f12711, #FC466B, #ff8008, #f12711", "rgba(241, 39, 17, 0.45)", padding="8px", bg_color="transparent")
     
