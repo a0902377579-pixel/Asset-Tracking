@@ -128,13 +128,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
-# 🚨 終極修正：改用試算表的絕對身分證字號，徹底斷開跟舊檔案的連結！
 SPREADSHEET_ID = "1BButbI49PY3SIy13-zh_wDE9n6ZhLeE0mR-vxtBELYE"
 
 # ==========================================
 # 2. 核心資料讀取
 # ==========================================
-@st.cache_resource(ttl=600)
+# 金鑰驗證只需一次，保留快取
+@st.cache_resource(ttl=3600)
 def get_gspread_client():
     try:
         creds = Credentials.from_service_account_info(
@@ -146,15 +146,14 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-# 為了防止舊資料死當，我們把快取縮短成 15 秒
-@st.cache_data(ttl=15, show_spinner=False)
+# 🚀 終極殺手鐧：徹底拔除 @st.cache_data！每次刷新絕對去 Google 拿最新鮮的資料！
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
     try:
         sh = client.open_by_key(SPREADSHEET_ID)
     except Exception as e:
-        st.error(f"🚨 無法連線到新的試算表！\n請務必將你的 GCP 服務帳戶 Email 加進試算表「共用」並設為編輯者。\n錯誤訊息: {e}")
+        st.error(f"🚨 無法連線到新的試算表！\n錯誤訊息: {e}")
         return None, None
         
     try:
@@ -188,7 +187,6 @@ def load_sheet_data():
         st.error(f"資料處理錯誤: {e}")
         return None, None
 
-@st.cache_data(ttl=15, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -200,7 +198,6 @@ def load_bank_data():
         return b_val, txs
     except: return 58661.0, []
 
-@st.cache_data(ttl=15, show_spinner=False)
 def load_stock_transactions():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
@@ -220,7 +217,6 @@ def load_stock_transactions():
     except: pass
     return pd.DataFrame()
 
-@st.cache_data(ttl=15, show_spinner=False)
 def load_tasks_data():
     client = get_gspread_client()
     if not client: return []
@@ -346,11 +342,8 @@ with st.sidebar:
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
     
+    # 這裡的重新整理按鈕只需要叫 Streamlit 重跑一次即可，因為我們已經沒有快取了！
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
-        load_sheet_data.clear()
-        load_bank_data.clear()
-        load_stock_transactions.clear()
-        load_tasks_data.clear()
         st.rerun()
 
     st.divider()
@@ -375,7 +368,6 @@ with st.sidebar:
                     try:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_bank_ledger").append_row([rec_date.strftime('%Y/%m/%d'), rec_type, amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount], value_input_option="USER_ENTERED")
-                        load_bank_data.clear(); load_sheet_data.clear(); load_stock_transactions.clear()
                         st.session_state.bank_confirm = False; st.success("紀錄成功寫入！"); st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with c_no:
@@ -411,7 +403,6 @@ with st.sidebar:
                     try:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_stock_transactions").append_row([s_date.strftime('%Y/%m/%d'), name_check, current_shares, current_price, st.session_state.s_fee, total_amt_check], value_input_option="USER_ENTERED")
-                        load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear()
                         st.session_state.stock_confirm = False; st.success("股票紀錄成功寫入！"); st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with sc_no:
@@ -421,9 +412,9 @@ with st.sidebar:
 # 主畫面開始
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
-# 🚨 這是你判斷有沒有更新成功的「浮水印」！
+# 🚨 浮水印更新為 V4，看到這個就代表更新成功！
 tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V3 強制連線版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4 零快取直連版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景", "⚡ 生活中樞 (Life OS)"])
 
@@ -871,7 +862,6 @@ with tab4:
                     sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                     ws = sh.worksheet("db_tasks")
                     ws.append_row([new_task_id, False, date_str, time_str, task_msg, False], value_input_option="USER_ENTERED")
-                    load_tasks_data.clear() 
                     st.success(f"✅ 任務已安全送達 Google 大腦！將於 {date_str} {time_str} 準時提醒。")
                     st.rerun()
                 except Exception as e:
@@ -919,7 +909,6 @@ with tab4:
                         st.error(f"狀態同步失敗：{e}")
             
             if has_changed:
-                load_tasks_data.clear() 
                 st.rerun()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -938,7 +927,6 @@ with tab4:
                     if rows_to_delete:
                         for r_idx in reversed(rows_to_delete):
                             ws.delete_rows(r_idx)
-                        load_tasks_data.clear()
                         st.success(f"✅ 已成功清理 {len(rows_to_delete)} 筆完成任務！")
                         st.rerun()
                     else:
