@@ -133,7 +133,6 @@ SPREADSHEET_ID = "1BButbI49PY3SIy13-zh_wDE9n6ZhLeE0mR-vxtBELYE"
 # ==========================================
 # 2. 核心資料讀取
 # ==========================================
-# 金鑰驗證只需一次，保留快取
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
     try:
@@ -146,7 +145,6 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-# 🚀 終極殺手鐧：徹底拔除 @st.cache_data！每次刷新絕對去 Google 拿最新鮮的資料！
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -161,6 +159,7 @@ def load_sheet_data():
             if not v: return 0.0
             try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
             except: return 0.0
+            
         s_rows = sh.worksheet("資產總覽").get_all_values()
         holdings, total_assets, total_cost, total_profit = [], 0.0, 0.0, 0.0
         if len(s_rows) > 1:
@@ -180,6 +179,7 @@ def load_sheet_data():
                         if curr_price == 0.0 and shares > 0: curr_price = m_val / shares
                         holdings.append({"stock_name": name, "shares": shares, "avg_cost": avg_cost, "total_cost": cost, "current_price": curr_price, "market_value": m_val, "各股損益": profit, "change_pct": chg_pct})
         profit_rate = (total_profit / total_cost * 100) if total_cost > 0 else 0.0
+        
         ws_overview = sh.worksheet("每日損益追蹤")
         hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
@@ -342,8 +342,10 @@ with st.sidebar:
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
     
-    # 這裡的重新整理按鈕只需要叫 Streamlit 重跑一次即可，因為我們已經沒有快取了！
+    # 🚨 修正處：強制清除 st.cache_resource 快取，打破 gspread Session 咬死舊快照的問題
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
+        st.cache_resource.clear()
+        st.cache_data.clear()
         st.rerun()
 
     st.divider()
@@ -412,9 +414,9 @@ with st.sidebar:
 # 主畫面開始
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
-# 🚨 浮水印更新為 V4，看到這個就代表更新成功！
 tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4 零快取直連版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
+# 🚨 浮水印更新為 V4.1，看到這個就代表強制清洗快取的機制已啟動！
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.1 徹底清除快取版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景", "⚡ 生活中樞 (Life OS)"])
 
@@ -910,6 +912,7 @@ with tab4:
             
             if has_changed:
                 st.rerun()
+
 
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("🗑️ 清除所有『已完成』的任務", use_container_width=True):
