@@ -145,7 +145,8 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-@st.cache_data(ttl=600, show_spinner=False)
+# 將主要資料快取壽命修改為 60 秒，完美貼合自動刷新週期
+@st.cache_data(ttl=60, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -179,7 +180,7 @@ def load_sheet_data():
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
     except: return None, None
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -191,7 +192,7 @@ def load_bank_data():
         return b_val, txs
     except: return 58661.0, []
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_stock_transactions():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
