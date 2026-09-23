@@ -128,7 +128,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
-# 🚨 終極修正：改用試算表的絕對身分證字號，徹底避免讀取到備份或同名檔案！
+# 🚨 終極修正：改用試算表的絕對身分證字號，徹底斷開跟舊檔案的連結！
 SPREADSHEET_ID = "1BButbI49PY3SIy13-zh_wDE9n6ZhLeE0mR-vxtBELYE"
 
 # ==========================================
@@ -146,12 +146,18 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-@st.cache_data(ttl=60, show_spinner=False)
+# 為了防止舊資料死當，我們把快取縮短成 15 秒
+@st.cache_data(ttl=15, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
     try:
         sh = client.open_by_key(SPREADSHEET_ID)
+    except Exception as e:
+        st.error(f"🚨 無法連線到新的試算表！\n請務必將你的 GCP 服務帳戶 Email 加進試算表「共用」並設為編輯者。\n錯誤訊息: {e}")
+        return None, None
+        
+    try:
         def parse_num(v):
             if not v: return 0.0
             try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
@@ -178,9 +184,11 @@ def load_sheet_data():
         ws_overview = sh.worksheet("每日損益追蹤")
         hist_data = [{"日期": r[0].strip(), "總累積成本": parse_num(r[5]), "總市值": parse_num(r[6]), "總投資損益": parse_num(r[7]), "0050每日損益": parse_num(r[12]), "台積電每日損益": parse_num(r[13])} for r in ws_overview.get_all_values()[1:] if len(r) >= 14 and str(r[0]).strip() != ""]
         return {"total_assets": total_assets, "total_cost": total_cost, "total_profit": total_profit, "profit_rate": profit_rate, "holdings": holdings}, hist_data
-    except: return None, None
+    except Exception as e: 
+        st.error(f"資料處理錯誤: {e}")
+        return None, None
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=15, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -192,7 +200,7 @@ def load_bank_data():
         return b_val, txs
     except: return 58661.0, []
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=15, show_spinner=False)
 def load_stock_transactions():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
@@ -212,8 +220,7 @@ def load_stock_transactions():
     except: pass
     return pd.DataFrame()
 
-# 🚀 專屬任務清單快取
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=15, show_spinner=False)
 def load_tasks_data():
     client = get_gspread_client()
     if not client: return []
@@ -414,7 +421,9 @@ with st.sidebar:
 # 主畫面開始
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
-st.markdown("##### 🚀 終極數據戰情室 | 全方位投資決策系統")
+# 🚨 這是你判斷有沒有更新成功的「浮水印」！
+tz_tw = datetime.timezone(datetime.timedelta(hours=8))
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V3 強制連線版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景", "⚡ 生活中樞 (Life OS)"])
 
