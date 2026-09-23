@@ -128,7 +128,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'}
-SPREADSHEET_NAME = "個人資產" 
+# 🚨 終極修正：改用試算表的絕對身分證字號，徹底避免讀取到備份或同名檔案！
+SPREADSHEET_ID = "1BButbI49PY3SIy13-zh_wDE9n6ZhLeE0mR-vxtBELYE"
 
 # ==========================================
 # 2. 核心資料讀取
@@ -145,13 +146,12 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
-# 將主要資料快取壽命修改為 60 秒，完美貼合自動刷新週期
 @st.cache_data(ttl=60, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
     try:
-        sh = client.open(SPREADSHEET_NAME)
+        sh = client.open_by_key(SPREADSHEET_ID)
         def parse_num(v):
             if not v: return 0.0
             try: return float(str(v).replace('NT$', '').replace('$', '').replace(',', '').replace('%', '').strip())
@@ -185,7 +185,7 @@ def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
     try:
-        sh = client.open(SPREADSHEET_NAME)
+        sh = client.open_by_key(SPREADSHEET_ID)
         try: b_val = float(str(sh.worksheet("資產總覽").get_all_values()[1][11]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 58661)
         except: b_val = 58661.0
         txs = [{"日期": r[0].strip(), "類型": r[1].strip(), "金額": float(str(r[2]).replace('NT$', '').replace('$', '').replace(',', '').strip() or 0)} for r in sh.worksheet("db_bank_ledger").get_all_values()[1:] if len(r) >= 3 and str(r[0]).strip() != ""]
@@ -197,7 +197,7 @@ def load_stock_transactions():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
     try:
-        sh = client.open(SPREADSHEET_NAME)
+        sh = client.open_by_key(SPREADSHEET_ID)
         rows = sh.worksheet("db_stock_transactions").get_all_values()
         if len(rows) > 1:
             df = pd.DataFrame(rows[1:])
@@ -218,7 +218,7 @@ def load_tasks_data():
     client = get_gspread_client()
     if not client: return []
     try:
-        sh = client.open(SPREADSHEET_NAME)
+        sh = client.open_by_key(SPREADSHEET_ID)
         ws = sh.worksheet("db_tasks")
         return ws.get_all_values()
     except Exception as e:
@@ -366,7 +366,7 @@ with st.sidebar:
             with c_yes:
                 if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_bank_ledger").append_row([rec_date.strftime('%Y/%m/%d'), rec_type, amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount], value_input_option="USER_ENTERED")
                         load_bank_data.clear(); load_sheet_data.clear(); load_stock_transactions.clear()
                         st.session_state.bank_confirm = False; st.success("紀錄成功寫入！"); st.rerun()
@@ -402,7 +402,7 @@ with st.sidebar:
             with sc_yes:
                 if st.button("✅ 確認寫入", use_container_width=True, key="stock_yes"):
                     try:
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_stock_transactions").append_row([s_date.strftime('%Y/%m/%d'), name_check, current_shares, current_price, st.session_state.s_fee, total_amt_check], value_input_option="USER_ENTERED")
                         load_sheet_data.clear(); load_bank_data.clear(); load_stock_transactions.clear()
                         st.session_state.stock_confirm = False; st.success("股票紀錄成功寫入！"); st.rerun()
@@ -790,7 +790,7 @@ with tab4:
     # ==========================================
     st.markdown("### 📝 多功能大腦暫存看板 (雲端永久保存)")
     try:
-        sh = get_gspread_client().open(SPREADSHEET_NAME)
+        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
         try:
             ws_notes = sh.worksheet("db_notes")
         except:
@@ -859,7 +859,7 @@ with tab4:
                 time_str = f"{task_hour}:{task_min}"
                 
                 try:
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                     ws = sh.worksheet("db_tasks")
                     ws.append_row([new_task_id, False, date_str, time_str, task_msg, False], value_input_option="USER_ENTERED")
                     load_tasks_data.clear() 
@@ -896,7 +896,7 @@ with tab4:
                     new_status = bool(edited_df.loc[i, '狀態'])
                     
                     try:
-                        sh = get_gspread_client().open(SPREADSHEET_NAME)
+                        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         ws = sh.worksheet("db_tasks")
                         cell = ws.find(task_id_to_update)
                         if cell:
@@ -916,7 +916,7 @@ with tab4:
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button("🗑️ 清除所有『已完成』的任務", use_container_width=True):
                 try:
-                    sh = get_gspread_client().open(SPREADSHEET_NAME)
+                    sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                     ws = sh.worksheet("db_tasks")
                     all_records = ws.get_all_values()
                     
