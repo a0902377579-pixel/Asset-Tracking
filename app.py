@@ -217,15 +217,6 @@ def load_stock_transactions():
     except: pass
     return pd.DataFrame()
 
-def load_tasks_data():
-    client = get_gspread_client()
-    if not client: return []
-    try:
-        sh = client.open_by_key(SPREADSHEET_ID)
-        ws = sh.worksheet("db_tasks")
-        return ws.get_all_values()
-    except Exception as e:
-        return []
 
 # ==========================================
 # 3. 視覺化引擎與樣式函數
@@ -342,10 +333,7 @@ with st.sidebar:
     st.info("💡 輸入後自動換算手續費，送出後即時更新。")
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
     
-    # 🚨 修正處：強制清除 st.cache_resource 快取，打破 gspread Session 咬死舊快照的問題
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
-        st.cache_resource.clear()
-        st.cache_data.clear()
         st.rerun()
 
     st.divider()
@@ -415,10 +403,9 @@ with st.sidebar:
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
 tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-# 🚨 浮水印更新為 V4.1，看到這個就代表強制清洗快取的機制已啟動！
-st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.1 徹底清除快取版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.2 專注投資版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景", "⚡ 生活中樞 (Life OS)"])
+tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景"])
 
 # ------------------------------------------
 # 分頁 1：總覽儀表板
@@ -770,171 +757,3 @@ with tab3:
     with c3_2:
         st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
-
-# ------------------------------------------
-# 分頁 4：⚡ 個人生活中樞 (Life OS) - 全雲端資料庫版
-# ------------------------------------------
-with tab4:
-    st.markdown("### 🚀 捷徑與快速導航中樞")
-    shortcut_html = """
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-        <a href="https://github.com" target="_blank" style="text-decoration: none;"><div style="background: linear-gradient(135deg, #1e2128 0%, #3a4a5a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"><span style="font-size: 2rem;">🐙</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">GitHub</span></div></a>
-        <a href="https://chatgpt.com" target="_blank" style="text-decoration: none;"><div style="background: linear-gradient(135deg, #1e2128 0%, #1c5276 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(28, 82, 118, 0.3);"><span style="font-size: 2rem;">🤖</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">AI 助手</span></div></a>
-        <a href="https://www.youtube.com" target="_blank" style="text-decoration: none;"><div style="background: linear-gradient(135deg, #1e2128 0%, #761c1c 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(118, 28, 28, 0.3);"><span style="font-size: 2rem;">▶️</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">YouTube</span></div></a>
-        <a href="https://calendar.google.com" target="_blank" style="text-decoration: none;"><div style="background: linear-gradient(135deg, #1e2128 0%, #74b9ff 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; transition: all 0.3s; box-shadow: 0 4px 15px rgba(116, 185, 255, 0.3);"><span style="font-size: 2rem;">📅</span><br><span style="color: #ffffff; font-weight: bold; font-size: 1.1rem;">Google 日曆</span></div></a>
-    </div><style>a > div:hover { transform: translateY(-5px) scale(1.02); filter: brightness(1.2); }</style>
-    """
-    render_neon_container(lambda: st.markdown(shortcut_html, unsafe_allow_html=True), "shortcut_grid", neon_styles[1][0], neon_styles[1][1], padding="15px", bg_color="transparent")
-    st.divider()
-
-    # ==========================================
-    # 📝 閃電筆記與大腦暫存區 (雲端永久保存版)
-    # ==========================================
-    st.markdown("### 📝 多功能大腦暫存看板 (雲端永久保存)")
-    try:
-        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
-        try:
-            ws_notes = sh.worksheet("db_notes")
-        except:
-            ws_notes = sh.add_worksheet("db_notes", 10, 2)
-            ws_notes.append_row(["區塊", "內容"])
-            ws_notes.append_rows([["靈感與隨筆", ""], ["購物與待辦", ""], ["工作暫存區", ""], ["長期備忘錄", ""]])
-        
-        note_records = ws_notes.get_all_values()
-        notes_dict = {row[0]: row[1] for row in note_records[1:]} if len(note_records) > 1 else {}
-        
-        with st.form("notes_form"):
-            nc1, nc2 = st.columns(2)
-            with nc1:
-                n1 = st.text_area("📌 靈感與隨筆", value=notes_dict.get("靈感與隨筆", ""), height=150)
-                n2 = st.text_area("🛒 購物與待辦", value=notes_dict.get("購物與待辦", ""), height=150)
-            with nc2:
-                n3 = st.text_area("💼 工作暫存區", value=notes_dict.get("工作暫存區", ""), height=150)
-                n4 = st.text_area("🎯 長期備忘錄", value=notes_dict.get("長期備忘錄", ""), height=150)
-            
-            submit_notes = st.form_submit_button("💾 儲存筆記至雲端大腦")
-            if submit_notes:
-                ws_notes.clear()
-                ws_notes.append_row(["區塊", "內容"])
-                ws_notes.append_rows([["靈感與隨筆", n1], ["購物與待辦", n2], ["工作暫存區", n3], ["長期備忘錄", n4]])
-                st.success("✅ 筆記已永久保存！就算換電腦、重新整理也不會消失。")
-    except Exception as e:
-        st.error("讀取筆記發生錯誤，請確認 Google 試算表連線。")
-
-    st.divider()
-
-    # ==========================================
-    # 📅 任務排程與動態待辦清單
-    # ==========================================
-    st.markdown("### 📅 任務排程與 LINE 助理")
-    
-    tasks_raw = load_tasks_data()
-    
-    if len(tasks_raw) > 1:
-        headers = tasks_raw[0]
-        df_tasks = pd.DataFrame(tasks_raw[1:], columns=headers)
-        df_tasks['狀態'] = df_tasks['狀態'].apply(lambda x: str(x).upper() == 'TRUE')
-        df_tasks['已發送'] = df_tasks['已發送'].apply(lambda x: str(x).upper() == 'TRUE')
-    else:
-        df_tasks = pd.DataFrame(columns=["任務ID", "狀態", "日期", "時間", "事件內容", "已發送"])
-
-    tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-    current_now = datetime.datetime.now(tz_tw)
-
-    col_t1, col_t2 = st.columns([1, 1.5])
-    
-    with col_t1:
-        st.markdown("#### 🔔 新增提醒事件")
-        task_date = st.date_input("任務日期", current_now.date())
-        
-        st.caption("任務時間")
-        col_th, col_tm = st.columns(2)
-        task_hour = col_th.selectbox("時", [f"{i:02d}" for i in range(24)], index=current_now.hour)
-        task_min = col_tm.selectbox("分", [f"{i:02d}" for i in range(60)], index=current_now.minute)
-        
-        task_msg = st.text_input("提醒內容", placeholder="例如：晚上搶高鐵票...")
-        
-        if st.button("🚀 設定排程提醒", use_container_width=True):
-            if task_msg:
-                new_task_id = "T" + datetime.datetime.now(tz_tw).strftime("%Y%m%d%H%M%S")
-                date_str = task_date.strftime('%Y-%m-%d')
-                time_str = f"{task_hour}:{task_min}"
-                
-                try:
-                    sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
-                    ws = sh.worksheet("db_tasks")
-                    ws.append_row([new_task_id, False, date_str, time_str, task_msg, False], value_input_option="USER_ENTERED")
-                    st.success(f"✅ 任務已安全送達 Google 大腦！將於 {date_str} {time_str} 準時提醒。")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"寫入雲端失敗：{e}")
-            else:
-                st.warning("⚠️ 請輸入提醒內容")
-
-    with col_t2:
-        st.markdown("#### 📆 近期待辦清單預覽")
-        st.caption("你可以隨時在這裡手動打勾已完成的任務！")
-        
-        if not df_tasks.empty:
-            edited_df = st.data_editor(
-                df_tasks,
-                column_config={
-                    "任務ID": None,   
-                    "已發送": None,   
-                    "狀態": st.column_config.CheckboxColumn("完成", help="勾選表示已完成"),
-                    "事件內容": st.column_config.TextColumn("事件內容", width="large")
-                },
-                disabled=["任務ID", "日期", "時間", "事件內容", "已發送"],
-                hide_index=True,
-                use_container_width=True,
-                key="task_editor"
-            )
-            
-            has_changed = False
-            for i in range(len(df_tasks)):
-                if df_tasks.loc[i, '狀態'] != edited_df.loc[i, '狀態']:
-                    task_id_to_update = df_tasks.loc[i, '任務ID']
-                    new_status = bool(edited_df.loc[i, '狀態'])
-                    
-                    try:
-                        sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
-                        ws = sh.worksheet("db_tasks")
-                        cell = ws.find(task_id_to_update)
-                        if cell:
-                            ws.update_cell(cell.row, 2, new_status)
-                            if new_status:
-                                finish_now = datetime.datetime.now(tz_tw)
-                                ws.update_cell(cell.row, 3, finish_now.strftime('%Y-%m-%d'))
-                                ws.update_cell(cell.row, 4, finish_now.strftime('%H:%M'))
-                        has_changed = True
-                    except Exception as e:
-                        st.error(f"狀態同步失敗：{e}")
-            
-            if has_changed:
-                st.rerun()
-
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🗑️ 清除所有『已完成』的任務", use_container_width=True):
-                try:
-                    sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
-                    ws = sh.worksheet("db_tasks")
-                    all_records = ws.get_all_values()
-                    
-                    rows_to_delete = []
-                    for idx, row in enumerate(all_records):
-                        if idx == 0: continue
-                        if str(row[1]).upper() == 'TRUE':
-                            rows_to_delete.append(idx + 1)
-                            
-                    if rows_to_delete:
-                        for r_idx in reversed(rows_to_delete):
-                            ws.delete_rows(r_idx)
-                        st.success(f"✅ 已成功清理 {len(rows_to_delete)} 筆完成任務！")
-                        st.rerun()
-                    else:
-                        st.info("💡 目前沒有需要清理的已完成任務。")
-                except Exception as e:
-                    st.error(f"清理失敗: {e}")
-        else:
-            st.info("📦 雲端資料庫目前是空的喔！快在左邊新增一個任務吧！")
