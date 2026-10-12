@@ -87,7 +87,7 @@ def check_password():
                 else:
                     st.warning("⚠️ 畫面中偵測不到人臉，請確認光源並正對鏡頭。")
     with col_right:
-        st.markdown("### 🔑 手動密碼登入")
+        st.markdown("### 🔑 手提密碼登入")
         st.caption("備用通道，輸入正確密碼後按 Enter")
         st.text_input("輸入密碼", type="password", on_change=password_entered, key="password_input", placeholder="輸入密碼...")
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
@@ -131,7 +131,7 @@ WEEK_MAP = {0: '一', 1: '二', 2: '三', 3: '四', 4: '五', 5: '六', 6: '日'
 SPREADSHEET_ID = "1BButbI49PY3SIy13-zh_wDE9n6ZhLeE0mR-vxtBELYE"
 
 # ==========================================
-# 2. 核心資料讀取
+# 2. 核心資料讀取 (🛡️ 加入 60 秒防護罩)
 # ==========================================
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
@@ -145,6 +145,7 @@ def get_gspread_client():
         st.error(f"⚠️ 金鑰讀取失敗: {e}")
         return None
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_sheet_data():
     client = get_gspread_client()
     if not client: return None, None
@@ -187,6 +188,7 @@ def load_sheet_data():
         st.error(f"資料處理錯誤: {e}")
         return None, None
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_bank_data():
     client = get_gspread_client()
     if not client: return 58661.0, []
@@ -198,6 +200,7 @@ def load_bank_data():
         return b_val, txs
     except: return 58661.0, []
 
+@st.cache_data(ttl=60, show_spinner=False)
 def load_stock_transactions():
     client = get_gspread_client()
     if not client: return pd.DataFrame()
@@ -333,6 +336,8 @@ with st.sidebar:
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
     
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
+        # 清除快取，讓下次讀取直接拿最新的
+        st.cache_data.clear()
         st.rerun()
 
     st.divider()
@@ -350,7 +355,6 @@ with st.sidebar:
         sip_price = 0.0
         sip_stock = "元大台灣0050"
         
-        # 🚀 這裡就是你許願的新功能：定期定額專屬輸入區塊！
         if rec_type == "定期定額":
             st.markdown("---")
             st.markdown("##### 🔗 定期定額專屬設定 (自動連動股票交易)")
@@ -380,12 +384,14 @@ with st.sidebar:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_bank_ledger").append_row([rec_date.strftime('%Y/%m/%d'), rec_type, amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount], value_input_option="USER_ENTERED")
                         
-                        # 同步寫入股票資料庫！
                         if rec_type == "定期定額" and sip_price > 0:
                             calc_shares = round(amount / sip_price)
                             sh.worksheet("db_stock_transactions").append_row([rec_date.strftime('%Y/%m/%d'), sip_stock, calc_shares, sip_price, 0, amount], value_input_option="USER_ENTERED")
                             
-                        st.session_state.bank_confirm = False; st.success("紀錄成功寫入！"); st.rerun()
+                        st.session_state.bank_confirm = False
+                        st.cache_data.clear() # 寫入成功後立刻清除快取，保證下次讀取是新的
+                        st.success("紀錄成功寫入！")
+                        st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with c_no:
                 if st.button("❌ 取消", use_container_width=True, key="bank_no"): st.session_state.bank_confirm = False; st.rerun()
@@ -420,7 +426,10 @@ with st.sidebar:
                     try:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_stock_transactions").append_row([s_date.strftime('%Y/%m/%d'), name_check, current_shares, current_price, st.session_state.s_fee, total_amt_check], value_input_option="USER_ENTERED")
-                        st.session_state.stock_confirm = False; st.success("股票紀錄成功寫入！"); st.rerun()
+                        st.session_state.stock_confirm = False
+                        st.cache_data.clear() # 寫入成功後立刻清除快取
+                        st.success("股票紀錄成功寫入！")
+                        st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with sc_no:
                 if st.button("❌ 取消寫入", use_container_width=True, key="stock_no"): st.session_state.stock_confirm = False; st.rerun()
@@ -430,7 +439,7 @@ with st.sidebar:
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
 tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.3 雙向連動版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.4 效能防護版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
 tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景"])
 
