@@ -217,7 +217,6 @@ def load_stock_transactions():
     except: pass
     return pd.DataFrame()
 
-
 # ==========================================
 # 3. 視覺化引擎與樣式函數
 # ==========================================
@@ -334,7 +333,6 @@ with st.sidebar:
     apply_neon_to_next_container("sidebar_btn_neon", "#00b894, #00c6ff, #11998e, #00b894", "rgba(0, 184, 148, 0.45)", padding="4px", bg_color="transparent")
     
     if st.button("🔄 強制同步最新試算表資料", use_container_width=True): 
-        st.cache_resource.clear()
         st.rerun()
 
     st.divider()
@@ -347,43 +345,47 @@ with st.sidebar:
         is_locked = st.session_state.bank_confirm
         rec_date = st.date_input("入帳日期", value=datetime.date.today(), max_value=datetime.date.today(), key="bank_date", disabled=is_locked)
         rec_type = st.selectbox("異動類型", ["現金", "跨行轉", "轉帳提", "委代入", "證券款", "電匯", "定期定額"], key="bank_type", disabled=is_locked)
+        amount = st.number_input("金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
         
-        # 🚀 終極更新：動態顯示定期定額專屬欄位
-        amount = st.number_input("扣款總額" if rec_type == "定期定額" else "金額 (系統將自動判斷正負)", min_value=0.0, step=100.0, key="bank_amount", disabled=is_locked)
+        sip_price = 0.0
+        sip_stock = "元大台灣0050"
         
+        # 🚀 這裡就是你許願的新功能：定期定額專屬輸入區塊！
         if rec_type == "定期定額":
-            st.info("💡 系統將自動同步寫入「股票交易」明細 (預設標的: 元大台灣0050)")
-            sip_price = st.number_input("買入價格 (成交單價)", min_value=0.0, step=0.01, key="sip_price", disabled=is_locked)
-            sip_shares = st.number_input("實際買入股數", min_value=0, step=1, value=0, key="sip_shares", disabled=is_locked)
-        else:
-            sip_price = 0.0
-            sip_shares = 0
+            st.markdown("---")
+            st.markdown("##### 🔗 定期定額專屬設定 (自動連動股票交易)")
+            sip_stock = st.selectbox("扣款標的", stock_options, key="sip_stock_select", disabled=is_locked)
+            if sip_stock == "其他 (手動輸入新股)":
+                sip_stock = st.text_input("輸入新標的名稱", key="sip_stock_input", disabled=is_locked)
+            sip_price = st.number_input("買入單價 (系統將自動換算股數)", min_value=0.0, step=0.1, key="sip_price", disabled=is_locked)
+            
+            if sip_price > 0 and amount > 0:
+                calc_shares = round(amount / sip_price)
+                st.markdown(f'<div style="padding: 8px; background: rgba(9, 171, 59, 0.2); border-radius: 5px; color: #55efc4; font-weight: bold; margin-bottom: 10px;">💡 試算：預計獲得 {calc_shares} 股</div>', unsafe_allow_html=True)
 
         action_container = st.empty()
         if not st.session_state.bank_confirm:
             if action_container.button("寫入金流紀錄", use_container_width=True, disabled=(amount == 0), key="bank_submit_btn"): st.session_state.bank_confirm = True; st.rerun()
         else:
-            if rec_type == "定期定額":
-                action_container.warning(f"⚠️ 確定寫入定期定額嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **扣款總額**: NT$ {amount:,.0f}\n- **買入單價**: {sip_price}\n- **買入股數**: {sip_shares} 股")
-            else:
-                action_container.warning(f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: NT$ {amount:,.0f}")
+            warn_msg = f"⚠️ 請問確定要寫入此筆銀行金流嗎？\n\n- **日期**: {rec_date.strftime('%Y/%m/%d')}\n- **類型**: {rec_type}\n- **金額**: {amount:,.0f}"
+            if rec_type == "定期定額" and sip_price > 0:
+                calc_shares = round(amount / sip_price)
+                warn_msg += f"\n\n🔥 **系統將同步寫入【股票交易】**:\n- **標的**: {sip_stock}\n- **買入**: {calc_shares} 股\n- **單價**: {sip_price}"
                 
+            action_container.warning(warn_msg)
             c_yes, c_no = action_container.columns(2)
             with c_yes:
                 if st.button("✅ 確認寫入", use_container_width=True, key="bank_yes"):
                     try:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
-                        # 1. 寫入銀行流水 (扣款記錄負數)
                         sh.worksheet("db_bank_ledger").append_row([rec_date.strftime('%Y/%m/%d'), rec_type, amount if rec_type in ["現金", "跨行轉", "委代入", "電匯"] else -amount], value_input_option="USER_ENTERED")
                         
-                        # 2. 如果是定期定額，連動寫入股票交易明細
-                        if rec_type == "定期定額" and sip_shares > 0:
-                            fee = max(0, amount - (sip_price * sip_shares))
-                            # 股票交易欄位: [日期, 標的, 股數, 單價, 手續費, 單筆總價]
-                            sh.worksheet("db_stock_transactions").append_row([rec_date.strftime('%Y/%m/%d'), "元大台灣0050", sip_shares, sip_price, fee, amount], value_input_option="USER_ENTERED")
+                        # 同步寫入股票資料庫！
+                        if rec_type == "定期定額" and sip_price > 0:
+                            calc_shares = round(amount / sip_price)
+                            sh.worksheet("db_stock_transactions").append_row([rec_date.strftime('%Y/%m/%d'), sip_stock, calc_shares, sip_price, 0, amount], value_input_option="USER_ENTERED")
                             
-                        st.cache_resource.clear()
-                        st.session_state.bank_confirm = False; st.success("紀錄成功寫入與同步！"); st.rerun()
+                        st.session_state.bank_confirm = False; st.success("紀錄成功寫入！"); st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with c_no:
                 if st.button("❌ 取消", use_container_width=True, key="bank_no"): st.session_state.bank_confirm = False; st.rerun()
@@ -418,7 +420,6 @@ with st.sidebar:
                     try:
                         sh = get_gspread_client().open_by_key(SPREADSHEET_ID)
                         sh.worksheet("db_stock_transactions").append_row([s_date.strftime('%Y/%m/%d'), name_check, current_shares, current_price, st.session_state.s_fee, total_amt_check], value_input_option="USER_ENTERED")
-                        st.cache_resource.clear()
                         st.session_state.stock_confirm = False; st.success("股票紀錄成功寫入！"); st.rerun()
                     except Exception as e: st.error(f"寫入失敗: {e}")
             with sc_no:
@@ -429,7 +430,7 @@ with st.sidebar:
 # ==========================================
 st.title("💼 個人旗艦資產工作站 ☁️")
 tz_tw = datetime.timezone(datetime.timedelta(hours=8))
-st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.3 精準股數版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
+st.markdown(f"##### 🚀 終極數據戰情室 | 全方位投資決策系統 (V4.3 雙向連動版 - 頁面讀取時間: {datetime.datetime.now(tz_tw).strftime('%H:%M:%S')})")
 
 tab1, tab2, tab3 = st.tabs(["📊 總覽儀表板", "🌌 數據戰情室", "🎯 定期定額與願景"])
 
@@ -483,4 +484,303 @@ with tab2:
         c2_1, c2_2, c2_3 = st.columns(3)
         with c2_1:
             fig1 = px.pie(names=['股票總市值', '銀行帳戶餘額'], values=[dashboard_data["total_assets"], bank_balance], hole=0.5, color_discrete_sequence=['#3498db', '#f1c40f'])
-            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{
+            fig1.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig1, "1. 總資產水庫配置"), use_container_width=True, theme=None), "chart_1", neon_styles[0][0], neon_styles[0][1])
+            
+        with c2_2:
+            fig2 = px.pie(df_h, names='stock_name', values='market_value', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig2.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig2, "2. 個股市值佔比"), use_container_width=True, theme=None), "chart_2", neon_styles[1][0], neon_styles[1][1])
+
+        with c2_3:
+            fig3 = px.pie(df_h, names='stock_name', values='total_cost', hole=0.5, color_discrete_sequence=px.colors.qualitative.Set2)
+            fig3.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>投入成本: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', insidetextorientation='horizontal', textfont=dict(color='#ffffff', size=16, weight='bold'))
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig3, "3. 投入本金佈局佔比"), use_container_width=True, theme=None), "chart_3", neon_styles[2][0], neon_styles[2][1])
+
+        c2_4, c2_5, c2_6 = st.columns(3)
+        with c2_4:
+            fig4 = px.treemap(df_h, path=['stock_name'], values='market_value', color='各股損益(%)', color_continuous_scale=['#09ab3b', '#222222', '#ff4b4b'], color_continuous_midpoint=0, custom_data=['各股損益_str'])
+            fig4.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>市值: NT$ %{{value:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>帳面損益: %{{customdata[0]}}%</b></span><extra></extra>", textfont=dict(size=18, color="white"))
+            fig4.update_layout(coloraxis_colorbar=dict(tickformat=".2f"))  
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig4, "4. 股票熱力圖 (面積=市值, 色=賺賠)"), use_container_width=True, theme=None), "chart_4", neon_styles[3][0], neon_styles[3][1])
+
+        with c2_5:
+            fig5 = go.Figure(go.Waterfall(
+                orientation="v", measure=["relative"]*len(df_h) + ["total"],
+                x=df_h['stock_name'].tolist() + ["淨損益總計"], y=df_h['各股損益'].tolist() + [dashboard_data["total_profit"]],
+                decreasing={"marker":{"color":"#09ab3b"}}, increasing={"marker":{"color":"#ff4b4b"}}, totals={"marker":{"color":"#3498db"}}
+            ))
+            fig5.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>損益金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>", texttemplate="%{y:+,.0s}", textposition="outside")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig5, "5. 各股獲利貢獻瀑布圖"), use_container_width=True, theme=None), "chart_5", neon_styles[4][0], neon_styles[4][1])
+
+        with c2_6:
+            fig6 = go.Figure(data=[
+                go.Bar(name='總投入成本', x=df_h['stock_name'], y=df_h['total_cost'], marker_color='#9b59b6'),
+                go.Bar(name='當前總市值', x=df_h['stock_name'], y=df_h['market_value'], marker_color='#f1c40f')
+            ])
+            fig6.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
+            fig6.update_layout(barmode='group')
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig6, "6. 個股成本 vs 現值對比"), use_container_width=True, theme=None), "chart_6", neon_styles[5][0], neon_styles[5][1])
+
+    st.divider()
+    st.markdown("### 📈 展區二：時間維度與趨勢擴張")
+    if df_hist is not None:
+        df_hist_plot = df_hist[df_hist['星期'].isin(['一', '二', '三', '四', '五'])].copy()
+        df_hist_plot['繪圖日期'] = df_hist_plot['日期_顯示']
+        
+        c2_7, c2_8 = st.columns(2)
+        with c2_7:
+            fig7 = go.Figure()
+            fig7.add_trace(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(lower=0),
+                mode='lines', fill='tozeroy', line=dict(color='#ff4b4b', width=2), 
+                hoverinfo='skip', showlegend=False
+            ))
+            fig7.add_trace(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總投資損益'].clip(upper=0),
+                mode='lines', fill='tozeroy', line=dict(color='#09ab3b', width=2), 
+                hoverinfo='skip', showlegend=False
+            ))
+            c7_vals = [f"{v:+,.0f}" for v in df_hist_plot['總投資損益']]
+            c7_colors = ['#ff4b4b' if v >= 0 else '#09ab3b' for v in df_hist_plot['總投資損益']]
+            fig7.add_trace(go.Bar(
+                x=df_hist_plot['繪圖日期'], y=[0] * len(df_hist_plot), customdata=np.column_stack((c7_vals, c7_colors)),
+                marker_color=c7_colors, name="", hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:%{{customdata[1]}}'><b>累積損益: NT$ %{{customdata[0]}}</b></span><extra></extra>"
+            ))
+            fig7.update_xaxes(type='category')
+            fig7 = add_zero_baseline(fig7) 
+            fig7.update_layout(showlegend=False)
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig7, "7. 總投資累積損益面積圖 (紅漲綠跌)"), use_container_width=True, theme=None), "chart_7", neon_styles[6][0], neon_styles[6][1])
+            
+        with c2_8:
+            fig8 = go.Figure()
+            fig8.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['總市值'], mode='lines', name='總市值', line=dict(color='#2ecc71', width=3)))
+            fig8.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['20日均線'], mode='lines', name='20日均線', line=dict(color='#f39c12', width=2, dash='dot')))
+            fig8.update_xaxes(type='category')
+            fig8.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig8, "8. 總市值與 20 日均線乖離"), use_container_width=True, theme=None), "chart_8", neon_styles[7][0], neon_styles[7][1])
+
+        c2_9, c2_10 = st.columns(2)
+        with c2_9:
+            fig9 = go.Figure(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['總損益(%)'], customdata=df_hist_plot['總損益_str'], 
+                mode='lines+markers', line=dict(color='#9b59b6', width=2)
+            ))
+            fig9.update_xaxes(type='category')
+            fig9 = add_zero_baseline(fig9) 
+            fig9.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata}}%</b></span><extra></extra>")
+            fig9.update_yaxes(tickformat=".2f")  
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig9, "9. 總損益 (%) 走勢"), use_container_width=True, theme=None), "chart_9", neon_styles[8][0], neon_styles[8][1])
+
+        with c2_10:
+            fig10 = go.Figure()
+            fig10.add_trace(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['0050每日損益'], name='0050', marker_color='#3498db'))
+            fig10.add_trace(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電每日損益'], name='台積電', marker_color='#e74c3c'))
+            fig10.update_xaxes(type='category')
+            fig10.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>部位損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            fig10.update_layout(barmode='relative')
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig10, "10. 每日損益部位貢獻疊加"), use_container_width=True, theme=None), "chart_10", neon_styles[9][0], neon_styles[9][1])
+            
+        c2_11, c2_12 = st.columns(2)
+        with c2_11:
+            fig11 = go.Figure()
+            fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['0050累計'], mode='lines', name='0050 累計', line=dict(color='#3498db')))
+            fig11.add_trace(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['台積電累計'], mode='lines', name='台積電 累計', line=dict(color='#e74c3c')))
+            fig11.update_xaxes(type='category')
+            fig11.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{data.name}}</b></span><br><span style='color:{C_VAL}'><b>累計貢獻: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig11, "11. 雙引擎累計獲利賽跑"), use_container_width=True, theme=None), "chart_11", neon_styles[10][0], neon_styles[10][1])
+
+        with c2_12:
+            fig12 = px.scatter(df_hist_plot, x="總累積成本", y="總市值", color="總損益(%)", color_continuous_scale="Turbo", size_max=10, custom_data=['總損益_str', '繪圖日期'])
+            fig12.add_shape(type="line", x0=df_hist_plot["總累積成本"].min(), y0=df_hist_plot["總累積成本"].min(), x1=df_hist_plot["總累積成本"].max(), y1=df_hist_plot["總累積成本"].max(), line=dict(color="#FFD700", width=2, dash="dash"))
+            fig12.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{customdata[1]}}</b></span><br><span style='color:{C_LBL}'><b>總成本: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>總市值: NT$ %{{y:,.0f}}</b></span><br><span style='color:{C_PCT}'><b>總損益: %{{customdata[0]}}%</b></span><extra></extra>", marker=dict(size=8, opacity=0.8))
+            fig12.update_layout(coloraxis_colorbar=dict(tickformat=".2f"), hovermode="closest") 
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig12, "12. 資產擴張散點回歸圖 (虛線=損益兩平)"), use_container_width=True, theme=None), "chart_12", neon_styles[11][0], neon_styles[11][1])
+
+        st.divider()
+        st.markdown("### ⚠️ 展區三：風險回撤與規律矩陣")
+        c2_13, c2_14, c2_15 = st.columns(3)
+        with c2_13:
+            vol_colors = ['#ff4b4b' if val > 0 else '#09ab3b' for val in df_hist_plot['單日損益變化']]
+            fig13 = go.Figure(go.Bar(x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日損益變化'], marker_color=vol_colors))
+            fig13.update_xaxes(type='category')
+            fig13 = add_zero_baseline(fig13) 
+            fig13.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>單日波動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig13, "13. 單日總損益震盪圖"), use_container_width=True, theme=None), "chart_13", neon_styles[12][0], neon_styles[12][1])
+            
+        with c2_14:
+            fig14 = px.histogram(df_hist_plot, x="單日損益變化", nbins=20, color_discrete_sequence=['#3498db'])
+            fig14.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>損益區間: NT$ %{{x:,.0f}}</b></span><br><span style='color:{C_VAL}'><b>發生次數: %{{y}} 次</b></span><extra></extra>")
+            fig14.update_layout(hovermode="closest")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig14, "14. 盈虧分佈直方圖 (鐘型頻率)"), use_container_width=True, theme=None), "chart_14", neon_styles[13][0], neon_styles[13][1])
+            
+        with c2_15:
+            fig15 = go.Figure(go.Scatter(x=df_hist_plot['繪圖日期'], y=df_hist_plot['市值回撤'], fill='tozeroy', mode='lines', line=dict(color='#e67e22', width=2)))
+            fig15.update_xaxes(type='category')
+            fig15 = add_zero_baseline(fig15) 
+            fig15.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>高點回撤金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig15, "15. 歷史最大回撤 (Drawdown)"), use_container_width=True, theme=None), "chart_15", neon_styles[14][0], neon_styles[14][1])
+
+        c2_16, c2_17, c2_18 = st.columns(3)
+        with c2_16:
+            fig16 = go.Figure(go.Scatter(
+                x=df_hist_plot['繪圖日期'], y=df_hist_plot['單日漲跌幅(%)'], customdata=df_hist_plot['單日漲跌幅_str'], 
+                mode='lines', line=dict(color='#1abc9c', width=2)
+            ))
+            fig16.update_xaxes(type='category')
+            fig16 = add_zero_baseline(fig16) 
+            fig16.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_PCT}'><b>單日漲跌幅: %{{customdata}}%</b></span><extra></extra>")
+            fig16.update_yaxes(tickformat=".2f")  
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig16, "16. 單日總資產漲跌幅 (%) 走勢"), use_container_width=True, theme=None), "chart_16", neon_styles[15][0], neon_styles[15][1])
+
+        with c2_17:
+            win_days, lose_days = len(df_hist_plot[df_hist_plot['單日損益變化'] > 0]), len(df_hist_plot[df_hist_plot['單日損益變化'] < 0])
+            fig17 = px.pie(names=['上漲天數', '下跌天數'], values=[win_days, lose_days], hole=0.6, color_discrete_sequence=['#ff4b4b', '#09ab3b'])
+            fig17.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>天數: %{{value}} 天</b></span><br><span style='color:{C_PCT}'><b>佔比: %{{percent:.2%}}</b></span><extra></extra>", texttemplate="<b>%{label}</b><br><b>%{percent:.2%}</b>", textposition='inside', textfont=dict(color='#ffffff', size=16, weight='bold'))
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig17, "17. 歷史操作日勝率"), use_container_width=True, theme=None), "chart_17", neon_styles[16][0], neon_styles[16][1])
+
+        with c2_18:
+            dow_avg = df_hist_plot.groupby("星期")["單日損益變化"].mean().round(0).reindex(['一', '二', '三', '四', '五']).reset_index()
+            fig18 = go.Figure(go.Bar(x=dow_avg['星期'], y=dow_avg['單日損益變化'], marker_color=['#ff4b4b' if v>0 else '#09ab3b' for v in dow_avg['單日損益變化']]))
+            fig18.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>星期%{{x}}</b></span><br><span style='color:{C_VAL}'><b>平均損益: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            fig18.update_layout(hovermode="closest")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig18, "18. 星期別平均波動分析"), use_container_width=True, theme=None), "chart_18", neon_styles[17][0], neon_styles[17][1])
+
+    st.divider()
+    st.markdown("### 🏦 展區四：現金流動脈分析")
+    if df_txs is not None:
+        df_txs_plot = df_txs.copy()
+        df_txs_plot['繪圖日期'] = df_txs_plot['日期_顯示']
+        
+        c2_19, c2_20, c2_21 = st.columns(3)
+        with c2_19:
+            fig19 = px.sunburst(df_txs_plot, path=['流向', '類型'], values='金額絕對值', color='流向', color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig19.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{label}}</b></span><br><span style='color:{C_VAL}'><b>累積金額: NT$ %{{value:,.0f}}</b></span><extra></extra>", textfont=dict(color='#ffffff', size=14, weight='bold'))
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig19, "19. 銀行金流樹狀結構"), use_container_width=True, theme=None), "chart_19", neon_styles[18][0], neon_styles[18][1])
+            
+        with c2_20:
+            fig20 = px.bar(df_txs_plot, x="繪圖日期", y="金額", color="流向", color_discrete_map={'流入 (存錢/賣股)': '#09ab3b', '流出 (支出/買股)': '#ff4b4b'})
+            fig20.update_xaxes(type='category')
+            fig20.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>異動金額: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            fig20.update_layout(showlegend=False, hovermode="closest")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig20, "20. 單筆資金進出分布"), use_container_width=True, theme=None), "chart_20", neon_styles[19][0], neon_styles[19][1])
+            
+        with c2_21:
+            fig21 = go.Figure(go.Scatter(x=df_txs_plot['繪圖日期'], y=df_txs_plot['累計淨現金流'], mode='lines+markers', line=dict(color='#9b59b6', width=3)))
+            fig21.update_xaxes(type='category')
+            fig21 = add_zero_baseline(fig21)
+            fig21.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>日期: %{{x}}</b></span><br><span style='color:{C_VAL}'><b>累計淨金流: NT$ %{{y:+,.0f}}</b></span><extra></extra>")
+            render_neon_container(lambda: st.plotly_chart(style_fig(fig21, "21. 累計淨現金流走勢"), use_container_width=True, theme=None), "chart_21", neon_styles[20][0], neon_styles[20][1])
+
+# ------------------------------------------
+# 分頁 3：🎯 定期定額與願景
+# ------------------------------------------
+with tab3:
+    current_0050_value, current_0050_shares, current_0050_cost = 0, 0, 0
+    current_tsmc_value, current_tsmc_cost = 0, 0
+    if df_h is not None:
+        stock_0050 = df_h[df_h['stock_name'].str.contains('0050', na=False)]
+        if not stock_0050.empty:
+            current_0050_value = stock_0050['market_value'].sum(); current_0050_shares = stock_0050['shares'].sum(); current_0050_cost = stock_0050['total_cost'].sum()
+        stock_tsmc = df_h[df_h['stock_name'].str.contains('台積電', na=False)]
+        if not stock_tsmc.empty:
+            current_tsmc_value = stock_tsmc['market_value'].sum(); current_tsmc_cost = stock_tsmc['total_cost'].sum()
+            
+    avg_cost_0050 = (current_0050_cost / current_0050_shares) if current_0050_shares > 0 else 0
+    market_price_0050 = (current_0050_value / current_0050_shares) if current_0050_shares > 0 else 0
+
+    st.markdown("### 🏆 紀律印記：定期定額 10 年軌跡")
+    sip_records, real_sip_avg = [], 6000  
+    if df_txs is not None and not df_txs.empty:
+        df_sip = df_txs[df_txs['類型'] == '定期定額'].copy()
+        if not df_sip.empty:
+            real_sip_avg = int(df_sip['金額'].abs().mean())
+            df_sip = df_sip.sort_values('日期_dt')
+            df_sip['YYYY-MM'] = df_sip['日期_dt'].dt.strftime('%Y-%m')
+            df_sip['YYYY-MM-DD'] = df_sip['日期_dt'].dt.strftime('%Y-%m-%d')
+            df_sip = df_sip.drop_duplicates(subset=['YYYY-MM'], keep='last')
+            sip_records = df_sip.to_dict('records')
+
+    html_blocks = []
+    for i in range(120):
+        if i < len(sip_records):
+            rec = sip_records[i]; amt = abs(rec['金額']); date_str = rec['日期_dt'].strftime('%Y/%m/%d')
+            shares = 0
+            if df_st is not None and not df_st.empty:
+                match = df_st[(df_st['YYYY-MM-DD'] == rec['YYYY-MM-DD']) & (df_st['標的'].str.contains('0050', na=False)) & (df_st['股數'] > 0)]
+                if not match.empty:
+                    if len(match) == 1: shares = int(match['股數'].iloc[0])
+                    else:
+                        match = match.copy()
+                        match['diff'] = (match['單筆總價'] - amt).abs()
+                        best_match = match.sort_values('diff').iloc[0]; shares = int(best_match['股數'])
+            if shares == 0: shares = int(amt / market_price_0050) if market_price_0050 > 0 else 0
+            html_blocks.append(f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;"><div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #09ab3b, #00b894); color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 10px rgba(9, 171, 59, 0.5);">✓</div><div style="font-size: 11px; font-weight: bold; color: #a7f3d0; margin-top: 6px; white-space: nowrap;">{date_str}</div><div style="font-size: 11px; color: #d1d5db; white-space: nowrap;">{shares} 股</div></div>')
+        else:
+            html_blocks.append(f'<div style="display: flex; flex-direction: column; align-items: center; width: 100%;"><div style="width: 38px; height: 38px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center;"></div><div style="font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.8); margin-top: 6px; white-space: nowrap;">#{i+1}</div><div style="font-size: 11px; color: rgba(255,255,255,0.6); white-space: nowrap;">待扣款</div></div>')
+
+    blocks_str = ''.join(html_blocks)
+    full_html = f'<div style="width: 100%; box-sizing: border-box;"><p style="font-size: 1.1rem; color: #ffffff; font-weight: bold; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">🎯 10 年 120 期解鎖進度 (自動讀取銀行流水與證券明細)</p><div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 20px 5px; width: 100%; justify-items: center;">{blocks_str}</div></div>'
+    render_neon_container(lambda: st.markdown(full_html, unsafe_allow_html=True), "matrix_vision", neon_styles[0][0], neon_styles[0][1], padding="25px", bg_color="#0a1128")
+    st.divider()
+
+    st.markdown("### ⏳ 多重資產動態投影 (0050 + 台積電)")
+    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+    monthly_invest = col_s1.number_input("預測每月扣款 (專攻 0050)", value=real_sip_avg, step=100)
+    years = col_s2.slider("預計持續年數", min_value=1, max_value=30, value=10)
+    price_rate = col_s3.slider("市場年化成長預期 (%)", min_value=1.0, max_value=15.0, value=5.0, step=0.5)
+    div_yield = col_s4.slider("預估殖利率 (%)", min_value=0.0, max_value=10.0, value=3.5, step=0.5)
+
+    st.markdown("##### ⚙️ 圖表時間跨度設定")
+    resolution = st.radio("切換解析度", ["每年", "每月"], horizontal=True, label_visibility="collapsed")
+
+    months = years * 12; monthly_price_rate = price_rate / 100 / 12; monthly_div_rate = div_yield / 100 / 12
+    acc_cost_0050, val_nodrip_0050, val_drip_0050 = current_0050_cost, current_0050_value, current_0050_value
+    acc_cost_tsmc, val_nodrip_tsmc, val_drip_tsmc = current_tsmc_cost, current_tsmc_value, current_tsmc_value
+    curr_year, curr_month = datetime.date.today().year, datetime.date.today().month
+    
+    future_data = [{"時間": f"現在 ({curr_year}年{curr_month}月)", "總累積本金": current_0050_cost + current_tsmc_cost, "總無再投入": current_0050_value + current_tsmc_value, "總再投入": current_0050_value + current_tsmc_value, "0050累積本金": current_0050_cost, "0050無再投入": current_0050_value, "0050再投入": current_0050_value, "TSMC累積本金": current_tsmc_cost, "TSMC無再投入": current_tsmc_value, "TSMC再投入": current_tsmc_value}]
+    
+    for m in range(1, months + 1):
+        div_0050, div_tsmc = val_drip_0050 * monthly_div_rate, val_drip_tsmc * monthly_div_rate
+        acc_cost_0050 += monthly_invest
+        val_nodrip_0050 = (val_nodrip_0050 + monthly_invest) * (1 + monthly_price_rate)
+        val_drip_0050 = (val_drip_0050 + monthly_invest) * (1 + monthly_price_rate) + div_0050 + div_tsmc
+        val_nodrip_tsmc = val_nodrip_tsmc * (1 + monthly_price_rate)
+        val_drip_tsmc = val_drip_tsmc * (1 + monthly_price_rate)
+        fy = curr_year + ((curr_month + m - 1) // 12); fm = ((curr_month + m - 1) % 12) + 1
+        time_lbl = f"{fy}年{fm}月" if resolution == "每月" else f"{fy}年"
+        
+        if resolution == "每月" or (resolution == "每年" and m % 12 == 0):
+            future_data.append({"時間": time_lbl, "總累積本金": acc_cost_0050 + acc_cost_tsmc, "總無再投入": val_nodrip_0050 + val_nodrip_tsmc, "總再投入": val_drip_0050 + val_drip_tsmc, "0050累積本金": acc_cost_0050, "0050無再投入": val_nodrip_0050, "0050再投入": val_drip_0050, "TSMC累積本金": acc_cost_tsmc, "TSMC無再投入": val_nodrip_tsmc, "TSMC再投入": val_drip_tsmc})
+            
+    df_future = pd.DataFrame(future_data)
+    fig_future = go.Figure()
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總累積本金'], mode='lines', fill='tozeroy', name='[總計] 累積本金', legendgroup="Total", legendgrouptitle_text="全庫存總計", line=dict(color='rgba(149, 165, 166, 0.7)', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總無再投入'], mode='lines', fill='tonexty', name='[總計] 單純成長 (股息領出)', legendgroup="Total", line=dict(color='rgba(230, 126, 34, 0.7)', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['總再投入'], mode='lines', fill='tonexty', name='[總計] 股息再投入', legendgroup="Total", line=dict(color='rgba(241, 196, 15, 0.9)', width=3)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050累積本金'], mode='lines', name='[0050] 累積本金', legendgroup="0050", legendgrouptitle_text="0050 (含定期定額)", line=dict(color='#85c1e9', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050無再投入'], mode='lines', name='[0050] 單純成長', legendgroup="0050", line=dict(color='#3498db', width=2, dash='dash')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['0050再投入'], mode='lines', name='[0050] 股息再投入 (含台積電股息挹注)', legendgroup="0050", line=dict(color='#00e5ff', width=2)))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC累積本金'], mode='lines', name='[台積電] 累積本金', legendgroup="TSMC", legendgrouptitle_text="台積電 (單純放著長)", line=dict(color='#f1948a', width=2, dash='dot')))
+    fig_future.add_trace(go.Scatter(x=df_future['時間'], y=df_future['TSMC再投入'], mode='lines', name='[台積電] 市值成長 (股息已移轉0050)', legendgroup="TSMC", line=dict(color='#ff4b4b', width=2)))
+
+    fig_future = style_fig(fig_future, f"多重資產軌跡投影 (點擊圖例可隨時開關線條)", height=850)
+    if resolution == "每年": fig_future.update_xaxes(type='category')
+    fig_future.update_layout(font=dict(size=16, color="#ffffff"), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=40, r=40, t=70, b=60), legend=dict(groupclick="toggleitem", grouptitlefont=dict(size=18, color="#ffffff")))
+    fig_future.update_traces(hovertemplate=f"<span style='color:{C_LBL}'><b>%{{x}}</b></span><br><span style='color:{C_VAL}'><b>金額: NT$ %{{y:,.0f}}</b></span><extra></extra>")
+    render_neon_container(lambda: st.plotly_chart(fig_future, use_container_width=True, theme=None), "chart_future", neon_styles[0][0], neon_styles[0][1], padding="20px", bg_color="#0f1117")
+
+    st.divider()
+
+    st.markdown("### 💸 紀律引擎：0050 定期定額透視")
+    c3_1, c3_2 = st.columns(2)
+    est_dividends = current_0050_cost * (div_yield / 100)
+    free_shares = (est_dividends / market_price_0050) if market_price_0050 > 0 else 0
+    with c3_1:
+        st.markdown(create_colorful_card("平均持倉成本 vs 現價", f"NT$ {avg_cost_0050:,.2f}", "📉", "purple"), unsafe_allow_html=True)
+        diff_pct = ((market_price_0050 - avg_cost_0050) / avg_cost_0050 * 100) if avg_cost_0050 > 0 else 0
+        st.markdown(f"<p style='text-align: center; color: {'#ff4b4b' if diff_pct > 0 else '#09ab3b'}; font-weight: bold;'>現價落差: {diff_pct:+.2f}% (市場價 {market_price_0050:,.2f})</p>", unsafe_allow_html=True)
+    with c3_2:
+        st.markdown(create_colorful_card("累積預估配息 (換算免費零股)", f"{free_shares:,.0f} 股", "🥚", "purple"), unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #a0a5b1; font-weight: bold;'>預估配息總額: NT$ {est_dividends:,.0f}</p>", unsafe_allow_html=True)
